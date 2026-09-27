@@ -45,6 +45,20 @@ jobs:
           node-version: '20'
           cache: npm
 
+      # On Windows `bash` otherwise resolves to C:\Windows\System32\bash.exe
+      # (the WSL launcher), which fails without an installed distro. Put Git
+      # Bash first on PATH for every later `shell: bash` step, including the
+      # ones inside dtolnay/rust-toolchain.
+      - name: Prefer Git Bash on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitBin = Join-Path $env:ProgramFiles 'Git\bin'
+          if (-not (Test-Path (Join-Path $gitBin 'bash.exe'))) {
+            throw "Git Bash not found at $gitBin"
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $gitBin
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
