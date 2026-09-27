@@ -1,3 +1,15 @@
+type ClipboardWriter = (text: string) => Promise<void>;
+
+let hostWriter: ClipboardWriter | null = null;
+
+/**
+ * Route copies through the host, for an IDE webview whose clipboard access is
+ * not reliable (JCEF, WebView2 without focus).
+ */
+export function setClipboardWriter(writer: ClipboardWriter | null): void {
+  hostWriter = writer;
+}
+
 /**
  * Write `text` to the clipboard from the side panel.
  *
@@ -6,6 +18,7 @@
  * where it is still refused.
  */
 export async function copyText(text: string): Promise<void> {
+  if (hostWriter) return hostWriter(text);
   try {
     await navigator.clipboard.writeText(text);
     return;

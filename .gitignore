@@ -71,3 +71,5 @@ docs/release/public-initial-commit.md
 # Chrome Web Store screenshot staging — reviewed PNGs stay out of Git by default
 screenshots/
 CONTEXT.md
+dist-ide/
+release/ide/

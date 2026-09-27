@@ -123,6 +123,11 @@ jobs:
       - name: Package Edge release
         run: npm run package:edge -- --require-model
 
+      - name: Build IDE panel (shared by the IDE plugins)
+        env:
+          NER_MODEL_ASSETS_REQUIRED: '1'
+        run: npm run build:ide-webview
+
       - name: Read package version
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
@@ -144,6 +149,123 @@ jobs:
           path: |
             release/edge/privacy-guardrail-edge-*.zip
             release/edge/privacy-guardrail-edge-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      # Input for the IDE plugin jobs below, not a deliverable.
+      - name: Upload IDE panel
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-webview-${{ steps.version.outputs.version }}
+          path: dist-ide/webview
+          if-no-files-found: error
+          retention-days: 7
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  # IDE plugin installers (VS Code, JetBrains, Visual Studio). They are only
+  # uploaded as workflow artifacts for manual installation: never published to
+  # a marketplace, and their artifact names ("ide-…") stay out of the
+  # `privacy-guardrail-*-*` pattern the GitHub release collects.
+  vscode-extension:
+    name: IDE installer (VS Code)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Package VS Code extension
+        run: node scripts/ide/build-vscode.js
+
+      - name: Upload VS Code installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-privacy-guardrail-vscode-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/privacy-guardrail-vscode-*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+  jetbrains-plugin:
+    name: IDE installer (JetBrains)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Build JetBrains plugin
+        run: node scripts/ide/build-jetbrains.js
+
+      - name: Upload JetBrains installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-privacy-guardrail-jetbrains-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/privacy-guardrail-jetbrains-*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  visualstudio-extension:
+    name: IDE installer (Visual Studio)
+    needs: [prepare-models-and-package]
+    # Needs Visual Studio 2022 / Build Tools with the "Visual Studio extension
+    # development" workload on the runner.
+    runs-on: [self-hosted, windows]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Build Visual Studio extension
+        run: node scripts/ide/build-visualstudio.js
+
+      - name: Upload Visual Studio installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-privacy-guardrail-visualstudio-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/privacy-guardrail-visualstudio-*.vsix
           if-no-files-found: error
           retention-days: 30
 

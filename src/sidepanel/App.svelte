@@ -14,6 +14,7 @@
 	import PGLogo from '../popup/components/PGLogo.svelte';
 	import AnonymizeTab from './components/AnonymizeTab.svelte';
 	import HistoryTab from './components/HistoryTab.svelte';
+	import { onAnonymizeRequest, type ExternalAnonymizeRequest } from './external-input';
 
 	type TabId = 'history' | 'anonymize';
 	const tabs: Array<{ id: TabId; label: string }> = [
@@ -33,6 +34,8 @@
 	 */
 	let pinnedByUser = $state(false);
 	let restoreInput = $state('');
+	/** The last selection an IDE plugin handed over, if any. */
+	let external = $state.raw<ExternalAnonymizeRequest | null>(null);
 
 	const vaultEnabled = $derived(settings?.identityVaultEnabled ?? false);
 
@@ -91,7 +94,14 @@
 			else if (changes['pg_identity_vault']) void refreshVault();
 		};
 		chrome.storage.onChanged.addListener(onChanged);
-		return () => chrome.storage.onChanged.removeListener(onChanged);
+		const offRequest = onAnonymizeRequest((request) => {
+			external = request;
+			activeTab = 'anonymize';
+		});
+		return () => {
+			chrome.storage.onChanged.removeListener(onChanged);
+			offRequest();
+		};
 	});
 </script>
 
@@ -132,7 +142,7 @@
 		/>
 	</section>
 	<section class="panel-body" hidden={activeTab !== 'anonymize'}>
-		<AnonymizeTab {settings} {vault} onsaved={selectSaved} />
+		<AnonymizeTab {settings} {vault} {external} onsaved={selectSaved} />
 	</section>
 </main>
 

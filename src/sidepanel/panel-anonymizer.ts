@@ -48,6 +48,12 @@ export interface PanelDetection {
   classifications?: IdentifierClassifications;
 }
 
+/** Where text handed to the panel from outside came from, e.g. an IDE selection. */
+export interface PanelOrigin {
+  /** Shown in History, e.g. "VS Code · editor". */
+  label: string;
+}
+
 export interface PanelAnonymization {
   text: string;
   mappings: StoredEntityMap;
@@ -153,6 +159,7 @@ export async function commitPanelAnonymization(
   approvedSpans: PiiSpan[],
   classifications: IdentifierClassifications | undefined,
   entryId?: string,
+  origin?: PanelOrigin,
 ): Promise<{ result: PanelAnonymization; entry: HistoryEntry | null }> {
   const settings = await loadSettings();
   const vault = settings.identityVaultEnabled ? await loadIdentityVault() : null;
@@ -162,7 +169,8 @@ export async function commitPanelAnonymization(
 
   const entry = createHistoryEntry({
     id: entryId,
-    source: 'side-panel',
+    source: origin ? 'ide' : 'side-panel',
+    site: origin?.label,
     originalText,
     anonymizedText: result.text,
     mappings: result.mappings,
