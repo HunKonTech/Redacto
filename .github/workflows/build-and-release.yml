@@ -89,12 +89,25 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # The runner's system Python may be too new for the conversion wheels
+      # or lack the venv module, so use a standalone Python managed by uv.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python for model conversion
+        id: python
+        run: |
+          uv python install 3.12
+          echo "path=$(uv python find 3.12)" >> "$GITHUB_OUTPUT"
+
       - name: Prepare BardsAI NER model
+        env:
+          MODEL_PYTHON: ${{ steps.python.outputs.path }}
         run: |
           if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
-            scripts/edge/prepare-model.sh --force
+            scripts/edge/prepare-model.sh --python "$MODEL_PYTHON" --force
           else
-            scripts/edge/prepare-model.sh
+            scripts/edge/prepare-model.sh --python "$MODEL_PYTHON"
           fi
 
       - name: Prepare identifier-classifier model (optional)
