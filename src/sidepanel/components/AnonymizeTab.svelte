@@ -11,16 +11,20 @@
 		previewForPanel,
 		type PanelDetection,
 	} from '../panel-anonymizer';
+	import type { ExternalAnonymizeRequest } from '../external-input';
 	import { segmentsOf, toneFor } from '../segments';
 	import MarkedText from './MarkedText.svelte';
 
 	let {
 		settings,
 		vault,
+		external = null,
 		onsaved,
 	}: {
 		settings: Settings | null;
 		vault: IdentityVaultData;
+		/** A selection handed over by an IDE plugin: shown, anonymized and saved at once. */
+		external?: ExternalAnonymizeRequest | null;
 		/** Called with the history entry a copy wrote. */
 		onsaved: (entryId: string) => void;
 	} = $props();
@@ -36,6 +40,9 @@
 	let disabled = $state.raw<Set<string>>(new Set());
 	/** The history entry written by the last copy of this detection. */
 	let committedId = $state<string | null>(null);
+	/** The last handed-over selection; its origin labels History while the text is unchanged. */
+	let handedOver = $state.raw<ExternalAnonymizeRequest | null>(null);
+	let handledSeq = 0;
 	let note = $state('');
 	let noteTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -89,6 +96,27 @@
 		}
 	}
 
+	/** Anonymize a handed-over selection and save it to History right away. */
+	async function runExternal(request: ExternalAnonymizeRequest): Promise<void> {
+		input = request.text;
+		handedOver = request;
+		await run();
+		if (detectedFor !== request.text || error) return;
+		try {
+			const saved = await commit();
+			if (saved !== null) flash('Saved to History');
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+		}
+	}
+
+	$effect(() => {
+		// Wait for settings: `run` needs them.
+		if (!external || !settings || external.seq === handledSeq) return;
+		handledSeq = external.seq;
+		void runExternal(external);
+	});
+
 	function toggle(key: string, on: boolean): void {
 		const next = new Set(disabled);
 		if (on) next.delete(key);
@@ -104,6 +132,7 @@
 			approved,
 			detection.classifications,
 			committedId ?? undefined,
+			handedOver && handedOver.text === detectedFor ? handedOver.origin : undefined,
 		);
 		if (entry) {
 			committedId = entry.id;

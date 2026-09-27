@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+webview/
+LICENSE
+icon.png
+*.user

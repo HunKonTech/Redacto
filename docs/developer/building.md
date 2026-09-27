@@ -133,6 +133,10 @@ Those local model fixtures are not part of the public initial commit.
 
 The Chrome Web Store is the primary install path for beta users. Loading unpacked builds is for development and manual release validation.
 
+## IDE Plugins
+
+VS Code, JetBrains and Visual Studio plugins with the side panel: see [ide-plugins.md](ide-plugins.md).
+
 ## Common Build Problems
 
 - Missing `wasm-bindgen`: install `wasm-bindgen-cli` version `0.2.118`.

@@ -1,0 +1,91 @@
+{
+  "name": "privacy-guardrail-vscode",
+  "displayName": "Privacy Guardrail",
+  "description": "Anonymize selected code or console output on this device and restore the originals in AI replies. Local builds only \u2014 never published.",
+  "version": "0.5.0",
+  "private": true,
+  "publisher": "local",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "privacyGuardrail",
+          "title": "Privacy Guardrail",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "privacyGuardrail": [
+        {
+          "type": "webview",
+          "id": "privacyGuardrail.panel",
+          "name": "Anonymize & history"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "privacyGuardrail.anonymizeSelection",
+        "title": "Privacy Guardrail: Anonymize selection"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeTerminalSelection",
+        "title": "Privacy Guardrail: Anonymize terminal selection"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeClipboard",
+        "title": "Privacy Guardrail: Anonymize clipboard (e.g. copied from the Debug Console)"
+      },
+      {
+        "command": "privacyGuardrail.openPanel",
+        "title": "Privacy Guardrail: Open panel"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "privacyGuardrail.anonymizeSelection",
+          "when": "editorHasSelection",
+          "group": "9_cutcopypaste@9"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "privacyGuardrail.anonymizeTerminalSelection",
+          "when": "terminalTextSelected",
+          "group": "1_edit@9"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "privacyGuardrail.anonymizeSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeTerminalSelection",
+          "when": "terminalTextSelected"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "~1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.6.3"
+  },
+  "icon": "icon.png"
+}

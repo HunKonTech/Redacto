@@ -33,13 +33,16 @@ export const MAX_HISTORY_ENTRIES = 50;
 export const MAX_HISTORY_TEXT_CHARS = 20_000;
 
 /** Where an anonymization happened. */
-export type HistorySource = 'paste' | 'side-panel';
+export type HistorySource = 'paste' | 'side-panel' | 'ide';
 
 export interface HistoryEntry {
   id: string;
   createdAt: number;
   source: HistorySource;
-  /** Hostname the paste went to; absent for the side panel. */
+  /**
+   * Hostname the paste went to, or the IDE and view ("VS Code · editor") a
+   * selection came from; absent for the side panel.
+   */
   site?: string;
   originalText: string;
   anonymizedText: string;
@@ -192,7 +195,7 @@ function isHistoryEntry(value: unknown): value is HistoryEntry {
   return (
     typeof e.id === 'string' &&
     typeof e.createdAt === 'number' &&
-    (e.source === 'paste' || e.source === 'side-panel') &&
+    (e.source === 'paste' || e.source === 'side-panel' || e.source === 'ide') &&
     typeof e.originalText === 'string' &&
     typeof e.anonymizedText === 'string' &&
     !!e.mappings &&
