@@ -33,7 +33,11 @@ import { PageStatusChip } from '../ui/page-status-chip/page-status-chip';
 import { chipReasonMessageForStatus, deriveChipReason } from '../shared/page-status-chip-reason';
 import { SYSTEM_CHECK_STORAGE_KEY } from '../shared/system-check-storage';
 import { attachDeAnonBanner, type AttachedBanner } from '../ui/banner/de-anon-banner';
-import { anonymize, anonymizeWithVault } from '../shared/anonymizer';
+import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shared/anonymizer';
+import { extractCodeRegionTexts } from '../shared/code-rename';
+import { findCodeLikeRegions } from '../shared/code-identifiers';
+import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
+import type { ClassifyIdentifiersResponse } from '../shared/message-types';
 import { EntityMap } from '../shared/entity-map';
 import {
   buildConversationScope,
@@ -743,15 +747,151 @@ function makePreviewResolverFactory(
   };
 }
 
-function showReviewOverlay(
+/** Whether pasted code should have its declared identifiers renamed. */
+function renameIdentifiersEnabled(): boolean {
+  return settings?.codeAnonymization === 'full';
+}
+
+let classifyRequestCounter = 0;
+
+/**
+ * Asks the offscreen identifier-classifier model whether `originalText`'s
+ * undeclared code identifiers are OWN or LIB names. Best-effort: any
+ * failure (model unavailable, background unreachable, no code regions)
+ * resolves to `undefined`, and the caller falls back to the hardcoded
+ * library-name list via `code-rename.ts`'s own default.
+ */
+async function classifyCodeIdentifiers(
+  originalText: string,
+): Promise<ReadonlyMap<string, IdentifierVerdict> | undefined> {
+  const texts = extractCodeRegionTexts(originalText);
+  if (texts.length === 0) return undefined;
+
+  try {
+    const requestId = `identifiers-${Date.now()}-${classifyRequestCounter++}`;
+    const response = (await chrome.runtime.sendMessage({
+      type: 'CLASSIFY_IDENTIFIERS',
+      payload: { requestId, texts },
+    })) as ClassifyIdentifiersResponse | undefined;
+
+    if (!response || response.type !== 'IDENTIFIER_CLASSIFICATION_RESULT' || !response.payload.available) {
+      return undefined;
+    }
+    return new Map(response.payload.classifications.map((c) => [c.name, c.label]));
+  } catch (err) {
+    if (settings?.debug) {
+      console.warn('[PG:content] Identifier classification unavailable, using library-name list', err);
+    }
+    return undefined;
+  }
+}
+
+/**
+ * Replace the approved spans (and, when switched on, rename the code's own
+ * identifiers), paste the result, and record what went into the page.
+ * Returns false when nothing changed, so the caller can paste the original.
+ */
+async function pasteAnonymized(
+  originalText: string,
+  approvedSpans: PiiSpan[],
+  timings?: { totalMs: number },
+): Promise<boolean> {
+  const renameIdentifiers = renameIdentifiersEnabled();
+  const identifierClassifications = renameIdentifiers
+    ? await classifyCodeIdentifiers(originalText)
+    : undefined;
+  const options = { renameIdentifiers, identifierClassifications };
+  let anonymizedText: string;
+  let renamedIdentifiers: number;
+
+  if (settings.identityVaultEnabled) {
+    // Vault path — looks up existing identities, creates new
+    // records for first-time PII, writes back to storage so
+    // subsequent pastes (in any provider, any session) see the
+    // same canonical replacements.
+    const result = anonymizeWithVault(
+      originalText,
+      approvedSpans,
+      identityVault,
+      settings.defaultReplacementMode,
+      entityMap,
+      options,
+    );
+    entityMap = result.entityMap;
+    anonymizedText = result.text;
+    renamedIdentifiers = result.renamedIdentifiers;
+    identityVault = result.vaultData;
+    // Persist vault asynchronously — paste should not block on it.
+    saveIdentityVault(identityVault).catch((err) =>
+      console.error('[PG:content] vault save failed', err),
+    );
+  } else {
+    // Legacy path: per-conversation EntityMap only.
+    const result = anonymize(originalText, approvedSpans, entityMap, options);
+    entityMap = result.entityMap;
+    anonymizedText = result.text;
+    renamedIdentifiers = result.renamedIdentifiers;
+  }
+
+  if (anonymizedText === originalText) return false;
+
+  interceptor.pasteAnonymized(anonymizedText);
+
+  // Record what this session put into the page. The map may also hold
+  // entries restored from storage — on the shared "new chat" key those
+  // can belong to another tab's draft — and those are not ours to
+  // persist or file.
+  for (const [replacement] of entityMap.entries()) {
+    if (anonymizedText.includes(replacement)) {
+      sessionPlaceholders.add(replacement);
+    }
+  }
+
+  // The ledger just grew, so what may be resolved on this page grew
+  // with it — before anything has been written anywhere.
+  rebuildScope();
+  void recordEmittedTokens();
+
+  const parts = [];
+  if (approvedSpans.length > 0) parts.push(`${approvedSpans.length} item(s) replaced`);
+  if (renamedIdentifiers > 0) parts.push(`${renamedIdentifiers} identifier(s) renamed`);
+  showIndicator(`\u{1F512} ${parts.join(', ')}`, CHIP_FADE_MS);
+
+  if (settings.debug && timings) {
+    console.log(
+      `[PG:content] Detection: ${timings.totalMs}ms, anonymized ${approvedSpans.length} spans, renamed ${renamedIdentifiers} identifiers`,
+    );
+  }
+  return true;
+}
+
+/**
+ * The "nothing found" chip. Pasted code whose identifiers stay as they are
+ * because renaming is switched off says so, rather than reading as a miss.
+ */
+function noPiiIndicatorText(text: string): string {
+  if (!renameIdentifiersEnabled() && findCodeLikeRegions(text).length > 0) {
+    return '\u2713 No personal data found \u00b7 code kept as is (turn on "Rename code identifiers" in Options \u2192 Code blocks)';
+  }
+  return '\u2713 No personal data found';
+}
+
+/** Paste with only the code's identifiers renamed; false when there is nothing to rename. */
+async function pasteWithRenamedIdentifiers(originalText: string): Promise<boolean> {
+  return renameIdentifiersEnabled() && (await pasteAnonymized(originalText, []));
+}
+
+async function showReviewOverlay(
   originalText: string,
   rawSpans: PiiSpan[],
   timings?: { totalMs: number },
-): void {
+): Promise<void> {
   const spans = prepareReviewSpans(originalText, rawSpans, settings, adaptiveThresholds);
 
   if (spans.length === 0) {
-    // After filtering, nothing left — paste original
+    // After filtering, nothing left — paste original, or the code with its
+    // identifiers renamed when that is switched on.
+    if (await pasteWithRenamedIdentifiers(originalText)) return;
     showIndicator('\u2713 No actionable personal data found', NO_PII_INDICATOR_MS);
     interceptor.pasteOriginal(originalText);
     return;
@@ -761,64 +901,14 @@ function showReviewOverlay(
     originalText,
     spans,
     {
-      onConfirm: (approvedSpans: PiiSpan[]) => {
+      onConfirm: async (approvedSpans: PiiSpan[]) => {
         if (approvedSpans.length === 0) {
+          if (await pasteWithRenamedIdentifiers(originalText)) return;
           interceptor.pasteOriginal(originalText);
           return;
         }
-
-        let anonymizedText: string;
-
-        if (settings.identityVaultEnabled) {
-          // Vault path — looks up existing identities, creates new
-          // records for first-time PII, writes back to storage so
-          // subsequent pastes (in any provider, any session) see the
-          // same canonical replacements.
-          const result = anonymizeWithVault(
-            originalText,
-            approvedSpans,
-            identityVault,
-            settings.defaultReplacementMode,
-            entityMap,
-          );
-          entityMap = result.entityMap;
-          anonymizedText = result.text;
-          identityVault = result.vaultData;
-          // Persist vault asynchronously — paste should not block on it.
-          saveIdentityVault(identityVault).catch((err) =>
-            console.error('[PG:content] vault save failed', err),
-          );
-        } else {
-          // Legacy path: per-conversation EntityMap only.
-          const result = anonymize(originalText, approvedSpans, entityMap);
-          entityMap = result.entityMap;
-          anonymizedText = result.text;
-        }
-
-        interceptor.pasteAnonymized(anonymizedText);
-
-        // Record what this session put into the page. The map may also hold
-        // entries restored from storage — on the shared "new chat" key those
-        // can belong to another tab's draft — and those are not ours to
-        // persist or file.
-        for (const [replacement] of entityMap.entries()) {
-          if (anonymizedText.includes(replacement)) {
-            sessionPlaceholders.add(replacement);
-          }
-        }
-
-        // The ledger just grew, so what may be resolved on this page grew
-        // with it — before anything has been written anywhere.
-        rebuildScope();
-        void recordEmittedTokens();
-
-        showIndicator(
-          `\u{1F512} ${approvedSpans.length} item(s) replaced`,
-          CHIP_FADE_MS,
-        );
-
-        if (settings.debug && timings) {
-          console.log(`[PG:content] Detection: ${timings.totalMs}ms, anonymized ${approvedSpans.length} spans`);
+        if (!(await pasteAnonymized(originalText, approvedSpans, timings))) {
+          interceptor.pasteOriginal(originalText);
         }
       },
 
@@ -881,6 +971,13 @@ function showReviewOverlay(
     settings.identityVaultEnabled
       ? makePreviewResolverFactory(identityVault, settings.defaultReplacementMode)
       : undefined,
+    renameIdentifiersEnabled()
+      ? (approved) =>
+          previewIdentifierRenames(originalText, approved, {
+            entityMap,
+            vaultData: settings.identityVaultEnabled ? identityVault : undefined,
+          })
+      : undefined,
   );
 
   overlay.show();
@@ -931,14 +1028,17 @@ const interceptor = new PasteInterceptor(adapter, {
   onNoPii: (text) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showIndicator('\u2713 No personal data found', NO_PII_INDICATOR_MS);
-    interceptor.pasteOriginal(text);
+    void (async () => {
+      if (await pasteWithRenamedIdentifiers(text)) return;
+      showIndicator(noPiiIndicatorText(text), NO_PII_INDICATOR_MS);
+      interceptor.pasteOriginal(text);
+    })();
   },
 
   onPiiDetected: (text, spans, timings) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showReviewOverlay(text, spans, timings);
+    void showReviewOverlay(text, spans, timings);
   },
 
   onError: (error) => {

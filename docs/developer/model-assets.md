@@ -144,6 +144,44 @@ The repository still contains preparation scripts for deprecated or comparison m
 
 These are not the standard public beta runtime model. AI4Privacy assets are treated as local research/prototype assets and are not included in the official beta package.
 
+## Code Identifier Classifier
+
+Optional. When code anonymization is set to `full`, this classifier decides whether each undeclared identifier in pasted code is the user's own (renamed) or a library/framework name (kept). Without it, the extension falls back to the hardcoded `LIBRARY_NAMES` list in `src/shared/code-rename.ts`. The build only warns when it is missing.
+
+It is trained locally by `tools/identifier-classifier` (see its README) and kept in a private Hugging Face model repo, so other development machines can fetch it without retraining.
+
+Upload after a training run (on the training machine, once logged in with `hf auth login` and a write token):
+
+```bash
+hf upload koncsik/code-identifier-classifier \
+  tools/identifier-classifier/work/export/code-identifier-classifier . \
+  --repo-type model \
+  --private \
+  --exclude "onnx/model.onnx"
+```
+
+Only the int8 `onnx/model_quantized.onnx` is used at runtime; the 330 MB float export is left out.
+
+On another machine (logged in with a read token via `hf auth login`), just run:
+
+```bash
+npm run prepare:model:identifier-classifier
+```
+
+With no `--source-dir`, the script downloads `koncsik/code-identifier-classifier` from Hugging
+Face automatically (into `.model-sources/code-identifier-classifier`) and stages it into
+`generated/models/identifier-classifier`. If that output already exists it does nothing; pass
+`--force` to re-download and refresh it. To use a local export instead of Hugging Face, pass
+`--source-dir` explicitly, same as before:
+
+```bash
+npm run prepare:model:identifier-classifier -- \
+  --source-dir .model-sources/code-identifier-classifier \
+  --force
+```
+
+The decision threshold (`DEFAULT_LIB_THRESHOLD` in `src/shared/identifier-classifier-constants.ts`) is calibrated to one training run. Update it from the new run's `test_lib_threshold_own98` metric whenever you upload a retrained model.
+
 ## Licensing Caveats
 
 Project source code is Apache-2.0, but bundled model, runtime, font, and npm/Cargo dependencies keep their own licenses. Before packaging a public release:

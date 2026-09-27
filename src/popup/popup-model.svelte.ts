@@ -1,5 +1,7 @@
 import { derived, writable, get, type Readable, type Writable } from 'svelte/store';
 import type {
+  ClassifyIdentifiersRequest,
+  ClassifyIdentifiersResponse,
   ComposerMatchState,
   DetectionOptions,
   DetectPiiRequest,
@@ -29,7 +31,12 @@ import {
   runtimeNerModelKey,
   type NerModelChoice,
 } from '../shared/constants';
+import { anonymize } from '../shared/anonymizer';
+import { findCodeLikeRegions } from '../shared/code-identifiers';
+import { extractCodeRegionTexts } from '../shared/code-rename';
+import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
 import { GROUP_NAMES, GROUP_DEFAULT_ON, filterByGroup } from '../shared/category-groups';
+import { EntityMap } from '../shared/entity-map';
 import { applyAllowlistToText } from '../shared/feedback';
 import { loadIdentityVault } from '../shared/identity-vault';
 import { shouldAutoWarmLocalAi } from '../shared/local-ai-warmup-gate';
@@ -134,7 +141,7 @@ const CATEGORY_DESCRIPTIONS: Record<GroupName, string> = {
   Identity: 'Names, usernames',
   Contact: 'Email, phone, address',
   Financial: 'Cards, IBAN, accounts',
-  Network: 'IP addresses',
+  Network: 'IP addresses, internal hosts',
   Location: 'Places and regions',
   Password: 'Secrets and keys',
   Organization: 'Companies and orgs',
@@ -380,6 +387,77 @@ export function createAppModels(): AppModels {
     await saveAndBroadcast({ groupsEnabled: updateCategoryLocal(categoryId, value) });
   }
 
+  /**
+   * What the paste would become, with a fresh map so the preview neither
+   * touches the vault nor shifts real placeholder numbering.
+   */
+  async function formatReplacementPreview(text: string, spans: PiiSpan[], settings: Settings): Promise<string> {
+    const renameIdentifiers = settings.codeAnonymization === 'full';
+    if (!renameIdentifiers) {
+      const preview = anonymize(text, spans, new EntityMap(), { renameIdentifiers });
+      if (findCodeLikeRegions(text).length > 0) {
+        const hint = 'Code detected. Identifier renaming is off: turn on "Rename code identifiers" in Options \u2192 Code blocks.';
+        return preview.text === text ? hint : `${hint}\n\nAfter replacement:\n${preview.text}`;
+      }
+      return preview.text === text ? '' : `After replacement:\n${preview.text}`;
+    }
+
+    const classifier = await classifyCodeIdentifiers(text);
+    const preview = anonymize(text, spans, new EntityMap(), {
+      renameIdentifiers,
+      identifierClassifications: classifier?.classifications,
+    });
+    const classifierLine = classifier ? formatClassifierLine(classifier) : '';
+    if (preview.text === text) return classifierLine;
+    const renamed = preview.renamedIdentifiers > 0 ? ` (${preview.renamedIdentifiers} identifier(s) renamed)` : '';
+    const body = `After replacement${renamed}:\n${preview.text}`;
+    return classifierLine ? `${classifierLine}\n\n${body}` : body;
+  }
+
+  type ClassifierPreview = {
+    available: boolean;
+    error?: string;
+    classifications?: ReadonlyMap<string, IdentifierVerdict>;
+  };
+
+  /** Same round trip the content script makes on paste; undefined when there is no code. */
+  async function classifyCodeIdentifiers(text: string): Promise<ClassifierPreview | undefined> {
+    const texts = extractCodeRegionTexts(text);
+    if (texts.length === 0) return undefined;
+    try {
+      const request: ClassifyIdentifiersRequest = {
+        type: 'CLASSIFY_IDENTIFIERS',
+        payload: { requestId: `popup_identifiers_${Date.now()}`, texts },
+      };
+      const response = (await chrome.runtime.sendMessage(request)) as ClassifyIdentifiersResponse | undefined;
+      if (response?.type !== 'IDENTIFIER_CLASSIFICATION_RESULT' || !response.payload.available) {
+        return { available: false, error: response?.error };
+      }
+      return {
+        available: true,
+        classifications: new Map(response.payload.classifications.map((c) => [c.name, c.label])),
+      };
+    } catch (error) {
+      return { available: false, error: String(error) };
+    }
+  }
+
+  function formatClassifierLine(classifier: ClassifierPreview): string {
+    if (!classifier.available || !classifier.classifications) {
+      const reason = classifier.error ? ` (${classifier.error})` : '';
+      return `Identifier classifier unavailable${reason}; using the built-in library-name list.`;
+    }
+    const names = (label: IdentifierVerdict) =>
+      [...classifier.classifications!].filter(([, verdict]) => verdict === label).map(([name]) => name);
+    const own = names('OWN');
+    const lib = names('LIB');
+    return [
+      'Identifier classifier:',
+      `  own: ${own.length > 0 ? own.join(', ') : '\u2014'}`,
+      `  library: ${lib.length > 0 ? lib.join(', ') : '\u2014'}`,
+    ].join('\n');
+  }
+
   async function runDetection(): Promise<void> {
     const text = get(testInput).trim();
     if (!text || isRunning && get(isRunning)) return;
@@ -410,7 +488,9 @@ export function createAppModels(): AppModels {
       if (ner) renderNerStatus(ner);
       const nerLine = ner ? formatNerStatusLine(ner) : '';
       const body = spans.length === 0 ? formatNoPii(response.payload.timings) : formatResults(spans, response.payload.timings);
-      resultText.set(nerLine ? `${nerLine}\n\n${body}` : body);
+      const preview = await formatReplacementPreview(text, spans, settings);
+      const output = preview ? `${body}\n\n${preview}` : body;
+      resultText.set(nerLine ? `${nerLine}\n\n${output}` : output);
       runCount.update((count) => count + 1);
     } catch (error) {
       resultText.set(`Error: ${error}`);
