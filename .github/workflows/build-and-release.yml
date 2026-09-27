@@ -27,11 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Linux is validated again in prepare-models-and-package.
         include:
-          - os_label: linux
-            runs_on: [self-hosted, linux]
-          - os_label: mac
-            runs_on: [self-hosted, mac]
           - os_label: windows
             runs_on: [self-hosted, windows]
     runs-on: ${{ matrix.runs_on }}
