@@ -1,5 +1,6 @@
-import type { PiiSpan } from './message-types';
+import type { EntityType, PiiSpan } from './message-types';
 import { EntityMap } from './entity-map';
+import { dropKnownReplacements, knownReplacementTokens, placeholdersInText } from './already-anonymized';
 import { byteOffsetToStringIndex } from './text-offsets';
 import { bareIdentifierPlaceholder, createIdentifierPositionCheck } from './code-identifiers';
 import { aliasFor, IDENTIFIER_ALIAS_RE, planIdentifierRenames, type IdentifierRole } from './code-rename';
@@ -26,6 +27,13 @@ export interface AnonymizeOptions {
    * any name it doesn't cover (including when omitted entirely).
    */
   identifierClassifications?: ReadonlyMap<string, IdentifierVerdict>;
+  /**
+   * Replacement tokens from outside the EntityMap and vault passed in — the
+   * anonymization history. Like the tokens those two already know, they are
+   * never replaced or renamed again, so already-anonymized text passes
+   * through unchanged.
+   */
+  knownReplacements?: Iterable<string>;
 }
 
 export interface AnonymizeResult {
@@ -97,6 +105,7 @@ function identifierReplacements(
   resolveAlias: AliasResolver,
   knownNames: Iterable<string>,
   classifications?: ReadonlyMap<string, IdentifierVerdict>,
+  replacementTokens: ReadonlySet<string> = new Set(),
 ): { replacements: Replacement[]; renamed: number } {
   const plan = planIdentifierRenames(originalText, { knownNames, classifications });
   const blocked = new Set<string>();
@@ -108,7 +117,9 @@ function identifierReplacements(
 
   const aliases = new Map<string, string>();
   for (const [name, role] of plan.roles) {
-    if (blocked.has(name)) continue;
+    // An alias or placeholder from an earlier anonymization is already safe;
+    // renaming it again would break the way back to the original.
+    if (blocked.has(name) || replacementTokens.has(name)) continue;
     const alias = resolveAlias(name, role, plan.identifiersInText);
     if (alias) aliases.set(name, alias);
   }
@@ -180,9 +191,14 @@ export interface IdentifierRename {
 export function previewIdentifierRenames(
   originalText: string,
   spans: readonly PiiSpan[],
-  context: { entityMap?: EntityMap; vaultData?: IdentityVaultData } = {},
+  context: { entityMap?: EntityMap; vaultData?: IdentityVaultData; knownReplacements?: Iterable<string> } = {},
 ): IdentifierRename[] {
   const entityMap = new EntityMap(context.entityMap?.toStored());
+  const known = knownReplacementTokens({
+    vault: context.vaultData,
+    entityMap,
+    extra: context.knownReplacements,
+  });
   const spanRanges = spans.map((span) => ({
     start: byteOffsetToStringIndex(originalText, span.start),
     end: byteOffsetToStringIndex(originalText, span.end),
@@ -198,8 +214,17 @@ export function previewIdentifierRenames(
         spanRanges,
         vaultAliases(vaultData, entityMap, []),
         vaultAliasedNames(vaultData, entityMap),
+        undefined,
+        known,
       )
-    : identifierReplacements(originalText, spanRanges, entityMapAliases(entityMap), entityMapAliasedNames(entityMap));
+    : identifierReplacements(
+        originalText,
+        spanRanges,
+        entityMapAliases(entityMap),
+        entityMapAliasedNames(entityMap),
+        undefined,
+        known,
+      );
   // Preview is best-effort and stays synchronous (it re-runs on every span
   // toggle in the review overlay); it always uses the lexical LIBRARY_NAMES
   // fallback rather than awaiting the classifier. The actual paste (below)
@@ -232,8 +257,10 @@ export function anonymize(
     return { text: originalText, entityMap, renamedIdentifiers: 0 };
   }
 
+  const known = knownReplacementTokens({ entityMap, extra: options.knownReplacements });
+  for (const { type, index } of placeholdersInText(originalText, known)) entityMap.reserve(type, index);
   // Sort spans by start position (should already be sorted from merger)
-  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  const sorted = dropKnownReplacements(spans, known).sort((a, b) => a.start - b.start);
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 
@@ -254,6 +281,7 @@ export function anonymize(
       entityMapAliases(entityMap),
       entityMapAliasedNames(entityMap),
       options.identifierClassifications,
+      known,
     );
     replacements.push(...renames.replacements);
     renamedIdentifiers = renames.renamed;
@@ -303,7 +331,16 @@ export function anonymizeWithVault(
     return { text: originalText, entityMap, vaultData, recordsTouched, renamedIdentifiers: 0 };
   }
 
-  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  // Taken before any upsert: tokens this call is about to create are not
+  // "already anonymized".
+  const known = knownReplacementTokens({ vault: vaultData, entityMap, extra: options.knownReplacements });
+  // A token from outside the vault (history kept with cross-session memory
+  // off) can share a number with the next record; move the counter past it.
+  for (const { type, index } of placeholdersInText(originalText, known)) {
+    const entityType = type as EntityType;
+    vaultData.counters[entityType] = Math.max(vaultData.counters[entityType] ?? 0, index);
+  }
+  const sorted = dropKnownReplacements(spans, known).sort((a, b) => a.start - b.start);
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 
@@ -334,6 +371,7 @@ export function anonymizeWithVault(
       vaultAliases(vaultData, entityMap, recordsTouched),
       vaultAliasedNames(vaultData, entityMap),
       options.identifierClassifications,
+      known,
     );
     replacements.push(...renames.replacements);
     renamedIdentifiers = renames.renamed;

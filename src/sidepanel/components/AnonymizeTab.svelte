@@ -56,7 +56,7 @@
 	const approved = $derived(detection ? detection.spans.filter((span) => !disabled.has(keyOf(span))) : []);
 	const preview = $derived(
 		detection && settings && detectedFor !== null
-			? previewForPanel(detectedFor, approved, settings, vault, detection.classifications)
+			? previewForPanel(detectedFor, approved, settings, vault, detection.classifications, detection.knownReplacements)
 			: null,
 	);
 	const previewSegments = $derived(
@@ -164,7 +164,19 @@
 		</div>
 	</article>
 
-	{#if detection && !stale}
+	{#if detection?.alreadyAnonymized && !stale}
+		<article class="card">
+			<CardHeading title="Already anonymized" />
+			<div class="body">
+				<p class="hint">
+					This is the anonymized text from
+					<strong>{detection.alreadyAnonymized.site ?? 'the side panel'}</strong>, so it is left as it is — anonymizing
+					it again would replace its replacements. Paste it wherever you need it; the reply can be restored in
+					History &amp; restore.
+				</p>
+			</div>
+		</article>
+	{:else if detection && !stale}
 		{#if items.length > 0}
 			<article class="card">
 				<CardHeading title="Detected" badge={`${approved.length}/${detection.spans.length}`} />

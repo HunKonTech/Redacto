@@ -15,6 +15,7 @@
  * that is missing or rejects reads as empty, never as an error.
  */
 
+import { normalizeForMatch, textFingerprint } from './already-anonymized';
 import { bareIdentifierPlaceholder } from './code-identifiers';
 import type { EntityMap } from './entity-map';
 import { augmentEntityMap } from './entity-map-augment';
@@ -42,6 +43,11 @@ export interface HistoryEntry {
   site?: string;
   originalText: string;
   anonymizedText: string;
+  /**
+   * `textFingerprint` of the full anonymized text, so a paste of it is
+   * recognised even when `anonymizedText` was clipped.
+   */
+  anonymizedFingerprint?: string;
   /** True when either text was clipped to `MAX_HISTORY_TEXT_CHARS`. */
   truncated: boolean;
   /** Replacement token (placeholder, synthetic value or alias) → original. */
@@ -86,6 +92,7 @@ export function createHistoryEntry(input: NewHistoryEntry, now: number = Date.no
     ...(input.site ? { site: input.site } : {}),
     originalText: original.text,
     anonymizedText: anonymized.text,
+    anonymizedFingerprint: textFingerprint(input.anonymizedText),
     truncated: original.clipped || anonymized.clipped,
     mappings: { ...input.mappings },
     replacedCount: input.replacedCount,
@@ -128,6 +135,25 @@ export function restoreFromHistory(
   vaultEnabled: boolean,
 ): ResolveResult {
   return resolveText(text, augmentEntityMap(entry.mappings, vault, vaultEnabled));
+}
+
+/**
+ * The entry whose anonymized text `text` is, whole — a copy of it pasted
+ * somewhere. Null for anything else, including a part of one.
+ */
+export function findEntryForAnonymizedText(
+  text: string,
+  entries: readonly HistoryEntry[],
+): HistoryEntry | null {
+  const fingerprint = textFingerprint(text);
+  const normalized = normalizeForMatch(text);
+  return (
+    entries.find((entry) =>
+      entry.anonymizedFingerprint
+        ? entry.anonymizedFingerprint === fingerprint
+        : !entry.truncated && normalizeForMatch(entry.anonymizedText) === normalized,
+    ) ?? null
+  );
 }
 
 /**

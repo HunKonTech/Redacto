@@ -13,8 +13,11 @@
  */
 
 import { anonymize, anonymizeWithVault } from '../shared/anonymizer';
+import { dropKnownReplacements, knownReplacementTokens } from '../shared/already-anonymized';
 import {
   createHistoryEntry,
+  findEntryForAnonymizedText,
+  loadAnonymizationHistory,
   saveHistoryEntry,
   usedMappings,
   type HistoryEntry,
@@ -46,6 +49,10 @@ export type IdentifierClassifications = ReadonlyMap<string, IdentifierVerdict>;
 export interface PanelDetection {
   spans: PiiSpan[];
   classifications?: IdentifierClassifications;
+  /** Replacement tokens the anonymizer must leave alone. */
+  knownReplacements: string[];
+  /** Set when the text is, whole, the anonymized text of this entry. */
+  alreadyAnonymized?: HistoryEntry;
 }
 
 export interface PanelAnonymization {
@@ -62,6 +69,11 @@ let requestCounter = 0;
  * sensitivity thresholds.
  */
 export async function detectForPanel(text: string, settings: Settings): Promise<PanelDetection> {
+  const history = await loadAnonymizationHistory();
+  const knownReplacements = history.flatMap((entry) => Object.keys(entry.mappings));
+  const alreadyAnonymized = findEntryForAnonymizedText(text, history);
+  if (alreadyAnonymized) return { spans: [], knownReplacements, alreadyAnonymized };
+
   const requestId = `sidepanel_${Date.now()}_${requestCounter++}`;
   const request: DetectPiiRequest = {
     type: 'DETECT_PII',
@@ -76,11 +88,16 @@ export async function detectForPanel(text: string, settings: Settings): Promise<
   if (response.error) throw new Error(response.error);
 
   const adaptiveThresholds = await computeAdaptiveThresholds(settings.minConfidence);
-  const spans = prepareReviewSpans(text, response.payload.spans, settings, adaptiveThresholds);
+  const vault = settings.identityVaultEnabled ? await loadIdentityVault() : null;
+  const known = knownReplacementTokens({ vault, extra: knownReplacements });
+  const spans = dropKnownReplacements(
+    prepareReviewSpans(text, response.payload.spans, settings, adaptiveThresholds),
+    known,
+  );
   const classifications = settings.codeAnonymization === 'full'
     ? await classifyCodeIdentifiers(text)
     : undefined;
-  return { spans, classifications };
+  return { spans, classifications, knownReplacements };
 }
 
 /**
@@ -115,10 +132,12 @@ export function anonymizeForPanel(
   settings: Settings,
   vault: IdentityVaultData | null,
   classifications?: IdentifierClassifications,
+  knownReplacements: Iterable<string> = [],
 ): PanelAnonymization {
   const options = {
     renameIdentifiers: settings.codeAnonymization === 'full',
     identifierClassifications: classifications,
+    knownReplacements,
   };
   const result = vault
     ? anonymizeWithVault(originalText, approvedSpans, vault, settings.defaultReplacementMode, new EntityMap(), options)
@@ -137,9 +156,10 @@ export function previewForPanel(
   settings: Settings,
   vault: IdentityVaultData | null,
   classifications?: IdentifierClassifications,
+  knownReplacements: Iterable<string> = [],
 ): PanelAnonymization {
   const scratch = vault && settings.identityVaultEnabled ? structuredClone(vault) : null;
-  return anonymizeForPanel(originalText, approvedSpans, settings, scratch, classifications);
+  return anonymizeForPanel(originalText, approvedSpans, settings, scratch, classifications, knownReplacements);
 }
 
 /**
@@ -156,7 +176,12 @@ export async function commitPanelAnonymization(
 ): Promise<{ result: PanelAnonymization; entry: HistoryEntry | null }> {
   const settings = await loadSettings();
   const vault = settings.identityVaultEnabled ? await loadIdentityVault() : null;
-  const result = anonymizeForPanel(originalText, approvedSpans, settings, vault, classifications);
+  // Re-read rather than reused from detection: the entry this call replaces
+  // must not count its own tokens as someone else's.
+  const knownReplacements = (await loadAnonymizationHistory())
+    .filter((entry) => entry.id !== entryId)
+    .flatMap((entry) => Object.keys(entry.mappings));
+  const result = anonymizeForPanel(originalText, approvedSpans, settings, vault, classifications, knownReplacements);
   if (Object.keys(result.mappings).length === 0) return { result, entry: null };
   if (vault) await saveIdentityVault(vault);
 

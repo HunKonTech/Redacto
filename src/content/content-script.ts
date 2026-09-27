@@ -34,7 +34,16 @@ import { chipReasonMessageForStatus, deriveChipReason } from '../shared/page-sta
 import { SYSTEM_CHECK_STORAGE_KEY } from '../shared/system-check-storage';
 import { attachDeAnonBanner, type AttachedBanner } from '../ui/banner/de-anon-banner';
 import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shared/anonymizer';
-import { createHistoryEntry, saveHistoryEntry, usedMappings } from '../shared/anonymization-history';
+import {
+  HISTORY_STORAGE_KEY,
+  createHistoryEntry,
+  findEntryForAnonymizedText,
+  loadAnonymizationHistory,
+  saveHistoryEntry,
+  usedMappings,
+  type HistoryEntry,
+} from '../shared/anonymization-history';
+import { dropKnownReplacements, knownReplacementTokens } from '../shared/already-anonymized';
 import { extractCodeRegionTexts } from '../shared/code-rename';
 import { findCodeLikeRegions } from '../shared/code-identifiers';
 import { findErrorRegions } from '../shared/error-trace';
@@ -145,6 +154,13 @@ let scope: ConversationScope = emptyScope();
  * `loose` marks banners placed by the fallback, not on a matched turn.
  */
 const attachedBanners: Array<{ banner: AttachedBanner; loose: boolean }> = [];
+
+/**
+ * The anonymization history, kept current from storage. Its tokens are never
+ * anonymized again, and a paste that is exactly one of its anonymized texts
+ * goes in unchanged.
+ */
+let historyEntries: HistoryEntry[] = [];
 
 /** Tokens already reported as present but unresolvable; reported once each. */
 const unresolvableReported = new Set<string>();
@@ -749,6 +765,39 @@ function makePreviewResolverFactory(
   };
 }
 
+/** Replacement tokens from the history, for the anonymizer to leave alone. */
+function historyTokens(): string[] {
+  return historyEntries.flatMap((entry) => Object.keys(entry.mappings));
+}
+
+async function refreshHistoryEntries(): Promise<void> {
+  historyEntries = await loadAnonymizationHistory();
+}
+
+/**
+ * Take a paste that is exactly the anonymized text of a history entry — the
+ * side panel's output, or a message copied from another chat — and insert it
+ * unchanged. Scanning it again would replace its replacements.
+ *
+ * Its pairs join this page's ledger as if the paste had been anonymized
+ * here, so the reply to it is restored on the page like any other.
+ */
+async function claimAlreadyAnonymizedPaste(text: string): Promise<boolean> {
+  await refreshHistoryEntries();
+  const entry = findEntryForAnonymizedText(text, historyEntries);
+  if (!entry) return false;
+
+  interceptor.pasteOriginal(text);
+  for (const [token, original] of Object.entries(entry.mappings)) {
+    if (entityMap.getOriginal(token) === undefined) entityMap.addExternal(token, original);
+    sessionPlaceholders.add(token);
+  }
+  rebuildScope();
+  void recordEmittedTokens();
+  showIndicator('\u{1F512} Already anonymized \u00b7 pasted as is', NO_PII_INDICATOR_MS);
+  return true;
+}
+
 /** Whether pasted code should have its declared identifiers renamed. */
 function renameIdentifiersEnabled(): boolean {
   return settings?.codeAnonymization === 'full';
@@ -802,7 +851,7 @@ async function pasteAnonymized(
   const identifierClassifications = renameIdentifiers
     ? await classifyCodeIdentifiers(originalText)
     : undefined;
-  const options = { renameIdentifiers, identifierClassifications };
+  const options = { renameIdentifiers, identifierClassifications, knownReplacements: historyTokens() };
   let anonymizedText: string;
   let renamedIdentifiers: number;
 
@@ -904,7 +953,17 @@ async function showReviewOverlay(
   rawSpans: PiiSpan[],
   timings?: { totalMs: number },
 ): Promise<void> {
-  const spans = prepareReviewSpans(originalText, rawSpans, settings, adaptiveThresholds);
+  // A replacement token in the paste — part of an earlier anonymized text —
+  // is not personal data and is not offered for replacing again.
+  const known = knownReplacementTokens({
+    vault: settings.identityVaultEnabled ? identityVault : null,
+    entityMap,
+    mappings: historyEntries.map((entry) => entry.mappings),
+  });
+  const spans = dropKnownReplacements(
+    prepareReviewSpans(originalText, rawSpans, settings, adaptiveThresholds),
+    known,
+  );
 
   if (spans.length === 0) {
     // After filtering, nothing left — paste original, or the code with its
@@ -994,6 +1053,7 @@ async function showReviewOverlay(
           previewIdentifierRenames(originalText, approved, {
             entityMap,
             vaultData: settings.identityVaultEnabled ? identityVault : undefined,
+            knownReplacements: historyTokens(),
           })
       : undefined,
   );
@@ -1076,6 +1136,8 @@ const interceptor = new PasteInterceptor(adapter, {
   onExplicitCancelDecision: async () => chooseAfterExplicitScanCancel(),
 
   onComposerLookup: reportComposerLookup,
+
+  claimPaste: claimAlreadyAnonymizedPaste,
 }, {
   waitForReady: () => pasteInterceptorReady,
 });
@@ -1179,6 +1241,7 @@ async function init(): Promise<void> {
   }
 
   await loadConversationScope();
+  await refreshHistoryEntries();
 
   releasePasteInterceptor?.();
   releasePasteInterceptor = null;
@@ -1189,6 +1252,8 @@ async function init(): Promise<void> {
   // pastes in this tab until reload.
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
+      // Kept in local or session storage depending on cross-session memory.
+      if (changes[HISTORY_STORAGE_KEY]) void refreshHistoryEntries();
       if (areaName !== 'local') return;
       if (changes['pg_identity_vault']) {
         const next = changes['pg_identity_vault'].newValue;

@@ -59,6 +59,13 @@ export interface PasteInterceptorCallbacks {
    * something that could have accepted it.
    */
   onComposerLookup?: (match: ComposerMatch) => void;
+  /**
+   * Offered every paste before it is scanned. Returning true means the
+   * caller has handled it — typically by inserting it unchanged through
+   * `pasteOriginal` because it is already anonymized — and it is not scanned.
+   * A rejection is treated as false.
+   */
+  claimPaste?: (text: string) => Promise<boolean>;
 }
 
 export interface PasteInterceptorOptions {
@@ -220,6 +227,16 @@ export class PasteInterceptor {
     if (!this.enabled) {
       this.pasteOriginal(text);
       return;
+    }
+
+    if (this.callbacks.claimPaste) {
+      let claimed = false;
+      try {
+        claimed = await this.callbacks.claimPaste(text);
+      } catch (error) {
+        console.warn('[PG:content] Paste claim check failed; scanning instead:', error);
+      }
+      if (claimed) return;
     }
 
     this.callbacks.onAnalyzing();
