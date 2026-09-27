@@ -51,7 +51,7 @@ jobs:
       # ones inside dtolnay/rust-toolchain.
       - name: Prefer Git Bash on Windows
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell
         run: |
           $gitBin = Join-Path $env:ProgramFiles 'Git\bin'
           if (-not (Test-Path (Join-Path $gitBin 'bash.exe'))) {
