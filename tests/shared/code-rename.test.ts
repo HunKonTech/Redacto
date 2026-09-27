@@ -1,4 +1,4 @@
-import { aliasFor, extractCodeRegionTexts, planIdentifierRenames } from '../../src/shared/code-rename';
+import { aliasFor, extractCodeRegionTexts, IDENTIFIER_ALIAS_RE, planIdentifierRenames } from '../../src/shared/code-rename';
 import type { IdentifierVerdict } from '../../src/shared/identifier-classifier-constants';
 
 function renamedNames(text: string): Record<string, string> {
@@ -185,6 +185,54 @@ describe('extractCodeRegionTexts', () => {
   test('returns nothing for prose with no code regions', () => {
     expect(extractCodeRegionTexts('Just a sentence about alma the variable.')).toEqual([]);
   });
+
+  test('leaves error output out of the code and adds its frames as code', () => {
+    const text = [
+      '```python',
+      'def load_invoice(invoice_id):',
+      '    return repo.get(invoice_id)',
+      'Traceback (most recent call last):',
+      '  File "app.py", line 2, in load_invoice',
+      '    return repo.get(invoice_id)',
+      "ValueError: bad id",
+      '```',
+    ].join('\n');
+
+    expect(extractCodeRegionTexts(text)).toEqual([
+      'def load_invoice(invoice_id):\n    return repo.get(invoice_id)\n',
+      'load_invoice();\nreturn repo.get(invoice_id)\nthrow new ValueError();',
+    ]);
+  });
+});
+
+describe('planIdentifierRenames on error output', () => {
+  const TRACE = `System.NullReferenceException: Object reference not set to an instance of an object.
+   at Acme.Billing.InvoiceService.LoadInvoice(Int32 id) in /src/InvoiceService.cs:line 42`;
+
+  test('own frames add namespaces, classes and methods', () => {
+    expect(renamedNames(TRACE)).toEqual({
+      Acme: 'namespace',
+      Billing: 'namespace',
+      InvoiceService: 'class',
+      LoadInvoice: 'function',
+    });
+  });
+
+  test('a LIB verdict from the classifier keeps a frame segment', () => {
+    const classifications = new Map<string, IdentifierVerdict>([['Acme', 'LIB']]);
+
+    expect([...planIdentifierRenames(TRACE, { classifications }).roles.keys()]).toEqual([
+      'Billing',
+      'InvoiceService',
+      'LoadInvoice',
+    ]);
+  });
+
+  test('traceback prose in a code block is not analysed as code', () => {
+    const text = '```\nTraceback (most recent call last):\n  File "x.py", line 1, in <module>\n    run()\nNameError: name \'run\' is not defined\n```';
+
+    expect(renamedNames(text)).toEqual({});
+  });
 });
 
 describe('aliasFor', () => {
@@ -196,5 +244,8 @@ describe('aliasFor', () => {
     expect(aliasFor('load_user', 'function', 5)).toBe('func_5');
     expect(aliasFor('GitHubClient', 'class', 6)).toBe('Class6');
     expect(aliasFor('LoadCommitAsync', 'function', 7)).toBe('Func7');
+    expect(aliasFor('acme', 'namespace', 8)).toBe('ns8');
+    expect(aliasFor('Acme', 'namespace', 9)).toBe('Ns9');
+    expect(['ns8', 'Ns9', 'NS_10'].every((alias) => IDENTIFIER_ALIAS_RE.test(alias))).toBe(true);
   });
 });

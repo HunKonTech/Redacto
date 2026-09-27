@@ -37,6 +37,7 @@ import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shar
 import { createHistoryEntry, saveHistoryEntry, usedMappings } from '../shared/anonymization-history';
 import { extractCodeRegionTexts } from '../shared/code-rename';
 import { findCodeLikeRegions } from '../shared/code-identifiers';
+import { findErrorRegions } from '../shared/error-trace';
 import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
 import type { ClassifyIdentifiersResponse } from '../shared/message-types';
 import { EntityMap } from '../shared/entity-map';
@@ -882,11 +883,12 @@ async function pasteAnonymized(
 }
 
 /**
- * The "nothing found" chip. Pasted code whose identifiers stay as they are
- * because renaming is switched off says so, rather than reading as a miss.
+ * The "nothing found" chip. Pasted code (or error output naming it) whose
+ * identifiers stay as they are because renaming is switched off says so,
+ * rather than reading as a miss.
  */
 function noPiiIndicatorText(text: string): string {
-  if (!renameIdentifiersEnabled() && findCodeLikeRegions(text).length > 0) {
+  if (!renameIdentifiersEnabled() && (findCodeLikeRegions(text).length > 0 || findErrorRegions(text).length > 0)) {
     return '\u2713 No personal data found \u00b7 code kept as is (turn on "Rename code identifiers" in Options \u2192 Code blocks)';
   }
   return '\u2713 No personal data found';

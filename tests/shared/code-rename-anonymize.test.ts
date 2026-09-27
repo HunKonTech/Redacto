@@ -196,3 +196,102 @@ describe('previewIdentifierRenames', () => {
     );
   });
 });
+
+describe('renameIdentifiers in error output', () => {
+  const PY_CODE = `def load_invoice(invoice_id):
+    invoice = repo.get(invoice_id)
+    return invoice.total`;
+  const PY_TRACE = `Traceback (most recent call last):
+  File "/srv/acme/billing/app.py", line 12, in load_invoice
+    return invoice.total
+AttributeError: 'NoneType' object has no attribute 'total'`;
+
+  const roundTrips = (text: string) => {
+    const entityMap = new EntityMap();
+    const result = anonymize(text, [], entityMap, RENAME);
+    expect(resolveText(result.text, entityMap).deAnonText).toBe(text);
+    return result.text;
+  };
+
+  test.each([
+    ['fenced', `${PY_CODE}\n\n\`\`\`\n${PY_TRACE}\n\`\`\``],
+    ['unfenced', `${PY_CODE}\n\n${PY_TRACE}`],
+  ])('a %s Python traceback uses the code\'s aliases and keeps its prose', (_label, text) => {
+    const out = roundTrips(text);
+
+    expect(out).toContain('def func_1(param_2):');
+    expect(out).toContain('line 12, in func_1\n    return var3.total');
+    expect(out).toContain('Traceback (most recent call last):');
+    expect(out).toContain("AttributeError: 'NoneType' object has no attribute 'total'");
+  });
+
+  test('a .NET stack trace on its own renames its own frames and file names', () => {
+    const trace = `Unhandled exception. System.NullReferenceException: Object reference not set to an instance of an object.
+   at Acme.Billing.InvoiceService.LoadInvoice(Int32 id) in C:\\src\\Acme\\Billing\\InvoiceService.cs:line 42
+   at Acme.Billing.Program.Main(String[] args) in C:\\src\\Acme\\Billing\\Program.cs:line 10`;
+
+    expect(roundTrips(trace)).toBe(`Unhandled exception. System.NullReferenceException: Object reference not set to an instance of an object.
+   at Ns1.Ns2.Class3.Func4(Int32 id) in C:\\src\\Acme\\Billing\\Class3.cs:line 42
+   at Ns1.Ns2.Class5.Main(String[] args) in C:\\src\\Acme\\Billing\\Class5.cs:line 10`);
+  });
+
+  test('a Java stack trace keeps the domain and the JDK', () => {
+    const trace = `Exception in thread "main" java.lang.NullPointerException
+\tat com.acme.billing.InvoiceService.loadInvoice(InvoiceService.java:42)
+\tat java.base/java.lang.Thread.run(Thread.java:833)`;
+
+    expect(roundTrips(trace)).toBe(`Exception in thread "main" java.lang.NullPointerException
+\tat com.ns1.ns2.Class3.func4(Class3.java:42)
+\tat java.base/java.lang.Thread.run(Thread.java:833)`);
+  });
+
+  test('a Node stack trace leaves node_modules frames alone', () => {
+    const trace = `TypeError: Cannot read properties of undefined (reading 'total')
+    at InvoiceService.loadInvoice (/app/src/InvoiceService.ts:42:13)
+    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)`;
+
+    expect(roundTrips(trace)).toBe(`TypeError: Cannot read properties of undefined (reading 'total')
+    at Class1.func2 (/app/src/Class1.ts:42:13)
+    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)`);
+  });
+
+  test('names a diagnostic quotes get the code\'s aliases', () => {
+    const text = `interface AcmeInvoice { customerName: string }
+const invoice: AcmeInvoice = load();
+
+src/invoice.ts(12,5): error TS2339: Property 'customerName' does not exist on type 'AcmeInvoice'.`;
+
+    expect(roundTrips(text)).toBe(`interface Class1 { field2: string }
+const var3: Class1 = func4();
+
+src/invoice.ts(12,5): error TS2339: Property 'field2' does not exist on type 'Class1'.`);
+  });
+
+  test('a quoted name the paste does not rename stays', () => {
+    const tsc = "src/invoice.ts(12,5): error TS2339: Property 'customerName' does not exist on type 'AcmeInvoice'.";
+    expect(roundTrips(tsc)).toBe(tsc);
+  });
+
+  test('an exception type under the frames\' own namespace is renamed with them', () => {
+    const trace = `Acme.Billing.InvoiceNotFoundException: Invoice 'INV-1' was not found.
+   at Acme.Billing.InvoiceService.LoadInvoice(Int32 id)`;
+
+    expect(roundTrips(trace)).toBe(`Ns1.Ns2.Class5: Invoice 'INV-1' was not found.
+   at Ns1.Ns2.Class3.Func4(Int32 id)`);
+  });
+
+  test('the vault gives a trace the aliases of an earlier paste', () => {
+    const vault = emptyVaultData();
+    const code = 'public class InvoiceService {\n    public Invoice LoadInvoice(int id) { return null; }\n}';
+    anonymizeWithVault(code, [], vault, 'placeholder', new EntityMap(), RENAME);
+    const trace = `System.NullReferenceException: Object reference not set to an instance of an object.
+   at Acme.Billing.InvoiceService.LoadInvoice(Int32 id) in /src/InvoiceService.cs:line 3`;
+
+    const entityMap = new EntityMap();
+    const { text } = anonymizeWithVault(trace, [], vault, 'placeholder', entityMap, RENAME);
+
+    expect(text).toBe(`System.NullReferenceException: Object reference not set to an instance of an object.
+   at Ns5.Ns6.Class1.Func2(Int32 param3) in /src/Class1.cs:line 3`);
+    expect(resolveText(text, entityMap).deAnonText).toBe(trace);
+  });
+});

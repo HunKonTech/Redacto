@@ -176,4 +176,25 @@ describe('code-safe replacement and restoration', () => {
 
     expect(check(start, start + 'Ada Lovelace'.length)).toBe(false);
   });
+
+  test('error output is prose, except for a name glued into an identifier and quoted source lines', () => {
+    const text = [
+      '```',
+      'Traceback (most recent call last):',
+      '  File "/home/ada/app.py", line 3, in getAdaLovelaceInvoice',
+      '    total = load(ada_id)',
+      "KeyError: 'Ada Lovelace'",
+      '```',
+    ].join('\n');
+    const check = createIdentifierPositionCheck(text);
+    const at = (needle: string, before = ''): [number, number] => {
+      const start = text.indexOf(before + needle) + before.length;
+      return [start, start + needle.length];
+    };
+
+    expect(check(...at('ada', '/home/'))).toBe(false);
+    expect(check(...at('Ada Lovelace'))).toBe(false);
+    expect(check(...at('AdaLovelace'))).toBe(true);
+    expect(check(...at('ada_id'))).toBe(true);
+  });
 });
