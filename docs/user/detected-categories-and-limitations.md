@@ -60,6 +60,20 @@ print(alma.nev)             →   print(var3.field2)
 - The review's **Replaced** tab shows the renamed code before you paste. Renaming also applies on protected web search pages, and to code pasted as a single line when it holds several statements (`int a = 1; var b = a;`).
 - Nothing is renamed in text that does not look like code. The analysis reads code shapes rather than compiling it, so an unusual declaration can be missed (its name then stays) and a library name that happens to match one of your names can be renamed (it is restored on copy-back).
 
+#### Error messages and stack traces
+
+Error output pasted with the code, or on its own, is renamed too: stack traces from Python, Node/JavaScript/TypeScript, .NET, Java/Kotlin, Go and Rust, exception lines, and compiler diagnostics from tsc, the C# compiler, gcc/clang, javac, kotlinc, rustc and `go build`.
+
+```text
+   at Acme.Billing.InvoiceService.LoadInvoice(Int32 id) in C:\src\Acme\InvoiceService.cs:line 42
+→  at Ns1.Ns2.Class3.Func4(Int32 id) in C:\src\Acme\Class3.cs:line 42
+```
+
+- A name renamed in the code gets the same alias in the error output (`in load_invoice` → `in func_1`, `Property 'customerName'` → `Property 'field2'`).
+- The namespaces, classes and methods of your own stack frames are renamed even when no code is pasted (`Acme` → `Ns1`); frames of libraries and the runtime (`System.`, `java.`, `node_modules/`, `site-packages/`, the Go and Rust standard libraries) stay as they are. In Java package names the leading domain (`com`, `org`, …) stays.
+- The file name follows its class (`InvoiceService.cs` → `Class3.cs`); the folders stay. An account name in a home-directory path is replaced by the secret detection as before.
+- A name the output only quotes (`'customerName'`, `` `customer_name` ``) is renamed only when the paste, or an earlier one, renames it anyway. The message text itself (`Traceback (most recent call last)`, `has no attribute`) is never changed, and neither is a `KeyError` key.
+
 ## What Local AI Helps With
 
 Local AI can help identify context-sensitive spans such as person names, organizations, addresses, locations, usernames, passwords, and miscellaneous sensitive phrases. It can still miss spans or flag harmless text.

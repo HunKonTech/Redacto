@@ -1,5 +1,13 @@
 import { findCodeLikeRegions } from './code-identifiers';
 import type { CodeRegion } from './code-region-finder';
+import {
+  errorRegionCodeTexts,
+  findErrorRegions,
+  parseErrorSlots,
+  subtractRegions,
+  type ErrorRegion,
+  type ErrorSlot,
+} from './error-trace';
 import type { IdentifierVerdict } from './identifier-classifier-constants';
 
 /**
@@ -14,9 +22,14 @@ import type { IdentifierVerdict } from './identifier-classifier-constants';
  * depend on it, because every alias is restored to exactly the name it
  * replaced. A missed name leaks that name; a wrongly renamed library name
  * only confuses the model until the reply is restored.
+ *
+ * Error output pasted with the code (stack traces, exception lines, compiler
+ * diagnostics — see `error-trace.ts`) is not analysed as code: its frames
+ * add the user's own namespaces, classes and methods, and the names it
+ * quotes get the same aliases as in the code, while its prose stays as is.
  */
 
-export type IdentifierRole = 'class' | 'function' | 'variable' | 'field' | 'param' | 'constant';
+export type IdentifierRole = 'class' | 'function' | 'variable' | 'field' | 'param' | 'constant' | 'namespace';
 
 export interface RenameOccurrence {
   /** UTF-16 index into the analysed text. */
@@ -145,11 +158,12 @@ const DECLARING_KEYWORDS: Record<string, IdentifierRole> = {
 
 const ROLE_PRIORITY: Record<IdentifierRole, number> = {
   param: 0,
-  variable: 1,
-  constant: 2,
-  field: 3,
-  function: 4,
-  class: 5,
+  namespace: 1,
+  variable: 2,
+  constant: 3,
+  field: 4,
+  function: 5,
+  class: 6,
 };
 
 const MODIFIERS = new Set(
@@ -355,6 +369,18 @@ function isTypeLike(token: Token | undefined): boolean {
   return token.text === '>' || token.text === ']' || token.text === '?' || token.text === '*' || token.text === '&';
 }
 
+/**
+ * Whether an undeclared name is a library/framework name. Consults the
+ * identifier-classifier model's verdict first (when it had an opinion on
+ * this exact name); falls back to the hardcoded `LIBRARY_NAMES` list when
+ * the model is unavailable or did not see this name.
+ */
+function isLibraryName(name: string, classifications?: ReadonlyMap<string, IdentifierVerdict>): boolean {
+  const verdict = classifications?.get(name);
+  if (verdict) return verdict === 'LIB';
+  return LIBRARY_NAMES.has(name);
+}
+
 class Analyzer {
   private readonly code: Token[];
   readonly roles = new Map<string, IdentifierRole>();
@@ -367,16 +393,8 @@ class Analyzer {
     this.classifications = classifications;
   }
 
-  /**
-   * Whether an undeclared name is a library/framework name. Consults the
-   * identifier-classifier model's verdict first (when it had an opinion on
-   * this exact name); falls back to the hardcoded `LIBRARY_NAMES` list when
-   * the model is unavailable or did not see this name.
-   */
   private isLibraryName(name: string): boolean {
-    const verdict = this.classifications?.get(name);
-    if (verdict) return verdict === 'LIB';
-    return LIBRARY_NAMES.has(name);
+    return isLibraryName(name, this.classifications);
   }
 
   /** Index of the previous non-newline token. */
@@ -761,6 +779,47 @@ function commentOccurrences(
   return out;
 }
 
+/** The code bodies to analyse: code-like regions, fence lines and error output removed. */
+function codeBodies(text: string, regions: readonly CodeRegion[], errorRegions: readonly ErrorRegion[]): CodeRegion[] {
+  return subtractRegions(
+    regions.map((region) => codeBody(text, region)),
+    errorRegions,
+  );
+}
+
+/**
+ * Names error output adds: the segments of the user's own frames, and the
+ * segments of an exception type rooted in one of their namespaces
+ * (`Acme.Billing.InvoiceNotFoundException` next to `Acme.Billing…` frames).
+ * Library frames and names that are excluded or library names add nothing.
+ */
+function errorTraceRoles(
+  slots: readonly ErrorSlot[],
+  own: (name: string) => boolean,
+  known: ReadonlySet<string>,
+): Map<string, IdentifierRole> {
+  const roles = new Map<string, IdentifierRole>();
+  const note = (slot: ErrorSlot) => {
+    const role = slot.role ?? 'namespace';
+    const current = roles.get(slot.name);
+    if (!current || ROLE_PRIORITY[role] > ROLE_PRIORITY[current]) roles.set(slot.name, role);
+  };
+  const qualified = slots.filter((slot) => slot.kind === 'qualified' && !slot.libraryFrame && own(slot.name));
+  for (const slot of qualified) {
+    if (!slot.exceptionType) note(slot);
+  }
+  const exceptionGroups = new Map<number, ErrorSlot[]>();
+  for (const slot of qualified) {
+    if (!slot.exceptionType || slot.group === undefined) continue;
+    exceptionGroups.set(slot.group, [...(exceptionGroups.get(slot.group) ?? []), slot]);
+  }
+  for (const group of exceptionGroups.values()) {
+    const root = group[0].name;
+    if (group.length > 1 && (roles.has(root) || known.has(root))) group.forEach(note);
+  }
+  return roles;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -788,17 +847,18 @@ export const IDENTIFIER_WORD_RE = /[\p{L}_$][\p{L}\p{N}_$]*/gu;
 
 /**
  * The trimmed text of every code-like region in `text` (fenced ``` markers
- * stripped) — the same regions and bodies `planIdentifierRenames` analyses.
- * Used to build the identifier-classifier model's input: it needs the
- * surrounding code as context, not isolated names.
+ * stripped) — the same regions and bodies `planIdentifierRenames` analyses —
+ * followed by the frames of any error output, written as code
+ * (`Acme.Billing.InvoiceService.LoadInvoice();`). Used to build the
+ * identifier-classifier model's input: it needs the surrounding code as
+ * context, not isolated names.
  */
 export function extractCodeRegionTexts(text: string, regions?: CodeRegion[]): string[] {
-  return (regions ?? findCodeLikeRegions(text))
-    .map((region) => {
-      const body = codeBody(text, region);
-      return text.slice(body.start, body.end);
-    })
+  const errorRegions = findErrorRegions(text);
+  const code = codeBodies(text, regions ?? findCodeLikeRegions(text), errorRegions)
+    .map((body) => text.slice(body.start, body.end))
     .filter((body) => body.trim().length > 0);
+  return [...code, ...errorRegionCodeTexts(text, errorRegions)];
 }
 
 /**
@@ -807,12 +867,20 @@ export function extractCodeRegionTexts(text: string, regions?: CodeRegion[]): st
  * in another is renamed in both).
  */
 export function planIdentifierRenames(text: string, options: RenamePlanOptions = {}): RenamePlan {
-  const regions = options.regions ?? findCodeLikeRegions(text);
+  const errorRegions = findErrorRegions(text);
+  const errorSlots = parseErrorSlots(text, errorRegions);
   const lexer = new Lexer(text);
-  for (const region of regions) {
-    const body = codeBody(text, region);
+  for (const body of codeBodies(text, options.regions ?? findCodeLikeRegions(text), errorRegions)) {
     lexer.lex(body.start, body.end);
     lexer.tokens.push({ kind: 'newline', start: body.end, end: body.end, text: '\n' });
+  }
+  // Source lines quoted by error output: their names are renamed like the
+  // code's, but they declare nothing.
+  const echoLexer = new Lexer(text);
+  for (const slot of errorSlots) {
+    if (slot.kind !== 'echo' || slot.libraryFrame) continue;
+    echoLexer.lex(slot.start, slot.end);
+    echoLexer.tokens.push({ kind: 'newline', start: slot.end, end: slot.end, text: '\n' });
   }
 
   const analyzer = new Analyzer(lexer.tokens, options.classifications);
@@ -822,8 +890,14 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
   for (const [name, role] of analyzer.roles) {
     if (!analyzer.excluded(name)) roles.set(name, role);
   }
-  const usedNames = new Set(lexer.tokens.filter((token) => token.kind === 'ident').map((token) => token.text));
-  for (const name of options.knownNames ?? []) {
+  const usedNames = new Set(
+    [...lexer.tokens, ...echoLexer.tokens].filter((token) => token.kind === 'ident').map((token) => token.text),
+  );
+  for (const slot of errorSlots) {
+    if (slot.kind !== 'echo' && !slot.libraryFrame) usedNames.add(slot.name);
+  }
+  const knownNames = new Set(options.knownNames ?? []);
+  for (const name of knownNames) {
     if (!roles.has(name) && usedNames.has(name) && !analyzer.excluded(name)) roles.set(name, 'variable');
   }
   const undeclared = new Set<string>();
@@ -832,12 +906,33 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
     roles.set(name, role);
     undeclared.add(name);
   }
+  const ownInTrace = (name: string) =>
+    !analyzer.excluded(name) && !isLibraryName(name, options.classifications) && !TYPE_KEYWORDS.has(name);
+  for (const [name, role] of errorTraceRoles(errorSlots, ownInTrace, new Set([...roles.keys(), ...knownNames]))) {
+    if (roles.has(name)) continue;
+    roles.set(name, role);
+    undeclared.add(name);
+  }
   const renamed = new Set(roles.keys());
 
   const comments = lexer.tokens.filter((token) => token.kind === 'comment');
+  const echoComments = echoLexer.tokens.filter((token) => token.kind === 'comment');
+  // A file is named after a class or module (`InvoiceService.cs`), not after a variable.
+  const frameNames = new Set(
+    errorSlots.filter((slot) => slot.kind === 'qualified' && !slot.libraryFrame).map((slot) => slot.name),
+  );
+  const fileNamed = (name: string) =>
+    frameNames.has(name) || ['class', 'namespace', 'function'].includes(roles.get(name) ?? '');
+  const slotOccurrences = errorSlots
+    .filter((slot) => slot.kind !== 'echo' && !slot.libraryFrame && renamed.has(slot.name))
+    .filter((slot) => slot.kind !== 'file-stem' || fileNamed(slot.name))
+    .map((slot) => ({ start: slot.start, end: slot.end, name: slot.name }));
   const occurrences = [
     ...analyzer.occurrences(renamed),
     ...commentOccurrences(text, comments, renamed, undeclared),
+    ...new Analyzer(echoLexer.tokens).occurrences(renamed),
+    ...commentOccurrences(text, echoComments, renamed, undeclared),
+    ...slotOccurrences,
   ].sort(
     (a, b) => a.start - b.start,
   );
@@ -857,16 +952,17 @@ const ROLE_WORD: Record<IdentifierRole, string> = {
   field: 'field',
   param: 'param',
   constant: 'CONST',
+  namespace: 'ns',
 };
 
 /** Matches every alias this module can produce. */
-export const IDENTIFIER_ALIAS_RE = /^_*(?:Class|[Ff]unc|[Vv]ar|[Ff]ield|[Pp]aram|CONST|Const|VAR|FUNC|FIELD|PARAM|CLASS)_?(\d+)$/;
+export const IDENTIFIER_ALIAS_RE = /^_*(?:Class|[Ff]unc|[Vv]ar|[Ff]ield|[Pp]aram|[Nn]s|CONST|Const|VAR|FUNC|FIELD|PARAM|CLASS|NS)_?(\d+)$/;
 
 /**
  * Alias for `name` in the role it was declared in, keeping its naming
  * convention so the code still reads idiomatically: `alma` → `var1`,
  * `_etags` → `_field2`, `ClientName` → `Field3`, `MAX_SIZE` → `CONST_4`,
- * `load_user` → `func_5`.
+ * `load_user` → `func_5`, `Acme` → `Ns6`.
  */
 export function aliasFor(name: string, role: IdentifierRole, index: number): string {
   const underscores = /^_*/.exec(name)![0];

@@ -34,6 +34,7 @@ import {
 import { anonymize } from '../shared/anonymizer';
 import { findCodeLikeRegions } from '../shared/code-identifiers';
 import { extractCodeRegionTexts } from '../shared/code-rename';
+import { findErrorRegions } from '../shared/error-trace';
 import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
 import { GROUP_NAMES, GROUP_DEFAULT_ON, filterByGroup } from '../shared/category-groups';
 import { EntityMap } from '../shared/entity-map';
@@ -395,7 +396,7 @@ export function createAppModels(): AppModels {
     const renameIdentifiers = settings.codeAnonymization === 'full';
     if (!renameIdentifiers) {
       const preview = anonymize(text, spans, new EntityMap(), { renameIdentifiers });
-      if (findCodeLikeRegions(text).length > 0) {
+      if (findCodeLikeRegions(text).length > 0 || findErrorRegions(text).length > 0) {
         const hint = 'Code detected. Identifier renaming is off: turn on "Rename code identifiers" in Options \u2192 Code blocks.';
         return preview.text === text ? hint : `${hint}\n\nAfter replacement:\n${preview.text}`;
       }

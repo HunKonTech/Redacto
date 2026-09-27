@@ -1,4 +1,5 @@
 import { findCodeRegions, type CodeRegion } from './code-region-finder';
+import { findErrorRegions, parseErrorSlots, subtractRegions } from './error-trace';
 import type { PiiSpan } from './message-types';
 import { byteOffsetToStringIndex, stringIndexToByteOffset } from './text-offsets';
 
@@ -295,23 +296,38 @@ function insideStringOrComment(text: string, lineStart: number, index: number): 
 }
 
 /**
+ * The code in `text` — code-like regions without the error output in them
+ * (stack traces, diagnostics: see `error-trace.ts`), plus the source lines
+ * that error output quotes — and the error output itself.
+ */
+function codeAndErrorRegions(text: string): { code: CodeRegion[]; errors: CodeRegion[] } {
+  const errors = findErrorRegions(text);
+  if (errors.length === 0) return { code: findCodeLikeRegions(text), errors };
+  const echoes = parseErrorSlots(text, errors)
+    .filter((slot) => slot.kind === 'echo')
+    .map(({ start, end }) => ({ start, end }));
+  return { code: mergeRegions([...subtractRegions(findCodeLikeRegions(text), errors), ...echoes]), errors };
+}
+
+/**
  * Returns a predicate telling whether a replacement at [start, end) (UTF-16
  * indices) sits in identifier position — inside code, outside strings and
  * comments, or glued to identifier characters. There a bracketed
  * placeholder would break the code, so the caller emits `TYPE_N` instead.
+ * Error output is prose: there only a position glued to a name counts
+ * (`at Acme.GetAnnaMuellerInvoice()`).
  */
 export function createIdentifierPositionCheck(
   text: string,
 ): (start: number, end: number) => boolean {
-  let regions: CodeRegion[] | null = null;
+  let regions: { code: CodeRegion[]; errors: CodeRegion[] } | null = null;
   return (start, end) => {
-    regions ??= findCodeLikeRegions(text);
-    if (!inRegions(regions, start, end)) return false;
+    regions ??= codeAndErrorRegions(text);
     const before = text[start - 1];
     const after = text[end];
-    if ((before && IDENTIFIER_CHAR_RE.test(before)) || (after && IDENTIFIER_CHAR_RE.test(after))) {
-      return true;
-    }
+    const glued = (before && IDENTIFIER_CHAR_RE.test(before)) || (after && IDENTIFIER_CHAR_RE.test(after));
+    if (!inRegions(regions.code, start, end)) return Boolean(glued) && inRegions(regions.errors, start, end);
+    if (glued) return true;
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
     return !insideStringOrComment(text, lineStart, start);
   };
