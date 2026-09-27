@@ -32,6 +32,7 @@ import {
   type NerModelChoice,
 } from '../shared/constants';
 import { anonymize } from '../shared/anonymizer';
+import { clearAnonymizationHistory } from '../shared/anonymization-history';
 import { findCodeLikeRegions } from '../shared/code-identifiers';
 import { extractCodeRegionTexts } from '../shared/code-rename';
 import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
@@ -527,7 +528,7 @@ export function createAppModels(): AppModels {
       memoryEnabled,
       consistentReplacementMode,
       mappingCount,
-      clearMappings: async () => { await clearEntityMaps(); await refreshStats(); },
+      clearMappings: async () => { await clearEntityMaps(); await clearAnonymizationHistory(); await refreshStats(); },
       openVaultOptions: () => chrome.tabs.create({ url: `${chrome.runtime.getURL('options/options.html')}#vault-section` }),
       setMemoryEnabled: (value) => saveAndBroadcast({ identityVaultEnabled: value }),
       setReplacementMode: (mode) => saveAndBroadcast({ defaultReplacementMode: mode }),

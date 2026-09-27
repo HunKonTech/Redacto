@@ -1,0 +1,175 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_model_refresh:
+        description: 'Force re-download/re-quantize cached models'
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: privacy-guardrail-build-release
+  cancel-in-progress: false
+
+env:
+  WASM_BINDGEN_VERSION: '0.2.118'
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.os_label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os_label: linux
+            runs_on: [self-hosted, linux]
+          - os_label: mac
+            runs_on: [self-hosted, mac]
+          - os_label: windows
+            runs_on: [self-hosted, windows]
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Ensure pinned wasm-bindgen-cli
+        shell: bash
+        run: |
+          if ! command -v wasm-bindgen >/dev/null 2>&1 || \
+             ! wasm-bindgen --version | grep -q "${WASM_BINDGEN_VERSION}"; then
+            cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
+          fi
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run model-free CI validation
+        run: npm run validate:ci
+
+  prepare-models-and-package:
+    name: Prepare models and package
+    needs: [validate]
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Ensure pinned wasm-bindgen-cli
+        run: |
+          if ! command -v wasm-bindgen >/dev/null 2>&1 || \
+             ! wasm-bindgen --version | grep -q "${WASM_BINDGEN_VERSION}"; then
+            cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
+          fi
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Prepare BardsAI NER model
+        run: |
+          if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
+            scripts/edge/prepare-model.sh --force
+          else
+            scripts/edge/prepare-model.sh
+          fi
+
+      - name: Prepare identifier-classifier model (optional)
+        continue-on-error: true
+        run: |
+          if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
+            npm run prepare:model:identifier-classifier -- --force
+          else
+            npm run prepare:model:identifier-classifier
+          fi
+
+      - name: Run model-free CI validation
+        run: npm run validate:ci
+
+      - name: Verify release version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm run version:check -- --require-tag
+
+      - name: Package Chrome release
+        run: npm run package:release
+
+      - name: Package Edge release
+        run: npm run package:edge -- --require-model
+
+      - name: Read package version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Chrome package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-guardrail-chrome-${{ steps.version.outputs.version }}
+          path: |
+            release/privacy-guardrail-*.zip
+            release/privacy-guardrail-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Edge package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-guardrail-edge-${{ steps.version.outputs.version }}
+          path: |
+            release/edge/privacy-guardrail-edge-*.zip
+            release/edge/privacy-guardrail-edge-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  github-release:
+    name: Publish GitHub pre-release
+    needs: [prepare-models-and-package]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: privacy-guardrail-*-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Privacy Guardrail ${{ github.ref_name }}
+          prerelease: true
+          body: |
+            See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.ref_name }}/CHANGELOG.md) for release notes.
+
+            Chrome Web Store and Microsoft Edge Add-ons uploads remain manual (see `docs/developer/releasing.md`).
+          files: |
+            release-artifacts/*.zip
+            release-artifacts/*.sha256

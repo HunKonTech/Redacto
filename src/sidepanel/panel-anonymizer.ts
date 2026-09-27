@@ -1,0 +1,174 @@
+/**
+ * Privacy Guardrail — Side panel anonymizer
+ *
+ * The paste flow of the chat pages, for text pasted into the side panel:
+ * detect, let the user switch items off, anonymize, and — once the result is
+ * copied — record it in the identity vault and the history so a reply to it
+ * can be restored later.
+ *
+ * Previews never touch storage. They run against a copy of the vault, so
+ * switching an item on and off does not leave records behind for text that
+ * was never used; `commitPanelAnonymization` repeats the run against the
+ * vault as it is at that moment and saves it.
+ */
+
+import { anonymize, anonymizeWithVault } from '../shared/anonymizer';
+import {
+  createHistoryEntry,
+  saveHistoryEntry,
+  usedMappings,
+  type HistoryEntry,
+} from '../shared/anonymization-history';
+import { extractCodeRegionTexts } from '../shared/code-rename';
+import { detectionOptionsFromSettings } from '../shared/detection-config';
+import { EntityMap } from '../shared/entity-map';
+import { computeAdaptiveThresholds } from '../shared/feedback';
+import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
+import {
+  loadIdentityVault,
+  saveIdentityVault,
+  type IdentityVaultData,
+} from '../shared/identity-vault';
+import type {
+  ClassifyIdentifiersResponse,
+  DetectPiiRequest,
+  PiiResultResponse,
+  PiiSpan,
+  Settings,
+} from '../shared/message-types';
+import type { StoredEntityMap } from '../shared/storage';
+import { loadSettings } from '../shared/storage';
+import { prepareReviewSpans } from '../content/review-spans';
+
+export type IdentifierClassifications = ReadonlyMap<string, IdentifierVerdict>;
+
+/** What a detection run hands the panel. */
+export interface PanelDetection {
+  spans: PiiSpan[];
+  classifications?: IdentifierClassifications;
+}
+
+export interface PanelAnonymization {
+  text: string;
+  mappings: StoredEntityMap;
+  renamedIdentifiers: number;
+}
+
+let requestCounter = 0;
+
+/**
+ * Run the detection pipeline on `text` and apply the same filtering a paste
+ * on a chat page gets: enabled categories, allowlist, blocklist and the
+ * sensitivity thresholds.
+ */
+export async function detectForPanel(text: string, settings: Settings): Promise<PanelDetection> {
+  const requestId = `sidepanel_${Date.now()}_${requestCounter++}`;
+  const request: DetectPiiRequest = {
+    type: 'DETECT_PII',
+    payload: { text, requestId, config: detectionOptionsFromSettings(settings) },
+  };
+  const response = (await chrome.runtime.sendMessage(request)) as
+    | (PiiResultResponse & { error?: string })
+    | undefined;
+  if (response?.type !== 'PII_RESULT') {
+    throw new Error('Invalid response from the detection pipeline');
+  }
+  if (response.error) throw new Error(response.error);
+
+  const adaptiveThresholds = await computeAdaptiveThresholds(settings.minConfidence);
+  const spans = prepareReviewSpans(text, response.payload.spans, settings, adaptiveThresholds);
+  const classifications = settings.codeAnonymization === 'full'
+    ? await classifyCodeIdentifiers(text)
+    : undefined;
+  return { spans, classifications };
+}
+
+/**
+ * Same round trip the content script makes on paste. Best-effort: undefined
+ * leaves renaming to the library-name list.
+ */
+async function classifyCodeIdentifiers(text: string): Promise<IdentifierClassifications | undefined> {
+  const texts = extractCodeRegionTexts(text);
+  if (texts.length === 0) return undefined;
+  try {
+    const response = (await chrome.runtime.sendMessage({
+      type: 'CLASSIFY_IDENTIFIERS',
+      payload: { requestId: `sidepanel_identifiers_${Date.now()}_${requestCounter++}`, texts },
+    })) as ClassifyIdentifiersResponse | undefined;
+    if (response?.type !== 'IDENTIFIER_CLASSIFICATION_RESULT' || !response.payload.available) {
+      return undefined;
+    }
+    return new Map(response.payload.classifications.map((c) => [c.name, c.label]));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Anonymize `originalText` with `approvedSpans`. `vault` is mutated; pass a
+ * copy for a preview. A null vault is the cross-session-memory-off path:
+ * placeholders are numbered for this text alone.
+ */
+export function anonymizeForPanel(
+  originalText: string,
+  approvedSpans: PiiSpan[],
+  settings: Settings,
+  vault: IdentityVaultData | null,
+  classifications?: IdentifierClassifications,
+): PanelAnonymization {
+  const options = {
+    renameIdentifiers: settings.codeAnonymization === 'full',
+    identifierClassifications: classifications,
+  };
+  const result = vault
+    ? anonymizeWithVault(originalText, approvedSpans, vault, settings.defaultReplacementMode, new EntityMap(), options)
+    : anonymize(originalText, approvedSpans, new EntityMap(), options);
+  return {
+    text: result.text,
+    mappings: usedMappings(result.text, result.entityMap),
+    renamedIdentifiers: result.renamedIdentifiers,
+  };
+}
+
+/** A preview that leaves `vault` untouched. */
+export function previewForPanel(
+  originalText: string,
+  approvedSpans: PiiSpan[],
+  settings: Settings,
+  vault: IdentityVaultData | null,
+  classifications?: IdentifierClassifications,
+): PanelAnonymization {
+  const scratch = vault && settings.identityVaultEnabled ? structuredClone(vault) : null;
+  return anonymizeForPanel(originalText, approvedSpans, settings, scratch, classifications);
+}
+
+/**
+ * Anonymize against the stored vault, save the vault and write the history
+ * entry. `entryId` replaces an entry saved by an earlier copy of the same
+ * text, so re-copying after switching an item off does not add a second one.
+ * Text with nothing replaced has nothing to restore and is not recorded.
+ */
+export async function commitPanelAnonymization(
+  originalText: string,
+  approvedSpans: PiiSpan[],
+  classifications: IdentifierClassifications | undefined,
+  entryId?: string,
+): Promise<{ result: PanelAnonymization; entry: HistoryEntry | null }> {
+  const settings = await loadSettings();
+  const vault = settings.identityVaultEnabled ? await loadIdentityVault() : null;
+  const result = anonymizeForPanel(originalText, approvedSpans, settings, vault, classifications);
+  if (Object.keys(result.mappings).length === 0) return { result, entry: null };
+  if (vault) await saveIdentityVault(vault);
+
+  const entry = createHistoryEntry({
+    id: entryId,
+    source: 'side-panel',
+    originalText,
+    anonymizedText: result.text,
+    mappings: result.mappings,
+    replacedCount: approvedSpans.length,
+    renamedIdentifiers: result.renamedIdentifiers,
+  });
+  await saveHistoryEntry(entry, settings.identityVaultEnabled);
+  return { result, entry };
+}

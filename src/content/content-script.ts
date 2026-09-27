@@ -34,6 +34,7 @@ import { chipReasonMessageForStatus, deriveChipReason } from '../shared/page-sta
 import { SYSTEM_CHECK_STORAGE_KEY } from '../shared/system-check-storage';
 import { attachDeAnonBanner, type AttachedBanner } from '../ui/banner/de-anon-banner';
 import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shared/anonymizer';
+import { createHistoryEntry, saveHistoryEntry, usedMappings } from '../shared/anonymization-history';
 import { extractCodeRegionTexts } from '../shared/code-rename';
 import { findCodeLikeRegions } from '../shared/code-identifiers';
 import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
@@ -836,6 +837,21 @@ async function pasteAnonymized(
   if (anonymizedText === originalText) return false;
 
   interceptor.pasteAnonymized(anonymizedText);
+
+  // Keep the pairs this paste used, so the side panel can list it and
+  // restore a reply to it even after the conversation is gone.
+  saveHistoryEntry(
+    createHistoryEntry({
+      source: 'paste',
+      site: window.location.hostname,
+      originalText,
+      anonymizedText,
+      mappings: usedMappings(anonymizedText, entityMap),
+      replacedCount: approvedSpans.length,
+      renamedIdentifiers,
+    }),
+    settings.identityVaultEnabled,
+  ).catch((err) => console.error('[PG:content] history save failed', err));
 
   // Record what this session put into the page. The map may also hold
   // entries restored from storage — on the shared "new chat" key those

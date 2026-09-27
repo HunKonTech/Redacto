@@ -7,7 +7,8 @@
     "storage",
     "offscreen",
     "tabs",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://chat.openai.com/*",
@@ -76,6 +77,17 @@
     }
   ],
   "options_page": "options/options.html",
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Open the Privacy Guardrail side panel"
+    }
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

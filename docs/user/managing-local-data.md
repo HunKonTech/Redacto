@@ -12,6 +12,7 @@ Depending on enabled features and usage, local storage can include:
 - replacement mode choices
 - allowlist and blocklist entries
 - local feedback or correction logs
+- the anonymization history shown in the side panel: the original and anonymized text of recent anonymizations and the replacements they used (at most 50 entries)
 
 This data can include original sensitive text because placeholder restoration needs a local mapping from placeholders or synthetic values back to the original value.
 
@@ -20,6 +21,10 @@ This data can include original sensitive text because placeholder restoration ne
 The identity vault keeps consistent replacements across supported conversations and providers. For example, the same name can resolve to the same placeholder or synthetic value on `chatgpt.com`, `chat.openai.com`, `claude.ai`, and `gemini.google.com`.
 
 Vault records are stored locally in the browser profile. They are not placed in Chrome sync storage by this project.
+
+## Anonymization History
+
+The side panel keeps recent anonymizations so a reply to any of them can be restored. With cross-session memory switched off, the history is kept only until the browser closes. Delete single entries or the whole history in the side panel; **Clear mappings** in the popup clears it as well.
 
 ## Feedback Logs
 

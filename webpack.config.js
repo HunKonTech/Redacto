@@ -53,6 +53,7 @@ module.exports = (_env = {}) => {
       'system-check/system-check-offscreen': './src/system-check/system-check-offscreen.ts',
       'popup/popup': './src/popup/popup.ts',
       'options/options': './src/options/options.ts',
+      'sidepanel/sidepanel': './src/sidepanel/sidepanel.ts',
     },
 
     output: {
@@ -178,6 +179,13 @@ module.exports = (_env = {}) => {
         template: 'src/options/options.html',
         filename: 'options/options.html',
         chunks: ['options/options'],
+      }),
+
+      // Side panel HTML
+      new HtmlWebpackPlugin({
+        template: 'src/sidepanel/sidepanel.html',
+        filename: 'sidepanel/sidepanel.html',
+        chunks: ['sidepanel/sidepanel'],
       }),
 
       // Offscreen HTML

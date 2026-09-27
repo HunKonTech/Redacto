@@ -10,7 +10,8 @@ const SUPPORTED_HOST_PERMISSIONS = [
 
 // `scripting` registers the web search content script, and only while the
 // user has switched search protection on and granted the search sites.
-const REQUIRED_PERMISSIONS = ['storage', 'offscreen', 'tabs', 'scripting'];
+// `sidePanel` hosts the history, restore and anonymize panel.
+const REQUIRED_PERMISSIONS = ['storage', 'offscreen', 'tabs', 'scripting', 'sidePanel'];
 
 // Optional: requested at runtime from the options page, never at install.
 // Keep in sync with SEARCH_ENGINE_ORIGINS in src/shared/search-engines.ts.

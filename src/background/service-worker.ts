@@ -744,6 +744,18 @@ syncSearchContentScriptBestEffort();
 chrome.permissions?.onAdded?.addListener(syncSearchContentScriptBestEffort);
 chrome.permissions?.onRemoved?.addListener(syncSearchContentScriptBestEffort);
 
+/**
+ * Keyboard shortcut for the side panel. `sidePanel.open` only works in
+ * response to a user action, so it is called straight from the listener with
+ * nothing awaited before it.
+ */
+chrome.commands?.onCommand?.addListener((command, tab) => {
+  if (command !== "open-side-panel" || typeof tab?.windowId !== "number") return;
+  chrome.sidePanel?.open({ windowId: tab.windowId }).catch((err) => {
+    console.error("[PG:background] side panel open failed", err);
+  });
+});
+
 /** Initialize default settings on install. */
 chrome.runtime.onInstalled.addListener(async () => {
   const settings = await loadSettings();

@@ -11,6 +11,18 @@
   const { navigation, protection, categories, vault, test, settings } = createAppModels();
   const { activeTab, setActiveTab } = navigation;
   const { enabled: protectionEnabled, version, modelLabel } = protection;
+
+  // Looked up ahead of the click: `sidePanel.open` has to run in response to
+  // the click itself, before anything is awaited.
+  let windowId: number | null = null;
+  chrome.windows?.getCurrent().then((win) => { windowId = win.id ?? null; }).catch(() => undefined);
+
+  function openSidePanel(): void {
+    if (windowId === null || !chrome.sidePanel) return;
+    chrome.sidePanel.open({ windowId }).then(() => window.close()).catch((err) => {
+      console.error('[PG:popup] side panel open failed', err);
+    });
+  }
 </script>
 
 <div class="page-frame">
@@ -104,6 +116,7 @@
     </section>
 
     <footer class="shell-footer">
+      <button type="button" onclick={openSidePanel} title="History, restore and anonymize (Alt+Shift+P)">Open side panel</button>
       <button type="button" onclick={() => settings.openOptions()}>More settings…</button>
     </footer>
   </main>
@@ -242,6 +255,8 @@
   }
   .shell-footer {
     flex-shrink: 0;
+    display: flex;
+    gap: 8px;
     padding: 8px 12px;
     border-top: 1px solid rgb(14 23 38 / 8%);
     background: var(--color-header);

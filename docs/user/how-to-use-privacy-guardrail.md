@@ -42,6 +42,13 @@ For repeated false positives, use the extension settings to add allowlist entrie
 
 On supported chat pages, Privacy Guardrail watches model responses for placeholders and restores known originals locally where supported. Restoration depends on the local placeholder or vault record still being available. If the model rewrites a placeholder heavily, restoration may be incomplete.
 
+## Side Panel
+
+The side panel stays open next to every tab. Open it with **Open side panel** in the popup or with `Alt+Shift+P` (change it at `chrome://extensions/shortcuts`).
+
+- **History & restore** lists recent anonymizations: pastes you reviewed on a chat page and text you anonymized in the panel. Paste an AI reply, or any text containing their replacements, into the restore box and the original values come back, ready to copy. The panel picks the entry whose replacements appear in the text; click an entry to choose it yourself.
+- **Anonymize** takes pasted text or code, finds personal data with the same detection and settings as a paste on a chat page, and lets you switch items off before copying the result. Copying saves the entry to the history, so this also works for chat sites and tools the extension does not run on.
+
 ## Canceling A Scan
 
 If a scan is taking too long, use the cancel control. Depending on your settings, the extension may ask whether to paste the original text or drop the pending paste.
