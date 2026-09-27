@@ -98,6 +98,30 @@ print(var3.field2)`);
     expect(text).toBe('const var2 = 1;\nconst var3 = var2 + 1;');
   });
 
+  test('prose leading into code on the same line keeps its words and uses the code\'s aliases', () => {
+    const original = [
+      'A hiba, hogy nemtalálja a offscreenReady_1-et pedig az Promise<void> | null = null; ként definiálva van. let offscreenReady: Promise<void> | null = null;',
+      'const canceledDetectionIds = new Set<string>();',
+      '',
+      'function invalidateOffscreenReady(): void {',
+      '  offscreenReady_1 = null;',
+      '}',
+    ].join('\n');
+    const { text, entityMap } = anonymize(original, [], new EntityMap(), RENAME);
+
+    expect(text).toBe(
+      [
+        'A hiba, hogy nemtalálja a var_4-et pedig az Promise<void> | null = null; ként definiálva van. let var1: Promise<void> | null = null;',
+        'const var2 = new Set<string>();',
+        '',
+        'function func3(): void {',
+        '  var_4 = null;',
+        '}',
+      ].join('\n'),
+    );
+    expect(resolveText(text, entityMap).deAnonText).toBe(original);
+  });
+
   test('prose is left alone', () => {
     const prose = 'Anna said the alma = apple joke again.';
     expect(anonymize(prose, [], new EntityMap(), RENAME).text).toBe(prose);

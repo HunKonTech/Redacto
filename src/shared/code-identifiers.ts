@@ -30,6 +30,43 @@ function isMultiStatementLine(line: string): boolean {
   return MULTI_STATEMENT_LINE_RE.test(trimmed) && /[=(]/.test(trimmed);
 }
 
+/**
+ * A sentence boundary followed by a code-starting keyword, where prose ends
+ * and code begins on the same line: `… it is defined there. let x = 1;`.
+ */
+const PROSE_TO_CODE_RE = new RegExp(`[.!?:]\\s+(?=${CODE_LINE_KEYWORD_RE.source.slice(1)})`, 'g');
+/** Words that are code, not prose, even when they stand alone. */
+const CODE_WORDS = new Set(
+  (
+    CODE_LINE_KEYWORD_RE.source.match(/[a-z]+/g)!.join(' ') +
+    ' in is not and or new of as int string void bool boolean char long double float null true false'
+  ).split(' '),
+);
+
+/** Whether `text` has three plain words in a row, none of them a code word. */
+function looksLikeProse(text: string): boolean {
+  let run = 0;
+  for (const word of text.split(/\s+/)) {
+    const bare = word.replace(/,$/, '');
+    run = /^\p{L}+$/u.test(bare) && !CODE_WORDS.has(bare) ? run + 1 : 0;
+    if (run >= 3) return true;
+  }
+  return false;
+}
+
+/**
+ * Length of the prose a line starts with before its code
+ * (`Why does this fail? let x = 1;` → up to `let`), or 0.
+ */
+function proseLeadLength(line: string): number {
+  let lead = 0;
+  for (const match of line.matchAll(PROSE_TO_CODE_RE)) {
+    const codeStart = match.index! + match[0].length;
+    if (looksLikeProse(line.slice(lead, match.index! + 1))) lead = codeStart;
+  }
+  return lead;
+}
+
 const IDENTIFIER_RE = /[A-Za-z_$][A-Za-z0-9_$]*/g;
 const IDENTIFIER_CHAR_RE = /[\p{L}\p{N}_$]/u;
 const IDENTIFIER_TEXT_RE = /^[\p{L}\p{N}_$]+$/u;
@@ -62,7 +99,7 @@ function isCodeLine(line: string): boolean {
  * Fenced / `<pre>` regions plus runs of unfenced lines that look like code.
  * A run needs at least two code-looking lines — or one line holding several
  * statements, or one unmistakable code line; blank lines and indented continuation lines inside a run do
- * not break it.
+ * not break it. Prose leading into code on the same line is left out.
  */
 export function findCodeLikeRegions(text: string): CodeRegion[] {
   const regions = [...findCodeRegions(text)];
@@ -77,10 +114,13 @@ export function findCodeLikeRegions(text: string): CodeRegion[] {
     runCodeLines = 0;
   };
 
-  for (const line of text.split('\n')) {
-    const lineEnd = offset + line.length;
+  for (const fullLine of text.split('\n')) {
+    const lineEnd = offset + fullLine.length;
+    const lead = proseLeadLength(fullLine);
+    const line = fullLine.slice(lead);
+    if (lead > 0) closeRun();
     if (isCodeLine(line)) {
-      if (runStart === -1) runStart = offset;
+      if (runStart === -1) runStart = offset + lead;
       runEnd = lineEnd;
       runCodeLines += isMultiStatementLine(line) || isStrongCodeLine(line) ? 2 : 1;
     } else if (runStart !== -1 && line.trim() !== '' && !/^\s/.test(line)) {

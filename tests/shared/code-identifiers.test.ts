@@ -60,6 +60,17 @@ describe('findCodeLikeRegions', () => {
     expect(findCodeLikeRegions('if you can, return it by Friday;')).toEqual([]);
   });
 
+  test('starts the region after prose that leads into code on the same line', () => {
+    const text = 'A hiba, hogy nemtalálja a x_1-et pedig az Promise<void> | null = null; ként definiálva van. let x: number = 1;\nconst y = x;';
+    const [region] = findCodeLikeRegions(text);
+    expect(text.slice(region.start, region.end)).toBe('let x: number = 1;\nconst y = x;');
+  });
+
+  test('keeps code with a statement boundary before a keyword whole', () => {
+    const line = 'x = 1; let y = 2;';
+    expect(findCodeLikeRegions(line)).toEqual([{ start: 0, end: line.length }]);
+  });
+
   test('still includes fenced blocks', () => {
     const text = 'see\n```\nhello\n```';
     expect(findCodeLikeRegions(text)).toEqual([{ start: 4, end: text.length }]);

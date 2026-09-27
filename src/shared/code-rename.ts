@@ -869,8 +869,9 @@ export function extractCodeRegionTexts(text: string, regions?: CodeRegion[]): st
 export function planIdentifierRenames(text: string, options: RenamePlanOptions = {}): RenamePlan {
   const errorRegions = findErrorRegions(text);
   const errorSlots = parseErrorSlots(text, errorRegions);
+  const regions = options.regions ?? findCodeLikeRegions(text);
   const lexer = new Lexer(text);
-  for (const body of codeBodies(text, options.regions ?? findCodeLikeRegions(text), errorRegions)) {
+  for (const body of codeBodies(text, regions, errorRegions)) {
     lexer.lex(body.start, body.end);
     lexer.tokens.push({ kind: 'newline', start: body.end, end: body.end, text: '\n' });
   }
@@ -923,6 +924,11 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
   );
   const fileNamed = (name: string) =>
     frameNames.has(name) || ['class', 'namespace', 'function'].includes(roles.get(name) ?? '');
+  // Prose around the code: only identifier-shaped names (`offscreenReady_1`),
+  // so plain words that happen to be names stay.
+  const prose = subtractRegions([{ start: 0, end: text.length }], [...regions, ...errorRegions]).map(
+    (region): Token => ({ kind: 'comment', start: region.start, end: region.end, text: text.slice(region.start, region.end) }),
+  );
   const slotOccurrences = errorSlots
     .filter((slot) => slot.kind !== 'echo' && !slot.libraryFrame && renamed.has(slot.name))
     .filter((slot) => slot.kind !== 'file-stem' || fileNamed(slot.name))
@@ -932,6 +938,7 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
     ...commentOccurrences(text, comments, renamed, undeclared),
     ...new Analyzer(echoLexer.tokens).occurrences(renamed),
     ...commentOccurrences(text, echoComments, renamed, undeclared),
+    ...commentOccurrences(text, prose, renamed, renamed),
     ...slotOccurrences,
   ].sort(
     (a, b) => a.start - b.start,
