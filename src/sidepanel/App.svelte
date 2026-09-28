@@ -14,13 +14,18 @@
 	import PGLogo from '../popup/components/PGLogo.svelte';
 	import AnonymizeTab from './components/AnonymizeTab.svelte';
 	import HistoryTab from './components/HistoryTab.svelte';
+	import SettingsTab from './components/SettingsTab.svelte';
 	import { onAnonymizeRequest, type ExternalAnonymizeRequest } from './external-input';
 
-	type TabId = 'history' | 'anonymize';
-	const tabs: Array<{ id: TabId; label: string }> = [
+	/** The web page has no options page of its own, so it shows the settings as a tab. */
+	let { settingsTab = false }: { settingsTab?: boolean } = $props();
+
+	type TabId = 'history' | 'anonymize' | 'settings';
+	const tabs: Array<{ id: TabId; label: string }> = $derived([
 		{ id: 'history', label: 'History & restore' },
 		{ id: 'anonymize', label: 'Anonymize' },
-	];
+		...(settingsTab ? [{ id: 'settings' as const, label: 'Settings' }] : []),
+	]);
 
 	let activeTab = $state<TabId>('history');
 	let settings = $state.raw<Settings | null>(null);
@@ -125,7 +130,7 @@
 		</nav>
 	</header>
 
-	<!-- Both tabs stay mounted so switching keeps what was typed in each. -->
+	<!-- The tabs stay mounted so switching keeps what was typed in each. -->
 	<section class="panel-body" hidden={activeTab !== 'history'}>
 		<HistoryTab
 			{entries}
@@ -144,6 +149,11 @@
 	<section class="panel-body" hidden={activeTab !== 'anonymize'}>
 		<AnonymizeTab {settings} {vault} {external} onsaved={selectSaved} />
 	</section>
+	{#if settingsTab}
+		<section class="panel-body" hidden={activeTab !== 'settings'}>
+			<SettingsTab />
+		</section>
+	{/if}
 </main>
 
 <style>

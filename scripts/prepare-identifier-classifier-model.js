@@ -25,8 +25,9 @@ beyond what the hardcoded LIBRARY_NAMES list would catch. Trained by
 exported ONNX artifacts into the runtime layout the extension loads, the same
 way 'prepare:model:*' does for the PII NER models.
 
-With no --source-dir, it downloads the artifacts from the private Hugging Face
-model repo (${DEFAULT_HF_REPO_ID}) via the 'hf' CLI, unless a prepared output
+With no --source-dir, it downloads the artifacts from the public Hugging Face
+model repo (${DEFAULT_HF_REPO_ID}) over HTTPS (HF_TOKEN, when set, is sent as
+the access token), falling back to the 'hf' CLI, unless a prepared output
 already exists at --output-dir (rerun with --force to refresh it from Hugging
 Face).
 
@@ -118,12 +119,36 @@ function isAlreadyPrepared(outputDir) {
   }
 }
 
-function downloadFromHuggingFace(repoId, downloadDir) {
-  const resolvedDownloadDir = path.resolve(downloadDir);
-  fs.mkdirSync(resolvedDownloadDir, { recursive: true });
+const HF_BASE_URL = 'https://huggingface.co';
 
-  console.log(`No --source-dir given; downloading ${repoId} from Hugging Face into ${resolvedDownloadDir} ...`);
-  const result = spawnSync('hf', ['download', repoId, '--local-dir', resolvedDownloadDir], {
+/** Repo files the runtime needs: everything but the float ONNX exports (only `model_quantized.onnx` is loaded). */
+function isNeededRepoFile(file) {
+  if (file.startsWith('.')) return false;
+  return !file.endsWith('.onnx') || file === 'onnx/model_quantized.onnx';
+}
+
+/** Download the repo's files over plain HTTPS: needs no 'hf' CLI or login for a public repo. */
+async function downloadOverHttps(repoId, downloadDir, { fetchImpl = fetch, token = process.env.HF_TOKEN } = {}) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const infoResponse = await fetchImpl(`${HF_BASE_URL}/api/models/${repoId}`, { headers });
+  if (!infoResponse.ok) throw new Error(`listing ${repoId} failed: HTTP ${infoResponse.status}`);
+  const info = await infoResponse.json();
+  const files = (info.siblings ?? []).map((sibling) => sibling.rfilename).filter(isNeededRepoFile);
+  if (files.length === 0) throw new Error(`${repoId} lists no model files`);
+
+  for (const file of files) {
+    const url = `${HF_BASE_URL}/${repoId}/resolve/main/${file.split('/').map(encodeURIComponent).join('/')}`;
+    const response = await fetchImpl(url, { headers });
+    if (!response.ok) throw new Error(`downloading ${file} failed: HTTP ${response.status}`);
+    const target = path.join(downloadDir, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, Buffer.from(await response.arrayBuffer()));
+    console.log(`- ${file}`);
+  }
+}
+
+function downloadWithHfCli(repoId, downloadDir) {
+  const result = spawnSync('hf', ['download', repoId, '--local-dir', downloadDir], {
     stdio: 'inherit',
   });
 
@@ -136,14 +161,27 @@ function downloadFromHuggingFace(repoId, downloadDir) {
   if (result.status !== 0) {
     throw new Error(
       `'hf download ${repoId}' failed (exit code ${result.status}). Make sure you are logged in with ` +
-        "'hf auth login' and have access to this private model repo, or pass --source-dir instead."
+        "'hf auth login' and have access to this model repo, or pass --source-dir instead."
     );
+  }
+}
+
+async function downloadFromHuggingFace(repoId, downloadDir, options = {}) {
+  const resolvedDownloadDir = path.resolve(downloadDir);
+  fs.mkdirSync(resolvedDownloadDir, { recursive: true });
+
+  console.log(`No --source-dir given; downloading ${repoId} from Hugging Face into ${resolvedDownloadDir} ...`);
+  try {
+    await downloadOverHttps(repoId, resolvedDownloadDir, options);
+  } catch (error) {
+    console.warn(`HTTPS download failed (${error.message}); trying the 'hf' CLI instead.`);
+    downloadWithHfCli(repoId, resolvedDownloadDir);
   }
 
   return resolvedDownloadDir;
 }
 
-function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
     console.log(usage());
@@ -157,7 +195,7 @@ function main(argv = process.argv.slice(2)) {
       console.log(`${outputDir} is already prepared; nothing to do. Rerun with --force to refresh it from Hugging Face.`);
       return;
     }
-    options.sourceDir = downloadFromHuggingFace(options.repoId || DEFAULT_HF_REPO_ID, DEFAULT_DOWNLOAD_DIR);
+    options.sourceDir = await downloadFromHuggingFace(options.repoId || DEFAULT_HF_REPO_ID, DEFAULT_DOWNLOAD_DIR);
   }
 
   const manifest = prepareLocalNerModel(options);
@@ -165,12 +203,10 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     console.error(error.message);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = {
@@ -180,4 +216,6 @@ module.exports = {
   DEFAULT_DOWNLOAD_DIR,
   parseArgs,
   isAlreadyPrepared,
+  isNeededRepoFile,
+  downloadFromHuggingFace,
 };
