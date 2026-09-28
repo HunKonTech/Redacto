@@ -91,6 +91,7 @@ import { prepareReviewSpans } from './review-spans';
 import { resolveThreshold } from '../shared/sensitivity-resolver';
 import { CONVERSATION_URL_POLL_MS, LOCAL_AI_ACTIVITY_HEARTBEAT_MS, NO_PII_INDICATOR_MS, RESPONSE_DEBOUNCE_MS, CHIP_FADE_MS } from '../shared/constants';
 import type { PiiSpan, FeedbackEntry, Settings, AllowlistEntry, CancelDetectionBehavior, NerStatus, NerStatusResponse, SystemCompatibilityStatus, SystemCompatibilityStatusResponse } from '../shared/message-types';
+import { debugError, debugLog, debugTrace, debugWarn } from '../shared/debug-log';
 
 // --- Adapter selection ---
 
@@ -250,7 +251,7 @@ async function maybeShowCriticalLocalAiModal(): Promise<void> {
     modal.show();
   } catch (err) {
     if (settings?.debug) {
-      console.warn('[PG:content] Failed to show Local AI resource modal', err);
+      debugWarn('[PG:content] Failed to show Local AI resource modal', err);
     }
   }
 }
@@ -283,10 +284,10 @@ function refreshPageStatusChip(): void {
  */
 function reportComposerLookup(match: ComposerMatch): void {
   if (match === 'none') {
-    // Unconditional, NOT behind `settings.debug`: reaching here means text
-    // reached the page without review, or reviewed text never landed. The
-    // page's own UI shows nothing either way.
-    console.warn(
+    // Reaching here means text reached the page without review, or reviewed
+    // text never landed. The chip / indicator below tells the user; the
+    // console line is for Debug mode only.
+    debugWarn(
       '[PG:content] No message box found on this page — neither the one this '
         + 'site adapter knows nor the target of the paste. Text here is not '
         + 'reviewed, and reviewed text has nowhere to be inserted.',
@@ -415,7 +416,7 @@ async function adoptConversation(next: string): Promise<void> {
     sessionPlaceholders.clear();
     filer.reset();
     if (settings?.debug) {
-      console.log(`[PG:content] ${next} is a conversation on record; tab ledger cleared`);
+      debugLog(`[PG:content] ${next} is a conversation on record; tab ledger cleared`);
     }
   }
   await loadConversationScope();
@@ -484,7 +485,7 @@ const filer = new ConversationFiler({
   move: (from, to, tokens) => moveConversationTokens(from, to, tokens),
   onMoved: (from, to, tokens) => {
     if (settings?.debug) {
-      console.log(
+      debugLog(
         `[PG:content] ${tokens.length} token(s) seen at ${to}; moved there from ${from}`,
       );
     }
@@ -544,7 +545,7 @@ function sameTokens(a: readonly string[], b: readonly string[]): boolean {
 /**
  * Note a token the user can see that this extension will not resolve.
  *
- * Deliberately a `console.debug` and nothing else. It is the one signal that
+ * Deliberately a Debug-mode console line and nothing else. It is the one signal that
  * a conversation has drifted out of scope, and it belongs to whoever is
  * debugging that — telling the user about a token nothing can be done with
  * would be noise where the extension is already doing its best.
@@ -553,7 +554,7 @@ function reportUnresolvableTokens(seen: readonly string[]): void {
   for (const token of seen) {
     if (scope.has(token) || unresolvableReported.has(token)) continue;
     unresolvableReported.add(token);
-    console.debug(
+    debugTrace(
       `[PG:content] ${token} is on this page but no original is known for it.`,
     );
   }
@@ -831,7 +832,7 @@ async function classifyCodeIdentifiers(
     return new Map(response.payload.classifications.map((c) => [c.name, c.label]));
   } catch (err) {
     if (settings?.debug) {
-      console.warn('[PG:content] Identifier classification unavailable, using library-name list', err);
+      debugWarn('[PG:content] Identifier classification unavailable, using library-name list', err);
     }
     return undefined;
   }
@@ -874,7 +875,7 @@ async function pasteAnonymized(
     identityVault = result.vaultData;
     // Persist vault asynchronously — paste should not block on it.
     saveIdentityVault(identityVault).catch((err) =>
-      console.error('[PG:content] vault save failed', err),
+      debugError('[PG:content] vault save failed', err),
     );
   } else {
     // Legacy path: per-conversation EntityMap only.
@@ -901,7 +902,7 @@ async function pasteAnonymized(
       renamedIdentifiers,
     }),
     settings.identityVaultEnabled,
-  ).catch((err) => console.error('[PG:content] history save failed', err));
+  ).catch((err) => debugError('[PG:content] history save failed', err));
 
   // Record what this session put into the page. The map may also hold
   // entries restored from storage — on the shared "new chat" key those
@@ -924,7 +925,7 @@ async function pasteAnonymized(
   showIndicator(`\u{1F512} ${parts.join(', ')}`, CHIP_FADE_MS);
 
   if (settings.debug && timings) {
-    console.log(
+    debugLog(
       `[PG:content] Detection: ${timings.totalMs}ms, anonymized ${approvedSpans.length} spans, renamed ${renamedIdentifiers} identifiers`,
     );
   }
@@ -999,7 +1000,7 @@ async function showReviewOverlay(
             interceptor.pasteOriginal(originalText);
           }
           if (settings.debug) {
-            console.log(`[PG:content] Overlay cancelled, ${decision === 'paste-original' ? 'original pasted' : 'nothing pasted'}`);
+            debugLog(`[PG:content] Overlay cancelled, ${decision === 'paste-original' ? 'original pasted' : 'nothing pasted'}`);
           }
         });
       },
@@ -1012,7 +1013,7 @@ async function showReviewOverlay(
         });
 
         if (settings.debug) {
-          console.log('[PG:content] Feedback logged:', entry.correctedType, entry.text);
+          debugLog('[PG:content] Feedback logged:', entry.correctedType, entry.text);
         }
       },
 
@@ -1154,7 +1155,7 @@ const responseObserver = new ResponseObserver(adapter, {
     // the banner holds the resolver and asks again, so there is nothing to
     // wait for here and nothing to go stale.
     if (attachBanner(element, true) && settings.debug) {
-      console.log('[PG:content] De-anonymization banner attached to response');
+      debugLog('[PG:content] De-anonymization banner attached to response');
     }
   },
   hasKnownSynthetic: (text) => {
@@ -1204,7 +1205,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse): undefined
     }
 
     if (settings.debug) {
-      console.log('[PG:content] Settings updated:', settings);
+      debugLog('[PG:content] Settings updated:', settings);
     }
   }
   return undefined;
@@ -1221,7 +1222,7 @@ async function init(): Promise<void> {
     releasePasteInterceptor?.();
     releasePasteInterceptor = null;
     if (settings.debug) {
-      console.log('[PG:content] Extension disabled, not activating');
+      debugLog('[PG:content] Extension disabled, not activating');
     }
     return;
   }
@@ -1261,7 +1262,7 @@ async function init(): Promise<void> {
           identityVault = next;
           rebuildScope();
           if (settings.debug) {
-            console.log('[PG:content] Vault reloaded from storage event');
+            debugLog('[PG:content] Vault reloaded from storage event');
           }
         }
       }
@@ -1283,7 +1284,7 @@ async function init(): Promise<void> {
             reportVisibility();
           }
           if (settings.debug) {
-            console.log('[PG:content] Settings reloaded from storage event');
+            debugLog('[PG:content] Settings reloaded from storage event');
           }
         }
       }
@@ -1308,10 +1309,10 @@ async function init(): Promise<void> {
   clipboardInterceptor.start();
 
   if (settings.debug) {
-    console.log(`[PG:content] Privacy Guardrail active on ${adapter.name} (${window.location.hostname})`);
-    console.log(`[PG:content] Adaptive thresholds:`, adaptiveThresholds);
-    console.log(`[PG:content] Conversation scope size: ${scope.size}`);
-    console.log(`[PG:content] Vault size: ${identityVault.records.length}`);
+    debugLog(`[PG:content] Privacy Guardrail active on ${adapter.name} (${window.location.hostname})`);
+    debugLog(`[PG:content] Adaptive thresholds:`, adaptiveThresholds);
+    debugLog(`[PG:content] Conversation scope size: ${scope.size}`);
+    debugLog(`[PG:content] Vault size: ${identityVault.records.length}`);
   }
 }
 
@@ -1323,14 +1324,14 @@ void init().catch((error) => {
   releasePasteInterceptor?.();
   releasePasteInterceptor = null;
 
-  // Report unconditionally — NOT behind `settings.debug`. Reaching here means
-  // paste review is off for the rest of this page's lifetime: there is no
+  // Reaching here means paste review is off for the rest of this page's lifetime: there is no
   // retry, and neither recovery listener can help (`chrome.storage.onChanged`
   // is registered further down `init` and so was never reached, and a
   // `SETTINGS_UPDATED` message cannot arrive if the runtime context is what
   // failed). A privacy tool that has stopped reviewing pastes must say so
-  // rather than let the user keep pasting while believing they are covered.
-  console.error(
+  // rather than let the user keep pasting while believing they are covered —
+  // the indicator below does that; the console line is Debug mode only.
+  debugError(
     '[PG:content] Initialization failed — paste review is OFF for this page. '
       + 'Reload the page to retry.',
     error,

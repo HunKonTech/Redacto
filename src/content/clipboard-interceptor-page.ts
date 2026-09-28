@@ -153,12 +153,4 @@ interface ReplaceMessage {
       /* user has already left the toast; nothing actionable */
     });
   });
-
-  // Boot marker so the user can confirm in DevTools that the main-world
-  // script actually loaded. Cheap and one-shot.
-  try {
-    console.debug('[PG:clipboard-page] writeText patch installed');
-  } catch {
-    /* ignore */
-  }
 })();

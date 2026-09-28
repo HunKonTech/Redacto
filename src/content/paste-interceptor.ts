@@ -12,6 +12,7 @@ import { MIN_PASTE_LENGTH } from '../shared/constants';
 import { detectionOptionsFromSettings } from '../shared/detection-config';
 import { loadSettings } from '../shared/storage';
 import { sendRuntimeMessageBestEffort } from './runtime-messaging';
+import { debugError, debugWarn } from '../shared/debug-log';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -234,7 +235,7 @@ export class PasteInterceptor {
       try {
         claimed = await this.callbacks.claimPaste(text);
       } catch (error) {
-        console.warn('[PG:content] Paste claim check failed; scanning instead:', error);
+        debugWarn('[PG:content] Paste claim check failed; scanning instead:', error);
       }
       if (claimed) return;
     }
@@ -298,13 +299,13 @@ export class PasteInterceptor {
       const errorMessage = getErrorMessage(err);
 
       if (isExtensionReloadError(errorMessage)) {
-        console.warn('[PG:content] Extension reloaded; refresh this page to reattach Privacy Guardrail.');
+        debugWarn('[PG:content] Extension reloaded; refresh this page to reattach Privacy Guardrail.');
         this.savedSelection = null;
         this.callbacks.onError('Extension reloaded. Refresh this page and paste again.');
         return;
       }
 
-      console.error('[PG:content] Detection error:', err);
+      debugError('[PG:content] Detection error:', err);
       this.callbacks.onError(errorMessage);
       this.pasteOriginal(text);
     } finally {
@@ -325,7 +326,7 @@ export class PasteInterceptor {
         }
       }
     } catch (error) {
-      console.error('[PG:content] Cancel decision failed:', error);
+      debugError('[PG:content] Cancel decision failed:', error);
     } finally {
       this.activePasteText = null;
       this.savedSelection = null;

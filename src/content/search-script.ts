@@ -27,6 +27,7 @@ import { prepareReviewSpans } from './review-spans';
 import { SearchGuard, type SearchReviewOutcome } from './search-guard';
 import { SearchAdapter } from './site-adapters/search-adapter';
 import { setFormControlValue } from './site-adapters/adapter-interface';
+import { debugError, debugLog } from '../shared/debug-log';
 
 const SETTINGS_KEY = 'pg_settings';
 
@@ -99,7 +100,7 @@ function anonymizeApproved(text: string, approvedSpans: PiiSpan[]): string {
     );
     identityVault = vaultResult.vaultData;
     if (vaultResult.text !== text) {
-      saveIdentityVault(identityVault).catch((err) => console.error('[PG:search] vault save failed', err));
+      saveIdentityVault(identityVault).catch((err) => debugError('[PG:search] vault save failed', err));
     }
     result = vaultResult;
   } else {
@@ -201,7 +202,7 @@ const guard = new SearchGuard({
 interceptor.start();
 guard.start();
 const ready = refreshSettings().catch((err) => {
-  console.error('[PG:search] failed to load settings', err);
+  debugError('[PG:search] failed to load settings', err);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -210,6 +211,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 void ready.then(() => {
   if (settings?.debug) {
-    console.log(`[PG:search] Privacy Guardrail search protection ${isActive() ? 'active' : 'inactive'} on ${location.hostname}`);
+    debugLog(`[PG:search] Privacy Guardrail search protection ${isActive() ? 'active' : 'inactive'} on ${location.hostname}`);
   }
 });

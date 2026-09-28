@@ -30,6 +30,7 @@
 import type { EntityType, PiiSpan } from './message-types';
 import { placeholder } from './constants';
 import { generateSyntheticValue, supportsSynthetic } from './synthetic-pool';
+import { debugWarn } from './debug-log';
 
 /** Active replacement strategy for an individual vault record. */
 export type ReplacementMode = 'placeholder' | 'synthetic';
@@ -411,8 +412,7 @@ export function buildReverseIndex(
       // The vault counter is supposed to prevent this; we log it for
       // defensive tracing.
       if (map.has(record.syntheticValue)) {
-        // eslint-disable-next-line no-console
-        console.warn(
+        debugWarn(
           '[PG:vault] synthetic value collision',
           record.syntheticValue,
         );

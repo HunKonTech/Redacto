@@ -31,6 +31,7 @@ import {
   saveSystemCheckResult,
   type SystemCheckResult,
 } from "../shared/system-check-storage";
+import { debugError } from '../shared/debug-log';
 
 const OFFSCREEN_URL = "offscreen/offscreen.html";
 const SYSTEM_CHECK_OFFSCREEN_URL = "system-check/system-check-offscreen.html";
@@ -418,7 +419,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
   };
 
   handleMessage(message, sender, safeSendResponse).catch((err) => {
-    console.error('[PG:background] Message handling failed:', err);
+    debugError('[PG:background] Message handling failed:', err);
     if (!responded) {
       safeSendResponse({
         error: err instanceof Error ? err.message : String(err),
@@ -736,7 +737,7 @@ async function syncSearchContentScript(): Promise<void> {
 
 function syncSearchContentScriptBestEffort(): void {
   syncSearchContentScript().catch((err) => {
-    console.error("[PG:background] search content script sync failed", err);
+    debugError("[PG:background] search content script sync failed", err);
   });
 }
 
@@ -752,7 +753,7 @@ chrome.permissions?.onRemoved?.addListener(syncSearchContentScriptBestEffort);
 chrome.commands?.onCommand?.addListener((command, tab) => {
   if (command !== "open-side-panel" || typeof tab?.windowId !== "number") return;
   chrome.sidePanel?.open({ windowId: tab.windowId }).catch((err) => {
-    console.error("[PG:background] side panel open failed", err);
+    debugError("[PG:background] side panel open failed", err);
   });
 });
 

@@ -5,7 +5,7 @@ import {
   type IdentifierVerdict,
 } from '../shared/identifier-classifier-constants';
 import { IDENTIFIER_WORD_RE } from '../shared/code-rename';
-import { debugLog } from './debug';
+import { debugLog } from '../shared/debug-log';
 import { alignTokensToText, alignmentCoverage, type TokenCharRange } from './token-offsets';
 import {
   NerProviderUnavailableError,

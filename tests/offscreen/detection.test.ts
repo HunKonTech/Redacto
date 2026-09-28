@@ -6,6 +6,7 @@ import {
   setNerProviderFactoryForTests,
 } from '../../src/offscreen/detection';
 import type { NerProvider } from '../../src/offscreen/ner-provider';
+import { setDebugEnabled } from '../../src/shared/debug-log';
 
 jest.mock('../../src/offscreen/wasm-bridge', () => ({
   detectPii: jest.fn().mockResolvedValue([]),
@@ -15,11 +16,13 @@ describe('offscreen detection flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     resetNerProviderStateForTests();
+    setDebugEnabled(true);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
     resetNerProviderStateForTests();
+    setDebugEnabled(false);
   });
 
   function silenceExpectedNerFailureLogs(): jest.SpyInstance {

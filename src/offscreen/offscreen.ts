@@ -1,5 +1,5 @@
 import type { Message } from '../shared/message-types';
-import { initDebugFlag } from './debug';
+import { debugLog, initDebugFlag } from '../shared/debug-log';
 import { handleOffscreenMessage } from './offscreen-handler';
 
 initDebugFlag();
@@ -12,4 +12,4 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   handleOffscreenMessage(message, sendResponse),
 );
 
-console.log('[PG:offscreen] Offscreen document ready');
+debugLog('[PG:offscreen] Offscreen document ready');
