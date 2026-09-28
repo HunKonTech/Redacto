@@ -138,6 +138,24 @@ For the public beta:
 5. Attach the exact Chrome extension zip and checksum.
 6. Link the release notes to `CHANGELOG.md`, `PRIVACY.md`, `SECURITY.md`, and support docs.
 
+## Build Versions Of This Fork
+
+Every run of `.github/workflows/build-and-release.yml` (manual or otherwise)
+gets its own version and publishes a GitHub pre-release; no tag has to be
+pushed first.
+
+- Version: `<BASE_VERSION>.<run number>`, e.g. `0.5.0.9`. `BASE_VERSION` is a
+  repository variable (Settings → Secrets and variables → Actions →
+  Variables) holding the upstream version this fork is based on; it stays
+  fixed while the run number grows by one per run. Without the variable,
+  `package.json`'s version is the base.
+- The workflow passes both as `PG_BASE_VERSION` / `PG_BUILD_NUMBER`;
+  `scripts/build-number.js` (`ciBuildVersion`) turns them into the version of
+  the extension manifests, the Chrome / Edge package names, the web page
+  footer and the pre-release (tag `v0.5.0.9` on the built commit).
+- `package.json`, `manifest.json` and `CHANGELOG.md` keep the upstream x.y.z;
+  `npm run version:check` still checks those.
+
 ## Chrome Web Store Handoff
 
 Chrome Web Store upload is manual for the first public beta. Upload the same reviewed zip that was attached to the GitHub pre-release. Use the listing copy and permission justifications prepared in the Chrome Web Store launch docs, and link to the GitHub-hosted privacy policy and support material.

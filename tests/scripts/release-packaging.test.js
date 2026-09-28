@@ -139,6 +139,18 @@ describe('official release packaging', () => {
     expect(fs.existsSync(result.zipPath)).toBe(false);
   });
 
+  test('a CI build is named after its build version', () => {
+    const result = createReleasePackage({
+      rootDir: tempRoot,
+      dryRun: true,
+      skipBuild: true,
+      env: { PG_BASE_VERSION: '0.2.0', PG_BUILD_NUMBER: '17' },
+    });
+
+    expect(result.zipPath).toBe(path.join(tempRoot, 'release', 'privacy-guardrail-0.2.0.17.zip'));
+    expect(result.checksumPath).toBe(path.join(tempRoot, 'release', 'privacy-guardrail-0.2.0.17.sha256'));
+  });
+
   test('release mode writes a versioned zip and matching SHA-256 checksum', () => {
     initCleanGitRepo(tempRoot);
 

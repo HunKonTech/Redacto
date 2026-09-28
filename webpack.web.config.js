@@ -12,16 +12,19 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ideConfig = require('./webpack.ide.config');
+const { ciBuildVersion } = require('./scripts/build-number');
 
 const SERVICE_WORKER_SOURCE = path.resolve(__dirname, 'src/web/sw.js');
 const NOT_CACHED = [/^sw\.js$/, /\.map$/, /\.LICENSE\.txt$/, /\.d\.ts$/, /^\.\.\//];
 
 /**
- * The version shown at the bottom of the page: package version, then (in CI)
- * the workflow run number, and the commit, e.g. `0.5.0 · build 42 · 1a2b3c4`.
+ * The version shown at the bottom of the page and the commit it was built
+ * from: in CI the build version (upstream base + this fork's build counter,
+ * scripts/build-number.js), e.g. `0.5.0.9 · 1a2b3c4`; locally package.json's.
  */
 function webVersion(env = process.env) {
-  const version = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
+  const packageVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
+  const version = ciBuildVersion(packageVersion, env) ?? packageVersion;
   let commit = env.GITHUB_SHA;
   if (!commit) {
     try {
@@ -30,7 +33,7 @@ function webVersion(env = process.env) {
       commit = '';
     }
   }
-  return [version, env.GITHUB_RUN_NUMBER && `build ${env.GITHUB_RUN_NUMBER}`, commit.trim().slice(0, 7)]
+  return [version, commit.trim().slice(0, 7)]
     .filter(Boolean)
     .join(' · ');
 }
