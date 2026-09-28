@@ -18,10 +18,12 @@ namespace PrivacyGuardrail.VisualStudio
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(PanelToolWindow), Style = VsDockStyle.Tabbed, Window = ToolWindowGuids.SolutionExplorer)]
+    [ProvideToolWindow(typeof(PanelToolWindow), Style = VsDockStyle.Tabbed, Window = SolutionExplorerWindowGuid)]
     public sealed class PrivacyGuardrailPackage : AsyncPackage
     {
         public const string PackageGuidString = "882984f8-e76d-469c-930c-cf547dc5e836";
+        // EnvDTE.Constants.vsWindowKindSolutionExplorer; attribute arguments need a constant.
+        private const string SolutionExplorerWindowGuid = "3ae79031-e1bc-11d0-8f78-00a0c9110057";
         private static readonly Guid CommandSet = new Guid("0ec4a041-9151-4737-9c2f-24dceca7d1a9");
         private const int AnonymizeSelectionId = 0x0100;
         private const int OpenPanelId = 0x0101;
@@ -48,7 +50,7 @@ namespace PrivacyGuardrail.VisualStudio
                 new CommandID(CommandSet, OpenPanelId)));
         }
 
-        private async Task<PanelControl> ShowPanelAsync()
+        private async System.Threading.Tasks.Task<PanelControl> ShowPanelAsync()
         {
             var window = await ShowToolWindowAsync(typeof(PanelToolWindow), 0, true, DisposalToken);
             return (window as PanelToolWindow)?.Panel;
