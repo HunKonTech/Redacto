@@ -83,6 +83,8 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
+    <!-- MenuCommandService, the base of OleMenuCommandService. -->
+    <Reference Include="System.Design" />
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
