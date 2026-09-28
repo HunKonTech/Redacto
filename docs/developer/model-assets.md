@@ -148,7 +148,7 @@ These are not the standard public beta runtime model. AI4Privacy assets are trea
 
 Optional. When code anonymization is set to `full`, this classifier decides whether each undeclared identifier in pasted code is the user's own (renamed) or a library/framework name (kept). Without it, the extension falls back to the hardcoded `LIBRARY_NAMES` list in `src/shared/code-rename.ts`. The build only warns when it is missing.
 
-It is trained locally by `tools/identifier-classifier` (see its README) and kept in a private Hugging Face model repo, so other development machines can fetch it without retraining.
+It is trained locally by `tools/identifier-classifier` (see its README) and published in the public Hugging Face model repo `koncsik/code-identifier-classifier`, so other machines and CI can fetch it without retraining.
 
 Upload after a training run (on the training machine, once logged in with `hf auth login` and a write token):
 
@@ -156,20 +156,20 @@ Upload after a training run (on the training machine, once logged in with `hf au
 hf upload koncsik/code-identifier-classifier \
   tools/identifier-classifier/work/export/code-identifier-classifier . \
   --repo-type model \
-  --private \
   --exclude "onnx/model.onnx"
 ```
 
 Only the int8 `onnx/model_quantized.onnx` is used at runtime; the 330 MB float export is left out.
 
-On another machine (logged in with a read token via `hf auth login`), just run:
+On another machine or in CI, just run:
 
 ```bash
 npm run prepare:model:identifier-classifier
 ```
 
 With no `--source-dir`, the script downloads `koncsik/code-identifier-classifier` from Hugging
-Face automatically (into `.model-sources/code-identifier-classifier`) and stages it into
+Face automatically over HTTPS — no `hf` CLI or login needed; `HF_TOKEN` is sent when set, and
+the `hf` CLI is tried if the HTTPS download fails — (into `.model-sources/code-identifier-classifier`) and stages it into
 `generated/models/identifier-classifier`. If that output already exists it does nothing; pass
 `--force` to re-download and refresh it. To use a local export instead of Hugging Face, pass
 `--source-dir` explicitly, same as before:
