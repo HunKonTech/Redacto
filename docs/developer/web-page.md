@@ -5,6 +5,15 @@ published as a static web page on GitHub Pages. It works like the side panel:
 paste text, anonymize it, copy it to an AI chat, then paste the reply into
 *History & restore* to get the original values back.
 
+The page has a third tab, **Settings**, since it has no options page: Local AI
+detection, debug logging, code blocks (secrets, *Rename code identifiers*),
+sensitivity, allowlist, blocklist and the identity vault. It reuses the options
+page's cards (`src/sidepanel/components/SettingsTab.svelte`) and saves to
+`localStorage` like the rest. With *Rename code identifiers* on, the Anonymize
+tab shows whether the identifier-classifier model decided the renames
+(*Identifier classifier: AI model*) or the built-in library-name list did
+(*regex fallback*, when the model is not in the build).
+
 Everything runs in the visitor's browser. Nothing is uploaded or stored on a
 server:
 

@@ -45,7 +45,7 @@ async function start(): Promise<void> {
   initDebugFlag();
   const target = document.getElementById('app');
   if (!target) throw new Error('Web panel mount target #app not found');
-  mount(App, { target });
+  mount(App, { target, props: { settingsTab: true } });
 }
 
 setUpOffline();
