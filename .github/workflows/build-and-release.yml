@@ -198,10 +198,10 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
 
-  # IDE plugin installers (VS Code, JetBrains, Visual Studio). They are only
-  # uploaded as workflow artifacts for manual installation: never published to
-  # a marketplace, and their artifact names ("ide-…") stay out of the
-  # `privacy-guardrail-*-*` pattern the GitHub release collects.
+  # IDE plugin installers (VS Code, JetBrains, Visual Studio) for manual
+  # installation: never published to a marketplace, but attached to the GitHub
+  # pre-release (the `ide-privacy-guardrail-*` artifacts) next to the browser
+  # packages.
   vscode-extension:
     name: IDE installer (VS Code)
     needs: [prepare-models-and-package]
@@ -322,15 +322,28 @@ jobs:
 
   github-release:
     name: Publish GitHub pre-release
-    needs: [prepare-models-and-package]
+    needs:
+      - prepare-models-and-package
+      - vscode-extension
+      - jetbrains-plugin
+      - visualstudio-extension
     # Every run publishes one, tagged v<build version> on the built commit;
-    # no tag has to be pushed first.
+    # no tag has to be pushed first. A failed IDE installer job only leaves
+    # its installer out of the release.
+    if: ${{ !cancelled() && needs.prepare-models-and-package.result == 'success' }}
     runs-on: [self-hosted, linux]
     steps:
       - name: Download packaged artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: privacy-guardrail-*-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Download IDE installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ide-privacy-guardrail-*
           merge-multiple: true
           path: release-artifacts
 
@@ -350,3 +363,4 @@ jobs:
           files: |
             release-artifacts/*.zip
             release-artifacts/*.sha256
+            release-artifacts/*.vsix

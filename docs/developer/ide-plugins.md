@@ -9,7 +9,7 @@ selection itself is never changed.
 
 These plugins are built for **manual installation only**. They are never
 published to the VS Code Marketplace, JetBrains Marketplace or Visual Studio
-Marketplace, and the CI workflow only uploads them as workflow artifacts.
+Marketplace; the CI workflow attaches them to the GitHub pre-release.
 
 ## How it fits together
 
@@ -56,8 +56,8 @@ package an existing `dist-ide/webview` only (that is what CI runs).
 In CI (`.github/workflows/build-and-release.yml`) the panel is built with the
 model in `prepare-models-and-package`, and the `vscode-extension`,
 `jetbrains-plugin` and `visualstudio-extension` jobs upload
-`ide-privacy-guardrail-*` artifacts. They are not attached to the GitHub
-release. The Visual Studio job needs a Windows runner with the "Visual Studio
+`ide-privacy-guardrail-*` artifacts, which `github-release` attaches to the
+GitHub pre-release (a failed IDE job only leaves its installer out). The Visual Studio job needs a Windows runner with the "Visual Studio
 extension development" workload.
 
 ## Install
