@@ -146,6 +146,8 @@ The Chrome Web Store is the primary install path for beta users. Loading unpacke
 
 VS Code, JetBrains and Visual Studio plugins with the side panel: see [ide-plugins.md](ide-plugins.md).
 
+The side panel as a static web page on GitHub Pages: see [web-page.md](web-page.md).
+
 ## Common Build Problems
 
 - Missing `wasm-bindgen`: install `wasm-bindgen-cli` version `0.2.118`.

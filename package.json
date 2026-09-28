@@ -7,6 +7,7 @@
     "build:wasm": "cd crate && cargo build --release --target wasm32-unknown-unknown && wasm-bindgen --target web --out-dir pkg --out-name privacy_guardrail_wasm target/wasm32-unknown-unknown/release/privacy_guardrail_wasm.wasm",
     "build:ext": "webpack --mode production",
     "build:ide-webview": "webpack --config webpack.ide.config.js --mode production",
+    "build:web": "webpack --config webpack.web.config.js --mode production",
     "build:ide:vscode": "npm run build:ide-webview && node scripts/ide/build-vscode.js",
     "build:ide:jetbrains": "npm run build:ide-webview && node scripts/ide/build-jetbrains.js",
     "build:ide:visualstudio": "npm run build:ide-webview && node scripts/ide/build-visualstudio.js",
