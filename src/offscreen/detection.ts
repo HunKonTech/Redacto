@@ -7,7 +7,7 @@ import type {
   PiiSpan,
 } from '../shared/message-types';
 import { ACTIVE_NER_MODELS, DEFAULT_NER_MODEL, nerModelDefinitionFor, runtimeNerModelKey } from '../shared/constants';
-import { debugLog } from './debug';
+import { debugError, debugLog, debugWarn } from '../shared/debug-log';
 import { detectPii } from './wasm-bridge';
 import {
   buildIdentifierSplitView,
@@ -163,7 +163,7 @@ async function externalNerSpansFor(
     const candidateDefinition = nerModelDefinitionFor(candidateModel);
     const provider = providerFactory(mode, candidateModel, config?.ner_webgpu_dtype);
     if (!provider) {
-      console.warn('[PG:offscreen] no provider returned for mode/model', {
+      debugWarn('[PG:offscreen] no provider returned for mode/model', {
         mode,
         model: candidateModel,
       });
@@ -234,7 +234,7 @@ async function externalNerSpansFor(
       if (candidateModel === model) {
         selectedError = err;
       }
-      console.error('[PG:offscreen] NER provider failed:', err);
+      debugError('[PG:offscreen] NER provider failed:', err);
       if (mode !== 'transformers') break;
     }
   }

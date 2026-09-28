@@ -14,6 +14,7 @@
  */
 
 import type { StorageAreaName, StorageSnapshot, WebviewToHost } from './protocol';
+import { debugError } from '../shared/debug-log';
 
 type ChangeListener = (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, area: string) => void;
 
@@ -92,7 +93,7 @@ export function createChromeShim(options: ShimOptions) {
       try {
         listener(changes, area);
       } catch (err) {
-        console.error('[PG:ide] storage listener failed', err);
+        debugError('[PG:ide] storage listener failed', err);
       }
     }
   };

@@ -12,6 +12,8 @@
  * away if nothing is typed in, otherwise when the user clicks "reload".
  */
 
+import { debugWarn } from '../shared/debug-log';
+
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
 interface OfflineStatus {
@@ -103,7 +105,7 @@ export function setUpOffline(): void {
       watchForUpdates(registration);
     })
     .catch((err) => {
-      console.warn('[PG:web] service worker registration failed', err);
+      debugWarn('[PG:web] service worker registration failed', err);
       status.textContent = 'Offline use is unavailable in this browser session.';
     });
 }

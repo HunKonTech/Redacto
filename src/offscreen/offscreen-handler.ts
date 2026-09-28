@@ -10,7 +10,7 @@ import type {
   OffscreenPongResponse,
   PiiResultResponse,
 } from '../shared/message-types';
-import { debugLog } from './debug';
+import { debugError, debugLog } from '../shared/debug-log';
 import { detectWithExternalNer, getNerStatus } from './detection';
 import { createIdentifierClassifierProvider } from './identifier-classifier-provider';
 
@@ -86,7 +86,7 @@ export function handleOffscreenMessage(
         sendResponse(response);
       })
       .catch((err) => {
-        console.error('[PG:offscreen] Identifier classification error:', err);
+        debugError('[PG:offscreen] Identifier classification error:', err);
         sendResponse({
           type: 'IDENTIFIER_CLASSIFICATION_RESULT',
           payload: { requestId, classifications: [], available: false },
@@ -131,7 +131,7 @@ export function handleOffscreenMessage(
         return;
       }
 
-      console.error('[PG:offscreen] Detection error:', err);
+      debugError('[PG:offscreen] Detection error:', err);
       sendResponse({
         type: 'PII_RESULT',
         payload: { requestId, spans: [], timings: { totalMs: 0 } },

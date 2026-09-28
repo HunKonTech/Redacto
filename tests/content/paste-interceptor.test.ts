@@ -3,8 +3,12 @@
 import { PasteInterceptor, type PasteInterceptorCallbacks } from '../../src/content/paste-interceptor';
 import type { SiteAdapter } from '../../src/content/site-adapters/adapter-interface';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { setDebugEnabled } from '../../src/shared/debug-log';
 
 describe('PasteInterceptor', () => {
+  beforeEach(() => setDebugEnabled(true));
+  afterEach(() => setDebugEnabled(false));
+
   const adapter: SiteAdapter = {
     name: 'test',
     getInputElement: () => null,

@@ -49,7 +49,7 @@ async function start(): Promise<void> {
       import('../sidepanel/App.svelte'),
       import('../sidepanel/external-input'),
       import('../sidepanel/clipboard'),
-      import('../offscreen/debug'),
+      import('../shared/debug-log'),
     ]);
 
   initDebugFlag();

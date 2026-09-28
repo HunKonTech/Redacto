@@ -39,7 +39,7 @@
 		<label class="toggle-row" for="debug-mode-toggle">
 			<div>
 				<span>Debug mode</span>
-				<p>Reveals testing controls that simulate compatibility states without restarting the browser.</p>
+				<p>Turns on browser console logging (<code>[PG:…]</code>) and reveals testing controls that simulate compatibility states without restarting the browser.</p>
 			</div>
 			<input
 				id="debug-mode-toggle"

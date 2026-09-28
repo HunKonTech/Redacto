@@ -8,6 +8,7 @@
  */
 
 import type { StorageAreaName, StorageSnapshot, WebviewToHost } from '../ide/protocol';
+import { debugWarn } from '../shared/debug-log';
 
 /** Keys are prefixed: every Pages site of the same owner shares this origin's storage. */
 const PREFIX = 'privacy-guardrail:';
@@ -52,6 +53,6 @@ export function persist(message: WebviewToHost): void {
     }
   } catch (err) {
     // Quota exceeded: the in-memory copy stays current for this visit.
-    console.warn('[PG:web] could not persist storage', err);
+    debugWarn('[PG:web] could not persist storage', err);
   }
 }

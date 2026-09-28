@@ -23,7 +23,7 @@ import {
   sliceTextByByteOffsets,
   stringIndexToByteOffset,
 } from '../shared/text-offsets';
-import { debugLog } from './debug';
+import { debugError, debugLog, debugWarn } from '../shared/debug-log';
 import {
   alignTokensToText,
   alignmentCoverage,
@@ -1432,20 +1432,20 @@ export function createTransformersNerProvider(
           try {
             const warmupStartedAt = performance.now();
             await classifier('warmup', { aggregation_strategy: 'simple' });
-            console.log('[PG:ner] webgpu warmup complete', {
+            debugLog('[PG:ner] webgpu warmup complete', {
               warmupMs: Math.round(performance.now() - warmupStartedAt),
             });
           } catch (err) {
-            console.warn('[PG:ner] webgpu warmup failed', err);
+            debugWarn('[PG:ner] webgpu warmup failed', err);
           }
         }
 
         lastLoadMs = Math.round(performance.now() - startedAt);
         pipelineReady = true;
-        console.log('[PG:ner] pipeline ready', { model: model.key, device, loadMs: lastLoadMs });
+        debugLog('[PG:ner] pipeline ready', { model: model.key, device, loadMs: lastLoadMs });
         return classifier;
       } catch (err) {
-        console.error('[PG:ner] pipeline init failed', err);
+        debugError('[PG:ner] pipeline init failed', err);
         throw err;
       }
     })();
@@ -1523,7 +1523,7 @@ export function createTransformersNerProvider(
       });
 
       if (!useOffsets) {
-        console.warn('[PG:ner] detect: offset alignment unavailable, span positions are approximate', {
+        debugWarn('[PG:ner] detect: offset alignment unavailable, span positions are approximate', {
           chunkIndex: i,
           hasTokenizer: Boolean(tokenizer),
           alignmentCoverage: Number(coverage.toFixed(3)),
@@ -1569,9 +1569,7 @@ export function createTransformersNerProvider(
       };
 
       const filtered = applyNerThresholdPolicy(spans, model.key);
-      // Unconditional diagnostic — first-run users may not have flipped
-      // the debug toggle yet. Keep until model behaviour is stable.
-      console.log('[PG:ner] detect: complete', {
+      debugLog('[PG:ner] detect: complete', {
         model: model.key,
         totalMs,
         inferenceMs,

@@ -39,7 +39,7 @@ async function start(): Promise<void> {
   const [{ mount }, { default: App }, { initDebugFlag }] = await Promise.all([
     import('svelte'),
     import('../sidepanel/App.svelte'),
-    import('../offscreen/debug'),
+    import('../shared/debug-log'),
   ]);
 
   initDebugFlag();
