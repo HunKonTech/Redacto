@@ -9,6 +9,9 @@
  * - `chrome.storage.local` → `localStorage` (History, identity vault, settings).
  * - `chrome.storage.session` → `sessionStorage` (gone when the tab closes).
  *
+ * A service worker (sw.js, offline.ts) keeps the page, and on request the
+ * model, in Cache Storage so it also works offline.
+ *
  * Nothing is sent to a server: the page is static and its CSP (web.html)
  * only allows requests to its own origin, for its scripts and model files.
  */
@@ -17,6 +20,7 @@ import '../shared/styles/tokens.css';
 import './web.css';
 import { createChromeShim, installChromeShim } from '../ide/chrome-shim';
 import { persist, readArea } from './browser-storage';
+import { setUpOffline } from './offline';
 
 async function start(): Promise<void> {
   // Everything below reads `chrome.*` when it loads, so it is imported only
@@ -44,4 +48,5 @@ async function start(): Promise<void> {
   mount(App, { target });
 }
 
+setUpOffline();
 void start();

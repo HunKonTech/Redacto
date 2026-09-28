@@ -13,6 +13,9 @@
   <meta name="description" content="Anonymize text before sending it to an AI chat, and restore the original values in the reply. Runs entirely in your browser.">
   <title>Privacy Guardrail — Anonymize &amp; restore</title>
   <link rel="icon" href="icon128.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#0f172a">
 </head>
 <body>
   <div id="app"></div>
@@ -21,6 +24,10 @@
     and History is kept in this browser's local storage — nothing is uploaded or stored on a server.
     Clear it any time from <em>History &amp; restore</em>.
     <a href="https://github.com/HunKonTech/pii-guardrail-browser-extension" rel="noopener noreferrer">Source code</a>
+  </p>
+  <p class="pg-web-note pg-web-offline">
+    <span id="pg-offline-status"></span>
+    <button type="button" id="pg-offline-model" hidden>Save the local AI model for offline use</button>
   </p>
 </body>
 </html>
