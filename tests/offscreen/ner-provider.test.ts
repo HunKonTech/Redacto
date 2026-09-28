@@ -3,6 +3,7 @@ import {
   chunkTextForNer,
   createFixtureNerProvider,
   defaultDetectWebGpu,
+  ensurePipelineTokenizer,
   createNerProvider,
   createTransformersNerProvider,
   mapAi4PrivacyLabelToEntityType,
@@ -956,5 +957,29 @@ describe('production transformer NER provider', () => {
       expect.objectContaining({ text: 'Ada Lovelace', entity_type: 'PERSON' }),
       expect.objectContaining({ text: 'Berlin', entity_type: 'LOCATION', score: 0.9 }),
     ]);
+  });
+});
+
+describe('ensurePipelineTokenizer', () => {
+  const tokenizer = { tokenize: () => ['a'] };
+
+  it('loads the tokenizer when the pipeline was built without one (http(s) model path)', async () => {
+    const classifier: { tokenizer?: typeof tokenizer } = {};
+    const from_pretrained = jest.fn().mockResolvedValue(tokenizer);
+
+    await ensurePipelineTokenizer(classifier, { from_pretrained }, 'model-id');
+
+    expect(from_pretrained).toHaveBeenCalledWith('model-id', { local_files_only: true });
+    expect(classifier.tokenizer).toBe(tokenizer);
+  });
+
+  it('keeps the tokenizer the pipeline already has', async () => {
+    const classifier = { tokenizer };
+    const from_pretrained = jest.fn();
+
+    await ensurePipelineTokenizer(classifier, { from_pretrained }, 'model-id');
+
+    expect(from_pretrained).not.toHaveBeenCalled();
+    expect(classifier.tokenizer).toBe(tokenizer);
   });
 });

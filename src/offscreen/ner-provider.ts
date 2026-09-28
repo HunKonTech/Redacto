@@ -113,7 +113,28 @@ type TransformersModule = {
       session_options?: { externalData?: NerExternalDataAsset[] };
     }
   ) => Promise<TokenClassificationPipeline>;
+  AutoTokenizer?: PretrainedTokenizerLoader;
 };
+
+export type PretrainedTokenizerLoader = {
+  from_pretrained: (model: string, options?: { local_files_only?: boolean }) => Promise<NerTokenizerLike>;
+};
+
+/**
+ * Transformers.js 4.2 decides whether a pipeline gets a tokenizer by probing
+ * `tokenizer_config.json` (get_file_metadata), and that probe skips local
+ * files when `env.localModelPath` is an http(s) URL — the web page and the
+ * IDE webviews. The pipeline then has no tokenizer and fails on first use
+ * with "this.tokenizer is not a function". Load it explicitly in that case.
+ */
+export async function ensurePipelineTokenizer(
+  classifier: { tokenizer?: NerTokenizerLike },
+  autoTokenizer: PretrainedTokenizerLoader | undefined,
+  modelId: string
+): Promise<void> {
+  if (classifier.tokenizer || !autoTokenizer) return;
+  classifier.tokenizer = await autoTokenizer.from_pretrained(modelId, { local_files_only: true });
+}
 
 /** 'Partial<Navigator>': the offscreen document's DOM lib varies, and only 'gpu' is read. */
 type NavigatorWithWebGpu = Partial<Navigator> & {
@@ -1362,7 +1383,7 @@ export function createTransformersNerProvider(
     // device. In Node, Transformers.js keeps string paths when possible so the
     // benchmark harness can still let ONNX Runtime resolve local sidecars.
     const externalData = externalDataForDtype(model, dtype);
-    return transformers.pipeline('token-classification', model.modelId, {
+    const classifier = await transformers.pipeline('token-classification', model.modelId, {
       dtype,
       local_files_only: true,
       device,
@@ -1370,6 +1391,8 @@ export function createTransformersNerProvider(
         ? { session_options: { externalData: [...externalData] } }
         : {}),
     });
+    await ensurePipelineTokenizer(classifier, transformers.AutoTokenizer, model.modelId);
+    return classifier;
   }
 
   async function ensurePipeline(): Promise<TokenClassificationPipeline> {

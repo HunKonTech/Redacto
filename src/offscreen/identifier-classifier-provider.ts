@@ -7,7 +7,13 @@ import {
 import { IDENTIFIER_WORD_RE } from '../shared/code-rename';
 import { debugLog } from './debug';
 import { alignTokensToText, alignmentCoverage, type TokenCharRange } from './token-offsets';
-import { NerProviderUnavailableError, type TokenClassificationItem, type NerTokenizerLike } from './ner-provider';
+import {
+  NerProviderUnavailableError,
+  ensurePipelineTokenizer,
+  type TokenClassificationItem,
+  type NerTokenizerLike,
+  type PretrainedTokenizerLoader,
+} from './ner-provider';
 
 /**
  * Classifies the code identifiers in `texts` (paste code regions, with
@@ -44,6 +50,7 @@ type TransformersModule = {
     model: string,
     options?: { dtype?: 'q8'; local_files_only?: boolean; device?: 'wasm' | 'cpu' }
   ) => Promise<TokenClassificationPipeline>;
+  AutoTokenizer?: PretrainedTokenizerLoader;
 };
 
 type TokenClassificationPipeline = ((
@@ -218,6 +225,7 @@ export function createIdentifierClassifierProvider(
         local_files_only: true,
         device,
       });
+      await ensurePipelineTokenizer(classifier, transformers.AutoTokenizer, IDENTIFIER_CLASSIFIER_MODEL_ID);
       debugLog('[PG:identifier-classifier] pipeline ready');
       return classifier;
     })();
