@@ -95,10 +95,15 @@ function isCodeLine(line: string): boolean {
   );
 }
 
+/** A `//` or `/* … *\/` comment line: inside code it does not end the code. */
+function isCommentLine(line: string): boolean {
+  return /^\s*(?:\/\/|\/\*|\*)/.test(line);
+}
+
 /**
  * Fenced / `<pre>` regions plus runs of unfenced lines that look like code.
  * A run needs at least two code-looking lines — or one line holding several
- * statements, or one unmistakable code line; blank lines and indented continuation lines inside a run do
+ * statements, or one unmistakable code line; blank lines, comment lines and indented continuation lines inside a run do
  * not break it. Prose leading into code on the same line is left out.
  */
 export function findCodeLikeRegions(text: string): CodeRegion[] {
@@ -123,7 +128,7 @@ export function findCodeLikeRegions(text: string): CodeRegion[] {
       if (runStart === -1) runStart = offset + lead;
       runEnd = lineEnd;
       runCodeLines += isMultiStatementLine(line) || isStrongCodeLine(line) ? 2 : 1;
-    } else if (runStart !== -1 && line.trim() !== '' && !/^\s/.test(line)) {
+    } else if (runStart !== -1 && line.trim() !== '' && !/^\s/.test(line) && !isCommentLine(line)) {
       closeRun();
     }
     offset = lineEnd + 1;

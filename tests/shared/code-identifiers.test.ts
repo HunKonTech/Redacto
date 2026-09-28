@@ -42,6 +42,12 @@ describe('findCodeLikeRegions', () => {
     expect(findCodeLikeRegions('My name is Ada Lovelace.\nI live in London.')).toEqual([]);
   });
 
+  test('keeps a comment line inside the code run', () => {
+    const text =
+      'const modal = document.querySelector("dialog");\n\n// Feliratkozás a bezárás eseményre\nmodal.addEventListener("close", () => {\n    console.log("A modal bezárult.");\n});';
+    expect(findCodeLikeRegions(text)).toEqual([{ start: 0, end: text.length }]);
+  });
+
   test('finds several statements on one line', () => {
     const line = 'int count = 0; var total = count + 1;';
     expect(findCodeLikeRegions(line)).toEqual([{ start: 0, end: line.length }]);
