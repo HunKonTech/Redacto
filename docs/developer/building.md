@@ -118,6 +118,15 @@ npm run test:ner:model
 
 Those local model fixtures are not part of the public initial commit.
 
+The identifier classifier has its own opt-in real-model test — it compiles the
+provider straight from TypeScript and runs the real ONNX session (in a child
+`node` process, not mocked), so it needs the model built first:
+
+```bash
+npm run prepare:model:identifier-classifier
+npm run test:identifier-classifier:model
+```
+
 ## Load In Chrome
 
 1. Build the extension.

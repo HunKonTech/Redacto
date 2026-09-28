@@ -35,6 +35,7 @@
     "test:e2e:live": "node scripts/run-live-e2e.js",
     "test:e2e:harness": "playwright test --config e2e/live/playwright.harness.config.ts",
     "test:ner:model": "jest --config jest.local-model.config.js",
+    "test:identifier-classifier:model": "jest --config jest.local-model.config.js identifier-classifier",
     "test:rust": "cd crate && cargo test",
     "check:svelte": "svelte-check --tsconfig ./tsconfig.svelte.json",
     "check:permissions": "node scripts/check-extension-permissions.js",

@@ -42,7 +42,7 @@ type TransformersModule = {
   pipeline: (
     task: 'token-classification',
     model: string,
-    options?: { dtype?: 'q8'; local_files_only?: boolean; device?: 'wasm' }
+    options?: { dtype?: 'q8'; local_files_only?: boolean; device?: 'wasm' | 'cpu' }
   ) => Promise<TokenClassificationPipeline>;
 };
 
@@ -62,6 +62,14 @@ interface IdentifierClassifierProviderOptions {
   getExtensionUrl?: (path: string) => string;
   assetExists?: (url: string) => Promise<boolean>;
   libThreshold?: number;
+  /**
+   * Runs inference on this device instead of the extension's real 'wasm'
+   * path. Node's onnxruntime-node backend doesn't support the 'wasm'
+   * execution provider, so the real-model integration test (which runs the
+   * genuine ONNX session under Node, not a mocked pipeline) overrides this
+   * to 'cpu'.
+   */
+  deviceOverride?: 'wasm' | 'cpu';
 }
 
 function defaultExtensionUrl(path: string): string {
@@ -94,13 +102,22 @@ async function defaultLoadTransformers(): Promise<TransformersModule> {
  * the fix is to have both providers agree on one wasm build up front
  * (e.g. via a shared "runtime device" decided once per document).
  */
-function configureEnvironment(transformers: TransformersModule, getExtensionUrl: (path: string) => string): void {
+function configureEnvironment(
+  transformers: TransformersModule,
+  getExtensionUrl: (path: string) => string,
+  device: 'wasm' | 'cpu'
+): void {
   transformers.env.allowRemoteModels = false;
   transformers.env.allowLocalModels = true;
   transformers.env.localModelPath = getExtensionUrl(MODEL_ASSET_ROOT);
   transformers.env.useBrowserCache = false;
   transformers.env.useFSCache = false;
   transformers.env.useWasmCache = false;
+
+  // Node's onnxruntime-node backend runs the 'cpu' device directly and has
+  // no use for onnxruntime-web's wasm glue files; only the real 'wasm'
+  // (in-browser) path needs them pointed at the extension's vendored assets.
+  if (device !== 'wasm') return;
 
   const wasmEnv = transformers.env.backends.onnx.wasm;
   if (!wasmEnv) {
@@ -189,15 +206,17 @@ export function createIdentifierClassifierProvider(
   const libThreshold = options.libThreshold ?? DEFAULT_LIB_THRESHOLD;
   let pipelinePromise: Promise<TokenClassificationPipeline> | null = null;
 
+  const device = options.deviceOverride ?? 'wasm';
+
   async function ensurePipeline(): Promise<TokenClassificationPipeline> {
     pipelinePromise ??= (async () => {
       await assertAssetsAvailable(getExtensionUrl, assetExists);
       const transformers = await loadTransformers();
-      configureEnvironment(transformers, getExtensionUrl);
+      configureEnvironment(transformers, getExtensionUrl, device);
       const classifier = await transformers.pipeline('token-classification', IDENTIFIER_CLASSIFIER_MODEL_ID, {
         dtype: 'q8',
         local_files_only: true,
-        device: 'wasm',
+        device,
       });
       debugLog('[PG:identifier-classifier] pipeline ready');
       return classifier;

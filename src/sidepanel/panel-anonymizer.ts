@@ -45,10 +45,27 @@ import { prepareReviewSpans } from '../content/review-spans';
 
 export type IdentifierClassifications = ReadonlyMap<string, IdentifierVerdict>;
 
+/**
+ * Whether identifier renaming, if it ran at all, used the identifier-classifier
+ * ONNX model or fell back to the hardcoded `LIBRARY_NAMES` list — shown in the
+ * side panel so "why was this name (not) renamed" has a visible answer instead
+ * of being an implementation detail only debugLog surfaces.
+ */
+export type ClassifierStatus =
+  /** "full" code anonymization is off; identifiers are not renamed at all. */
+  | 'off'
+  /** Renaming is on, but the text has no code-like regions to classify. */
+  | 'no-code'
+  /** The classifier model answered for this paste's undeclared names. */
+  | 'model'
+  /** The model was unavailable or errored; the static list was used instead. */
+  | 'fallback';
+
 /** What a detection run hands the panel. */
 export interface PanelDetection {
   spans: PiiSpan[];
   classifications?: IdentifierClassifications;
+  classifierStatus: ClassifierStatus;
   /** Replacement tokens the anonymizer must leave alone. */
   knownReplacements: string[];
   /** Set when the text is, whole, the anonymized text of this entry. */
@@ -78,7 +95,9 @@ export async function detectForPanel(text: string, settings: Settings): Promise<
   const history = await loadAnonymizationHistory();
   const knownReplacements = history.flatMap((entry) => Object.keys(entry.mappings));
   const alreadyAnonymized = findEntryForAnonymizedText(text, history);
-  if (alreadyAnonymized) return { spans: [], knownReplacements, alreadyAnonymized };
+  if (alreadyAnonymized) {
+    return { spans: [], classifierStatus: 'off', knownReplacements, alreadyAnonymized };
+  }
 
   const requestId = `sidepanel_${Date.now()}_${requestCounter++}`;
   const request: DetectPiiRequest = {
@@ -100,30 +119,37 @@ export async function detectForPanel(text: string, settings: Settings): Promise<
     prepareReviewSpans(text, response.payload.spans, settings, adaptiveThresholds),
     known,
   );
-  const classifications = settings.codeAnonymization === 'full'
-    ? await classifyCodeIdentifiers(text)
-    : undefined;
-  return { spans, classifications, knownReplacements };
+  let classifications: IdentifierClassifications | undefined;
+  let classifierStatus: ClassifierStatus = 'off';
+  if (settings.codeAnonymization === 'full') {
+    ({ classifications, status: classifierStatus } = await classifyCodeIdentifiers(text));
+  }
+  return { spans, classifications, classifierStatus, knownReplacements };
 }
 
 /**
- * Same round trip the content script makes on paste. Best-effort: undefined
- * leaves renaming to the library-name list.
+ * Same round trip the content script makes on paste. Best-effort: a
+ * 'fallback' status leaves renaming to the library-name list.
  */
-async function classifyCodeIdentifiers(text: string): Promise<IdentifierClassifications | undefined> {
+async function classifyCodeIdentifiers(
+  text: string,
+): Promise<{ classifications?: IdentifierClassifications; status: ClassifierStatus }> {
   const texts = extractCodeRegionTexts(text);
-  if (texts.length === 0) return undefined;
+  if (texts.length === 0) return { status: 'no-code' };
   try {
     const response = (await chrome.runtime.sendMessage({
       type: 'CLASSIFY_IDENTIFIERS',
       payload: { requestId: `sidepanel_identifiers_${Date.now()}_${requestCounter++}`, texts },
     })) as ClassifyIdentifiersResponse | undefined;
     if (response?.type !== 'IDENTIFIER_CLASSIFICATION_RESULT' || !response.payload.available) {
-      return undefined;
+      return { status: 'fallback' };
     }
-    return new Map(response.payload.classifications.map((c) => [c.name, c.label]));
+    return {
+      classifications: new Map(response.payload.classifications.map((c) => [c.name, c.label])),
+      status: 'model',
+    };
   } catch {
-    return undefined;
+    return { status: 'fallback' };
   }
 }
 

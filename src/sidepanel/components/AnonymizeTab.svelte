@@ -234,6 +234,19 @@
 				hint={preview && preview.renamedIdentifiers > 0 ? `${preview.renamedIdentifiers} identifiers renamed` : undefined}
 			/>
 			<div class="body">
+				{#if detection.classifierStatus === 'model' || detection.classifierStatus === 'fallback'}
+					<p
+						class="classifier-status"
+						class:status-model={detection.classifierStatus === 'model'}
+						class:status-fallback={detection.classifierStatus === 'fallback'}
+						title={detection.classifierStatus === 'model'
+							? 'The identifier-classifier ONNX model ran locally and decided which names to rename.'
+							: 'The identifier-classifier model was unavailable, so the hardcoded library-name list decided which names to rename.'}
+					>
+						<span class="dot" aria-hidden="true"></span>
+						{detection.classifierStatus === 'model' ? 'Identifier classifier: AI model' : 'Identifier classifier: regex fallback'}
+					</p>
+				{/if}
 				{#if preview && changed}
 					<MarkedText segments={previewSegments} label="Anonymized text" oncopy={onManualCopy} />
 					<button type="button" class="primary" onclick={copy}>Copy anonymized text</button>
@@ -267,6 +280,16 @@
 	.primary:disabled { cursor: not-allowed; opacity: 0.55; }
 	.error { margin: 0; color: var(--color-danger); font-size: 11px; line-height: 1.45; }
 	.hint { margin: 0; color: var(--color-muted); font-size: 11px; line-height: 1.45; }
+
+	.classifier-status {
+		display: flex; align-items: center; gap: 6px; margin: 0;
+		color: var(--color-muted); font-size: 10.5px; font-weight: 600;
+	}
+	.classifier-status .dot {
+		flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+	}
+	.classifier-status.status-model { color: var(--color-success); }
+	.classifier-status.status-fallback { color: var(--color-muted); }
 
 	.items { max-height: 30vh; margin: 0; padding: 4px 0; overflow-y: auto; list-style: none; }
 	.items label { display: flex; align-items: center; gap: 8px; padding: 5px 12px; cursor: pointer; }
