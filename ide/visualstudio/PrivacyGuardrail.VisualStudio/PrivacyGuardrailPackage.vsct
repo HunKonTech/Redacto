@@ -9,7 +9,7 @@
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
       </Group>
       <Group guid="guidCommandSet" id="grpOutputWindow" priority="0x0600">
-        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_OUTPUTWINDOW" />
+        <Parent guid="guidOutputWindowCommandSet" id="OutputWindowContextMenu" />
       </Group>
     </Groups>
 
@@ -43,6 +43,11 @@
       <IDSymbol name="grpOutputWindow" value="0x1021" />
       <IDSymbol name="cmdAnonymizeSelection" value="0x0100" />
       <IDSymbol name="cmdOpenPanel" value="0x0101" />
+    </GuidSymbol>
+    <!-- vsshlids.h has no Output window context menu symbol; these are the
+         values Command Explorer reports for it. -->
+    <GuidSymbol name="guidOutputWindowCommandSet" value="{C9DD4A59-47FB-11D2-83E7-00C04F9902C1}">
+      <IDSymbol name="OutputWindowContextMenu" value="0x0155" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
