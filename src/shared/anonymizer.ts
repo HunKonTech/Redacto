@@ -2,7 +2,7 @@ import type { EntityType, PiiSpan } from './message-types';
 import { EntityMap } from './entity-map';
 import { dropKnownReplacements, knownReplacementTokens, placeholdersInText } from './already-anonymized';
 import { byteOffsetToStringIndex } from './text-offsets';
-import { bareIdentifierPlaceholder, createIdentifierPositionCheck } from './code-identifiers';
+import { bareIdentifierPlaceholder, consistentIdentifierSpans, createIdentifierPositionCheck } from './code-identifiers';
 import { aliasFor, IDENTIFIER_ALIAS_RE, planIdentifierRenames, type IdentifierRole } from './code-rename';
 import type { IdentifierVerdict } from './identifier-classifier-constants';
 import {
@@ -260,7 +260,7 @@ export function anonymize(
   const known = knownReplacementTokens({ entityMap, extra: options.knownReplacements });
   for (const { type, index } of placeholdersInText(originalText, known)) entityMap.reserve(type, index);
   // Sort spans by start position (should already be sorted from merger)
-  const sorted = dropKnownReplacements(spans, known).sort((a, b) => a.start - b.start);
+  const sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 
@@ -340,7 +340,7 @@ export function anonymizeWithVault(
     const entityType = type as EntityType;
     vaultData.counters[entityType] = Math.max(vaultData.counters[entityType] ?? 0, index);
   }
-  const sorted = dropKnownReplacements(spans, known).sort((a, b) => a.start - b.start);
+  const sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 

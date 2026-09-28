@@ -11,6 +11,7 @@
 import '../shared/styles/tokens.css';
 import { createChromeShim, installChromeShim } from './chrome-shim';
 import { createHostBridge } from './host-bridge';
+import { withIdeDefaults } from './ide-defaults';
 import type { HostToWebview } from './protocol';
 
 type InitMessage = Extract<HostToWebview, { type: 'init' }>;
@@ -36,7 +37,7 @@ async function start(): Promise<void> {
     globalThis as { chrome?: unknown },
     createChromeShim({
       assetBase: document.baseURI,
-      storage,
+      storage: { ...storage, local: withIdeDefaults(storage.local) },
       post: (message) => bridge.post(message),
       handleMessage: routeRuntimeMessage,
     }),
@@ -60,5 +61,5 @@ async function start(): Promise<void> {
 
   const target = document.getElementById('app');
   if (!target) throw new Error('IDE panel mount target #app not found');
-  mount(App, { target });
+  mount(App, { target, props: { settingsTab: 'ide' } });
 }

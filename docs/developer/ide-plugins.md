@@ -33,8 +33,10 @@ The hosts are thin:
 | Visual Studio 2022 | `ide/visualstudio` | tool window (WebView2, `https://pg.local/`) | code editor, Output window | `%LOCALAPPDATA%\PrivacyGuardrail\storage.json` |
 
 `session` storage lives in memory for as long as the IDE runs, like
-`chrome.storage.session`. Settings use their defaults (local AI on, identity
-vault on); there is no options page in the IDEs.
+`chrome.storage.session`. The panel has a **Settings** tab (the web page's:
+local AI, code blocks, sensitivity, allow/blocklist, identity vault). Settings
+use the browser defaults, except that **Rename code identifiers** is on
+(`src/ide/ide-defaults.ts`), since IDE selections are mostly code.
 
 ## Build
 

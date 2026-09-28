@@ -17,8 +17,8 @@
 	import SettingsTab from './components/SettingsTab.svelte';
 	import { onAnonymizeRequest, type ExternalAnonymizeRequest } from './external-input';
 
-	/** The web page has no options page of its own, so it shows the settings as a tab. */
-	let { settingsTab = false }: { settingsTab?: boolean } = $props();
+	/** The web page and the IDE panels have no options page of their own, so they show the settings as a tab. */
+	let { settingsTab }: { settingsTab?: 'web' | 'ide' } = $props();
 
 	type TabId = 'history' | 'anonymize' | 'settings';
 	const tabs: Array<{ id: TabId; label: string }> = $derived([
@@ -151,7 +151,7 @@
 	</section>
 	{#if settingsTab}
 		<section class="panel-body" hidden={activeTab !== 'settings'}>
-			<SettingsTab />
+			<SettingsTab host={settingsTab} />
 		</section>
 	{/if}
 </main>

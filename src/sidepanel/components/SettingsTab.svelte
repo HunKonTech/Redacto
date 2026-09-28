@@ -10,11 +10,15 @@
 	import { saveSettings } from '../../shared/storage';
 
 	/**
-	 * The settings the web page (GitHub Pages) uses, reusing the options
-	 * page's cards. There is no service worker or other tab here, so the
-	 * changes are only saved: the page's storage shim keeps them in
-	 * localStorage and the panel picks them up through `storage.onChanged`.
+	 * The settings the web page (GitHub Pages) and the IDE panels use, reusing
+	 * the options page's cards. There is no service worker or other tab here,
+	 * so the changes are only saved: the storage shim keeps them (localStorage
+	 * on the web, the IDE host's storage in an IDE) and the panel picks them up
+	 * through `storage.onChanged`.
 	 */
+	let { host = 'web' }: { host?: 'web' | 'ide' } = $props();
+	const inIde = $derived(host === 'ide');
+
 	const model = createOptionsModel();
 	const settings = model.settings;
 
@@ -24,13 +28,18 @@
 
 <div class="stack">
 	<article class="card">
-		<CardHeading title="Detection" hint="Saved in this browser" />
+		<CardHeading title="Detection" hint={inIde ? 'Saved in this IDE' : 'Saved in this browser'} />
 		<div class="row">
 			<div class="info">
 				<span class="row-label">Local AI detection</span>
 				<p class="hint">
-					Finds names, addresses and other personal data with the local AI model, downloaded from this site
-					and run in this browser. When off, only the built-in rules detect.
+					{#if inIde}
+						Finds names, addresses and other personal data with the local AI model bundled with the plugin,
+						run inside the IDE. When off, only the built-in rules detect.
+					{:else}
+						Finds names, addresses and other personal data with the local AI model, downloaded from this site
+						and run in this browser. When off, only the built-in rules detect.
+					{/if}
 				</p>
 			</div>
 			<Toggle
@@ -43,7 +52,9 @@
 		<div class="row">
 			<div class="info">
 				<span class="row-label">Debug logging</span>
-				<p class="hint">Writes detection details (<code>[PG:…]</code>) to the browser console.</p>
+				<p class="hint">
+					Writes detection details (<code>[PG:…]</code>) to the {inIde ? 'webview developer tools console' : 'browser console'}.
+				</p>
 			</div>
 			<Toggle size="sm" checked={debug} label="Debug logging" onchange={(checked) => saveSettings({ debug: checked })} />
 		</div>

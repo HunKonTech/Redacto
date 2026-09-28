@@ -378,6 +378,102 @@ export function createIdentifierPositionCheck(
   };
 }
 
+interface IdentifierPart {
+  start: number;
+  end: number;
+  span: PiiSpan;
+}
+
+/**
+ * The model reads each occurrence of an identifier on its own, so the same
+ * name can come back split differently: `GitHub` in `class GitHubService`
+ * but `Git` + `Hub` in `ILogger<GitHubService>`, which anonymizes to
+ * `ORGANIZATION_1Service` next to `ORGANIZATION_2ORGANIZATION_3Service`.
+ *
+ * For spans that sit inside a longer identifier, touching parts of one type
+ * are joined, and the occurrence of the identifier with the best cover (most
+ * characters, then fewest parts) is applied to every occurrence of it, so the
+ * name anonymizes the same way everywhere. Other spans pass through.
+ */
+export function consistentIdentifierSpans(text: string, spans: readonly PiiSpan[]): PiiSpan[] {
+  const inIdentifierPosition = createIdentifierPositionCheck(text);
+  const occurrences = new Map<number, { word: string; parts: IdentifierPart[] }>();
+  for (const span of spans) {
+    const start = byteOffsetToStringIndex(text, span.start);
+    const end = byteOffsetToStringIndex(text, span.end);
+    if (!inIdentifierPosition(start, end)) continue;
+    let wordStart = start;
+    let wordEnd = end;
+    while (wordStart > 0 && IDENTIFIER_CHAR_RE.test(text[wordStart - 1])) wordStart--;
+    while (wordEnd < text.length && IDENTIFIER_CHAR_RE.test(text[wordEnd])) wordEnd++;
+    if (wordStart === start && wordEnd === end) continue;
+    const occurrence = occurrences.get(wordStart) ?? { word: text.slice(wordStart, wordEnd), parts: [] };
+    occurrence.parts.push({ start: start - wordStart, end: end - wordStart, span });
+    occurrences.set(wordStart, occurrence);
+  }
+  if (occurrences.size === 0) return [...spans];
+
+  const best = new Map<string, IdentifierPart[]>();
+  const cover = (parts: IdentifierPart[]) => parts.reduce((sum, part) => sum + part.end - part.start, 0);
+  for (const { word, parts } of occurrences.values()) {
+    const joined = joinTouchingParts(parts);
+    const current = best.get(word);
+    if (
+      !current ||
+      cover(joined) > cover(current) ||
+      (cover(joined) === cover(current) && joined.length < current.length)
+    ) {
+      best.set(word, joined);
+    }
+  }
+
+  const result: PiiSpan[] = [...spans];
+  for (const [word, parts] of best) {
+    const occurrence = new RegExp(`(?<![\\p{L}\\p{N}_$])${escapeRegExp(word)}(?![\\p{L}\\p{N}_$])`, 'gu');
+    for (const match of text.matchAll(occurrence)) {
+      const wordStart = match.index!;
+      const wordEnd = wordStart + word.length;
+      const byteStart = stringIndexToByteOffset(text, wordStart);
+      const byteEnd = stringIndexToByteOffset(text, wordEnd);
+      const overlapping = result.filter((span) => span.start < byteEnd && span.end > byteStart);
+      // A span reaching past the name ("GitHub Inc" in prose) is left alone.
+      if (overlapping.some((span) => span.start < byteStart || span.end > byteEnd)) continue;
+      for (const span of overlapping) result.splice(result.indexOf(span), 1);
+      for (const part of parts) {
+        result.push({
+          ...part.span,
+          start: stringIndexToByteOffset(text, wordStart + part.start),
+          end: stringIndexToByteOffset(text, wordStart + part.end),
+          text: text.slice(wordStart + part.start, wordStart + part.end),
+        });
+      }
+    }
+  }
+  return result.sort((a, b) => a.start - b.start);
+}
+
+/** `Git` + `Hub` of one type, with nothing between them, → `GitHub`. */
+function joinTouchingParts(parts: IdentifierPart[]): IdentifierPart[] {
+  const joined: IdentifierPart[] = [];
+  for (const part of [...parts].sort((a, b) => a.start - b.start)) {
+    const last = joined[joined.length - 1];
+    if (last && last.end === part.start && last.span.entity_type === part.span.entity_type) {
+      joined[joined.length - 1] = {
+        start: last.start,
+        end: part.end,
+        span: { ...last.span, score: Math.max(last.span.score, part.span.score) },
+      };
+    } else {
+      joined.push(part);
+    }
+  }
+  return joined;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** `[PERSON_1]` → `PERSON_1`; other replacements are returned unchanged. */
 export function bareIdentifierPlaceholder(placeholder: string): string {
   return /^\[[A-Z][A-Z_]*_\d+\]$/.test(placeholder) ? placeholder.slice(1, -1) : placeholder;
