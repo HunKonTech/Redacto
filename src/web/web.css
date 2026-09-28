@@ -43,6 +43,12 @@ body #app {
   cursor: pointer;
 }
 
+.pg-web-version {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--color-subtle);
+}
+
 .pg-web-offline button:disabled {
   opacity: 0.6;
   cursor: progress;

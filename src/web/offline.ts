@@ -5,7 +5,14 @@
  * whether the page, and the local AI model, work without a network. The
  * model is only downloaded for offline use when the user asks for it (or
  * the first time detection loads it), as it is large.
+ *
+ * Each deploy (a GitHub Actions run) ships a new sw.js. The page checks for it
+ * when it opens, when it comes back to the foreground and every half hour;
+ * the new worker takes over at once, and the page reloads onto it — right
+ * away if nothing is typed in, otherwise when the user clicks "reload".
  */
+
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
 interface OfflineStatus {
   type: 'offline-status';
@@ -35,6 +42,35 @@ function render(status: HTMLElement, button: HTMLButtonElement, message: Offline
   if (modelReady || error) button.disabled = false;
 }
 
+function hasTypedText(): boolean {
+  return Array.from(document.querySelectorAll('textarea')).some((field) => field.value.trim() !== '');
+}
+
+function watchForUpdates(registration: ServiceWorkerRegistration): void {
+  const check = (): void => void registration.update().catch(() => {});
+  setInterval(check, UPDATE_CHECK_INTERVAL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') check();
+  });
+}
+
+function reloadOnNewVersion(): void {
+  // The first install also takes control of the page; only a replaced worker is an update.
+  if (!navigator.serviceWorker.controller) return;
+  const button = document.getElementById('pg-update') as HTMLButtonElement | null;
+  let reloading = false;
+  const reload = (): void => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  };
+  button?.addEventListener('click', reload);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hasTypedText()) reload();
+    else if (button) button.hidden = false;
+  });
+}
+
 export function setUpOffline(): void {
   const status = document.getElementById('pg-offline-status');
   const button = document.getElementById('pg-offline-model') as HTMLButtonElement | null;
@@ -45,6 +81,7 @@ export function setUpOffline(): void {
   }
 
   render(status, button, null);
+  reloadOnNewVersion();
   navigator.serviceWorker.addEventListener('message', (event: MessageEvent<OfflineStatus>) => {
     if (event.data?.type === 'offline-status') render(status, button, event.data);
   });
@@ -61,7 +98,10 @@ export function setUpOffline(): void {
   navigator.serviceWorker
     .register('sw.js')
     .then(() => navigator.serviceWorker.ready)
-    .then((registration) => registration.active?.postMessage({ type: 'offline-status' }))
+    .then((registration) => {
+      registration.active?.postMessage({ type: 'offline-status' });
+      watchForUpdates(registration);
+    })
     .catch((err) => {
       console.warn('[PG:web] service worker registration failed', err);
       status.textContent = 'Offline use is unavailable in this browser session.';
