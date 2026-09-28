@@ -38,8 +38,37 @@ function isReleaseBuild(env = process.env) {
   return env.PG_RELEASE_BUILD === '1';
 }
 
-/** The manifest version for this build: `base` for releases, `base.N` otherwise. */
+/**
+ * The version of a CI build of this fork: the upstream version it is based on
+ * plus this repository's own build counter, `0.5.0` -> `0.5.0.9`.
+ *
+ * - `PG_BASE_VERSION`: the upstream x.y.z (the workflow sets it from the
+ *   `BASE_VERSION` repository variable); `fallbackBase` when unset.
+ * - `PG_BUILD_NUMBER`: the build counter (the workflow run number).
+ *
+ * Returns null outside CI (no `PG_BUILD_NUMBER`).
+ */
+function ciBuildVersion(fallbackBase, env = process.env) {
+  const rawBuild = String(env.PG_BUILD_NUMBER ?? '').trim();
+  if (!rawBuild) return null;
+  const build = Number(rawBuild);
+  if (!Number.isInteger(build) || build < 0 || build > MAX_BUILD_NUMBER) {
+    throw new Error(`PG_BUILD_NUMBER must be an integer from 0 to ${MAX_BUILD_NUMBER}; found "${rawBuild}".`);
+  }
+  const base = String(env.PG_BASE_VERSION ?? '').trim() || fallbackBase;
+  if (!/^\d+\.\d+\.\d+$/.test(base)) {
+    throw new Error(`PG_BASE_VERSION must use x.y.z numeric format; found "${base}".`);
+  }
+  return `${base}.${build}`;
+}
+
+/**
+ * The manifest version for this build: the CI build version when set,
+ * otherwise `base` for releases and `base.N` for local builds.
+ */
 function buildManifestVersion(baseVersion, rootDir, env = process.env) {
+  const ciVersion = ciBuildVersion(baseVersion, env);
+  if (ciVersion) return ciVersion;
   if (isReleaseBuild(env)) return baseVersion;
   return `${baseVersion}.${nextBuildNumber(rootDir)}`;
 }
@@ -47,7 +76,20 @@ function buildManifestVersion(baseVersion, rootDir, env = process.env) {
 module.exports = {
   BUILD_NUMBER_FILE,
   buildManifestVersion,
+  ciBuildVersion,
   isReleaseBuild,
   nextBuildNumber,
   readBuildNumber,
 };
+
+// `node scripts/build-number.js ci-version`: print the version of this build
+// (the CI build version, or package.json's version outside CI).
+if (require.main === module) {
+  if (process.argv[2] !== 'ci-version') {
+    console.error('Usage: node scripts/build-number.js ci-version');
+    process.exitCode = 1;
+  } else {
+    const packageVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version;
+    console.log(ciBuildVersion(packageVersion) ?? packageVersion);
+  }
+}

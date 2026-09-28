@@ -3,7 +3,8 @@ const path = require('path');
 const childProcess = require('child_process');
 
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-const RELEASE_FILE_PATTERN = /^privacy-guardrail-(\d+\.\d+\.\d+)\.(zip|sha256)$/;
+// The optional fourth part is a CI build number (scripts/build-number.js).
+const RELEASE_FILE_PATTERN = /^privacy-guardrail-(\d+\.\d+\.\d+)(?:\.\d+)?\.(zip|sha256)$/;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));

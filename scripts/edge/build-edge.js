@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 
+const { ciBuildVersion } = require('../build-number');
 const { missingPreparedModelAssets } = require('../extension-packaging');
 const { listPackageEntries, readPackageVersion, sha256File } = require('../package-release');
 
@@ -98,7 +99,8 @@ function stage(version) {
 
 function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  const version = readPackageVersion(ROOT_DIR);
+  const packageVersion = readPackageVersion(ROOT_DIR);
+  const version = ciBuildVersion(packageVersion) ?? packageVersion;
 
   const missingModel = missingPreparedModelAssets(ROOT_DIR);
   if (missingModel.length > 0) {

@@ -20,6 +20,12 @@ concurrency:
 
 env:
   WASM_BINDGEN_VERSION: '0.2.118'
+  # Build version of this fork: the upstream version it is based on (the
+  # `BASE_VERSION` repository variable, e.g. 0.5.0; package.json's when unset)
+  # plus this repository's own counter, the run number: 0.5.0.<run>. It names
+  # the packages, the manifests, the web page and the pre-release of each run.
+  PG_BASE_VERSION: ${{ vars.BASE_VERSION }}
+  PG_BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   validate:
@@ -156,9 +162,9 @@ jobs:
         with:
           path: dist-web
 
-      - name: Read package version
+      - name: Read build version
         id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node scripts/build-number.js ci-version)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Chrome package artifact
         uses: actions/upload-artifact@v4
@@ -317,7 +323,8 @@ jobs:
   github-release:
     name: Publish GitHub pre-release
     needs: [prepare-models-and-package]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Every run publishes one, tagged v<build version> on the built commit;
+    # no tag has to be pushed first.
     runs-on: [self-hosted, linux]
     steps:
       - name: Download packaged artifacts
@@ -330,11 +337,14 @@ jobs:
       - name: Create GitHub pre-release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Privacy Guardrail ${{ github.ref_name }}
+          tag_name: v${{ needs.prepare-models-and-package.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Privacy Guardrail v${{ needs.prepare-models-and-package.outputs.version }}
           prerelease: true
           body: |
-            See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.ref_name }}/CHANGELOG.md) for release notes.
+            Build ${{ github.run_number }} of this fork, based on upstream version ${{ vars.BASE_VERSION || 'from package.json' }}, commit ${{ github.sha }}.
+
+            See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
 
             Chrome Web Store and Microsoft Edge Add-ons uploads remain manual (see `docs/developer/releasing.md`).
           files: |

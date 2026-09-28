@@ -42,9 +42,10 @@ minutes; the new version takes over at once and the page reloads onto it —
 immediately if nothing is typed in, otherwise via *New version available —
 reload* in the footer, so unsaved text is not lost.
 
-The footer shows the version the page runs: `package.json` version, the
-workflow run number (`GITHUB_RUN_NUMBER`) and the commit, e.g.
-`v0.5.0 · build 42 · 1a2b3c4` (local builds omit the run number).
+The footer shows the version the page runs and its commit, e.g.
+`v0.5.0.42 · 1a2b3c4`: the build version of the run (see
+[releasing.md](releasing.md#build-versions-of-this-fork)); local builds show
+`package.json`'s version.
 
 Only the site's own files go through the service worker; it never sees the
 text typed into the page.

@@ -12,6 +12,7 @@ const {
   modelAssetStatusMessage,
 } = require('./extension-packaging');
 const { checkVersion } = require('./version');
+const { ciBuildVersion } = require('./build-number');
 
 const DEFAULT_VERSION = null;
 const RELEASE_DIR = 'release';
@@ -209,10 +210,12 @@ function createReleasePackage(options = {}) {
     });
   }
 
+  // A CI build is named after its build version (0.5.0.9), as its manifest is.
+  const packageVersion = ciBuildVersion(version, options.env ?? process.env) ?? version;
   const { entries, excluded } = listPackageEntries(distDir);
-  const fileName = `privacy-guardrail-${version}.zip`;
+  const fileName = `privacy-guardrail-${packageVersion}.zip`;
   const zipPath = path.join(releaseDir, fileName);
-  const checksumPath = path.join(releaseDir, `privacy-guardrail-${version}.sha256`);
+  const checksumPath = path.join(releaseDir, `privacy-guardrail-${packageVersion}.sha256`);
 
   if (dryRun) {
     return {
