@@ -137,6 +137,16 @@ jobs:
           NER_MODEL_ASSETS_REQUIRED: '1'
         run: npm run build:ide-webview
 
+      - name: Build web page (GitHub Pages)
+        env:
+          NER_MODEL_ASSETS_REQUIRED: '1'
+        run: npm run build:web
+
+      - name: Upload web page for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-web
+
       - name: Read package version
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
@@ -277,6 +287,23 @@ jobs:
           path: release/ide/privacy-guardrail-visualstudio-*.vsix
           if-no-files-found: error
           retention-days: 30
+
+  # The side panel as a static page on GitHub Pages (Settings → Pages →
+  # Source: GitHub Actions). Everything runs in the visitor's browser.
+  github-pages:
+    name: Deploy web page (GitHub Pages)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   github-release:
     name: Publish GitHub pre-release
