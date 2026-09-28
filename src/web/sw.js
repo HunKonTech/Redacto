@@ -64,7 +64,9 @@ async function respond(event) {
     return request.method === 'HEAD' ? new Response(null, { status: hit.status, headers: hit.headers }) : hit;
   }
   const response = await fetch(request);
-  if (request.method === 'GET' && response.ok && MODEL_URLS.has(url)) {
+  // Only whole files: the model loader probes files with a one-byte Range
+  // request, whose 206 answer the cache cannot store.
+  if (request.method === 'GET' && response.status === 200 && MODEL_URLS.has(url)) {
     // Stored alongside, so the (large) file reaches the page as it downloads.
     const copy = response.clone();
     event.waitUntil(caches.open(MODEL_CACHE).then((cache) => cache.put(url, copy)));

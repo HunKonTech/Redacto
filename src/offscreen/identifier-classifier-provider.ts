@@ -9,10 +9,9 @@ import { debugLog } from './debug';
 import { alignTokensToText, alignmentCoverage, type TokenCharRange } from './token-offsets';
 import {
   NerProviderUnavailableError,
-  ensurePipelineTokenizer,
+  pointRemoteLookupAtLocalAssets,
   type TokenClassificationItem,
   type NerTokenizerLike,
-  type PretrainedTokenizerLoader,
 } from './ner-provider';
 
 /**
@@ -40,6 +39,8 @@ type TransformersModule = {
     allowRemoteModels: boolean;
     allowLocalModels: boolean;
     localModelPath: string;
+    remoteHost?: string;
+    remotePathTemplate?: string;
     useBrowserCache: boolean;
     useFSCache: boolean;
     useWasmCache: boolean;
@@ -50,7 +51,6 @@ type TransformersModule = {
     model: string,
     options?: { dtype?: 'q8'; local_files_only?: boolean; device?: 'wasm' | 'cpu' }
   ) => Promise<TokenClassificationPipeline>;
-  AutoTokenizer?: PretrainedTokenizerLoader;
 };
 
 type TokenClassificationPipeline = ((
@@ -117,6 +117,7 @@ function configureEnvironment(
   transformers.env.allowRemoteModels = false;
   transformers.env.allowLocalModels = true;
   transformers.env.localModelPath = getExtensionUrl(MODEL_ASSET_ROOT);
+  pointRemoteLookupAtLocalAssets(transformers.env);
   transformers.env.useBrowserCache = false;
   transformers.env.useFSCache = false;
   transformers.env.useWasmCache = false;
@@ -225,7 +226,6 @@ export function createIdentifierClassifierProvider(
         local_files_only: true,
         device,
       });
-      await ensurePipelineTokenizer(classifier, transformers.AutoTokenizer, IDENTIFIER_CLASSIFIER_MODEL_ID);
       debugLog('[PG:identifier-classifier] pipeline ready');
       return classifier;
     })();

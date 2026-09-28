@@ -94,6 +94,8 @@ type TransformersModule = {
     allowRemoteModels: boolean;
     allowLocalModels: boolean;
     localModelPath: string;
+    remoteHost?: string;
+    remotePathTemplate?: string;
     useBrowserCache: boolean;
     useFSCache: boolean;
     useWasmCache: boolean;
@@ -113,28 +115,7 @@ type TransformersModule = {
       session_options?: { externalData?: NerExternalDataAsset[] };
     }
   ) => Promise<TokenClassificationPipeline>;
-  AutoTokenizer?: PretrainedTokenizerLoader;
 };
-
-export type PretrainedTokenizerLoader = {
-  from_pretrained: (model: string, options?: { local_files_only?: boolean }) => Promise<NerTokenizerLike>;
-};
-
-/**
- * Transformers.js 4.2 decides whether a pipeline gets a tokenizer by probing
- * `tokenizer_config.json` (get_file_metadata), and that probe skips local
- * files when `env.localModelPath` is an http(s) URL — the web page and the
- * IDE webviews. The pipeline then has no tokenizer and fails on first use
- * with "this.tokenizer is not a function". Load it explicitly in that case.
- */
-export async function ensurePipelineTokenizer(
-  classifier: { tokenizer?: NerTokenizerLike },
-  autoTokenizer: PretrainedTokenizerLoader | undefined,
-  modelId: string
-): Promise<void> {
-  if (classifier.tokenizer || !autoTokenizer) return;
-  classifier.tokenizer = await autoTokenizer.from_pretrained(modelId, { local_files_only: true });
-}
 
 /** 'Partial<Navigator>': the offscreen document's DOM lib varies, and only 'gpu' is read. */
 type NavigatorWithWebGpu = Partial<Navigator> & {
@@ -855,6 +836,23 @@ async function assertRequiredAssetsAvailable(
   }
 }
 
+/**
+ * Transformers.js 4.2 checks which files a model has (get_file_metadata)
+ * before loading it — e.g. whether there is a tokenizer — and that check
+ * skips local files when `env.localModelPath` is an http(s) URL, as on the
+ * web page and in the IDE webviews. The pipeline was then built without a
+ * tokenizer ("this.tokenizer is not a function"). Pointing the "remote" host
+ * at the same asset folder lets the check find the files there; nothing is
+ * requested from anywhere else, and the loads themselves stay
+ * `local_files_only`.
+ */
+export function pointRemoteLookupAtLocalAssets(env: TransformersModule['env']): void {
+  if (!/^https?:/i.test(env.localModelPath)) return;
+  env.allowRemoteModels = true;
+  env.remoteHost = env.localModelPath;
+  env.remotePathTemplate = '{model}/';
+}
+
 function configureTransformersEnvironment(
   transformers: TransformersModule,
   getExtensionUrl: (path: string) => string,
@@ -863,6 +861,7 @@ function configureTransformersEnvironment(
   transformers.env.allowRemoteModels = false;
   transformers.env.allowLocalModels = true;
   transformers.env.localModelPath = getExtensionUrl(MODEL_ASSET_ROOT);
+  pointRemoteLookupAtLocalAssets(transformers.env);
   transformers.env.useBrowserCache = false;
   transformers.env.useFSCache = false;
   // Skip Transformers.js's blob-URL wasm caching — extension CSP forbids
@@ -1383,7 +1382,7 @@ export function createTransformersNerProvider(
     // device. In Node, Transformers.js keeps string paths when possible so the
     // benchmark harness can still let ONNX Runtime resolve local sidecars.
     const externalData = externalDataForDtype(model, dtype);
-    const classifier = await transformers.pipeline('token-classification', model.modelId, {
+    return transformers.pipeline('token-classification', model.modelId, {
       dtype,
       local_files_only: true,
       device,
@@ -1391,8 +1390,6 @@ export function createTransformersNerProvider(
         ? { session_options: { externalData: [...externalData] } }
         : {}),
     });
-    await ensurePipelineTokenizer(classifier, transformers.AutoTokenizer, model.modelId);
-    return classifier;
   }
 
   async function ensurePipeline(): Promise<TokenClassificationPipeline> {
