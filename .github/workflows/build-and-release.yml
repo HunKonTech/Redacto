@@ -111,6 +111,7 @@ jobs:
           fi
 
       - name: Prepare identifier-classifier model (optional)
+        id: prepare_identifier_classifier
         continue-on-error: true
         run: |
           if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
@@ -118,6 +119,14 @@ jobs:
           else
             npm run prepare:model:identifier-classifier
           fi
+
+      # Runs the real ONNX session against the model just prepared above (no
+      # mocked pipeline) — proves the packaged model actually classifies
+      # identifiers, not only that the asset files exist. Skipped when the
+      # optional prepare step above didn't produce a model.
+      - name: Test identifier-classifier against the real ONNX model
+        if: steps.prepare_identifier_classifier.outcome == 'success'
+        run: npm run test:identifier-classifier:model
 
       - name: Run model-free CI validation
         run: npm run validate:ci
