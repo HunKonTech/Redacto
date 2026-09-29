@@ -28,6 +28,7 @@ export type EntityType =
   | 'MISC'
   | 'SECRET'
   | 'HOSTNAME'
+  | 'FILE_PATH'
   | 'IDENTIFIER';
 
 export const ENTITY_TYPES: readonly EntityType[] = [
@@ -49,6 +50,7 @@ export const ENTITY_TYPES: readonly EntityType[] = [
   'MISC',
   'SECRET',
   'HOSTNAME',
+  'FILE_PATH',
   'IDENTIFIER',
 ];
 

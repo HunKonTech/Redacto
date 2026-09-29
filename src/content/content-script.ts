@@ -757,7 +757,7 @@ function makePreviewResolverFactory(
       const idx = baseCounter + offset + 1;
       const ph = makePlaceholder(span.entity_type, idx);
       const synth = supportsSynthetic(span.entity_type)
-        ? generateSyntheticValue(span.entity_type, baseCounter + offset)
+        ? generateSyntheticValue(span.entity_type, baseCounter + offset, { original: span.text })
         : null;
       const rendered = defaultMode === 'synthetic' && synth ? synth : ph;
       seen.set(key, rendered);

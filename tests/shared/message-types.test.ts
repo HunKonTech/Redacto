@@ -31,6 +31,7 @@ describe('EntityType contract', () => {
       'MISC',
       'SECRET',
       'HOSTNAME',
+      'FILE_PATH',
       'IDENTIFIER',
     ];
 

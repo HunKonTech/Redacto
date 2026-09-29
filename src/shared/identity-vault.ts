@@ -205,6 +205,7 @@ export function activeReplacement(
 function provisionPlaceholderAndSynthetic(
   data: IdentityVaultData,
   entityType: EntityType,
+  originalText: string,
 ): { placeholderText: string; syntheticValue: string } {
   const current = data.counters[entityType] ?? 0;
   const idx = current + 1;
@@ -212,7 +213,9 @@ function provisionPlaceholderAndSynthetic(
 
   const placeholderText = placeholder(entityType, idx);
   const synthetic = supportsSynthetic(entityType)
-    ? generateSyntheticValue(entityType, current /* zero-based pool index */)
+    ? generateSyntheticValue(entityType, current /* zero-based pool index */, {
+        original: originalText,
+      })
     : null;
   return { placeholderText, syntheticValue: synthetic ?? '' };
 }
@@ -258,6 +261,7 @@ export function upsertEntity(
   const { placeholderText, syntheticValue } = provisionPlaceholderAndSynthetic(
     data,
     span.entity_type,
+    span.text,
   );
 
   // Honor the global default unless this type has no synthetic to offer,

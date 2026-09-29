@@ -2,6 +2,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 use crate::types::{DetectionSource, EntityType, PiiSpan};
+use crate::url_path::starts_a_filesystem_path;
 
 const INTERNAL_HOST_SCORE: f64 = 0.85;
 const PATH_USERNAME_SCORE: f64 = 0.85;
@@ -57,20 +58,6 @@ pub fn detect_infrastructure(text: &str) -> Vec<PiiSpan> {
     }
 
     spans
-}
-
-/// `/home/…` inside a URL (`https://site.com/home/about`) is a web route, not
-/// a filesystem path. Accept the match only at a token boundary or after
-/// `file://`.
-fn starts_a_filesystem_path(text: &str, start: usize) -> bool {
-    let before = &text[..start];
-    if before.ends_with("file://") {
-        return true;
-    }
-    match before.chars().next_back() {
-        None => true,
-        Some(c) => c.is_whitespace() || "\"'`=([{,:;>~".contains(c),
-    }
 }
 
 fn span(start: usize, end: usize, text: &str, entity_type: EntityType, score: f64) -> PiiSpan {

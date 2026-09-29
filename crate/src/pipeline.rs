@@ -4,7 +4,8 @@ use crate::context;
 use crate::merger;
 use crate::ner;
 use crate::regex_recognizers;
-use crate::types::{CodeMode, DetectionSource, PiiSpan, PipelineConfig};
+use crate::url_path;
+use crate::types::{CodeMode, DetectionSource, EntityType, PiiSpan, PipelineConfig};
 
 /// Run the full PII detection pipeline on the input text.
 ///
@@ -34,6 +35,7 @@ pub fn detect_with_external_spans(
     if config.code_mode != CodeMode::Off {
         regex_spans = code::combine_with_regex(regex_spans, code::detect_code_secrets(text));
     }
+    regex_spans = url_path::combine_with_regex(regex_spans, url_path::detect_links_and_paths(text));
 
     // Stage 2: NER (if enabled and model is loaded)
     let mut ner_spans = if config.ner_enabled && ner::is_model_loaded() {
@@ -42,6 +44,11 @@ pub fn detect_with_external_spans(
         Vec::new()
     };
     ner_spans.extend(valid_external_ner_spans(text, external_ner_spans));
+    // Only private links are anonymized; a model-tagged public URL stays so
+    // the assistant can still follow it.
+    ner_spans.retain(|span| {
+        span.entity_type != EntityType::Url || url_path::is_sensitive_url(&span.text)
+    });
 
     // Stage 3: Checksum validation (filter out invalid regex matches)
     regex_spans.retain(|span| checksum::validate(span));
@@ -126,6 +133,7 @@ fn ner_min_confidence(entity_type: crate::types::EntityType) -> f64 {
         | crate::types::EntityType::Date
         | crate::types::EntityType::Secret
         | crate::types::EntityType::Hostname
+        | crate::types::EntityType::FilePath
         | crate::types::EntityType::Identifier => 0.80,
         // Keep Rust's authoritative cap permissive enough for model-specific
         // TS threshold profiles. AI4Privacy still filters MISC at 0.90 before
@@ -749,5 +757,42 @@ mod tests {
             span.entity_type == EntityType::Secret
                 && span.text == "ghp_0123456789abcdefghijABCDEFGHIJ012345"
         }));
+    }
+
+    #[test]
+    fn private_links_and_paths_become_whole_spans() {
+        let text = "Ask anna@acme.hu about https://crm.acme.corp/u/anna@acme.hu \
+                    and /home/anna/exports/q3.csv";
+        let result = detect(text, &default_config());
+        let found: Vec<(EntityType, &str)> = result
+            .iter()
+            .map(|span| (span.entity_type, span.text.as_str()))
+            .collect();
+
+        assert_eq!(
+            found,
+            vec![
+                (EntityType::Email, "anna@acme.hu"),
+                (EntityType::Url, "https://crm.acme.corp/u/anna@acme.hu"),
+                (EntityType::FilePath, "/home/anna/exports/q3.csv"),
+            ]
+        );
+    }
+
+    #[test]
+    fn model_tagged_public_urls_are_dropped() {
+        let text = "Docs: https://docs.python.org/3/ and https://wiki.acme.internal/HR";
+        let spans = vec![
+            external_span(text, "https://docs.python.org/3/", EntityType::Url, 0.95),
+            external_span(text, "https://wiki.acme.internal/HR", EntityType::Url, 0.95),
+        ];
+        let result = detect_with_external_spans(text, &default_config(), spans);
+
+        let urls: Vec<&str> = result
+            .iter()
+            .filter(|span| span.entity_type == EntityType::Url)
+            .map(|span| span.text.as_str())
+            .collect();
+        assert_eq!(urls, vec!["https://wiki.acme.internal/HR"]);
     }
 }

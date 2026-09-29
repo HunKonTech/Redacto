@@ -16,17 +16,30 @@ Supported beta sites:
 | Identity | `PERSON`, `USERNAME` |
 | Contact | `EMAIL`, `PHONE`, `ADDRESS` |
 | Financial | `CREDIT_CARD`, `IBAN`, `BANK_ACCOUNT`, `SSN` |
-| Network | `IP_ADDRESS`, `HOSTNAME` |
+| Network | `IP_ADDRESS`, `HOSTNAME`, `URL`, `FILE_PATH` |
 | Location | `LOCATION` |
 | Password | `PASSWORD`, `SECRET` |
 | Organization | `ORGANIZATION` |
-| Low-signal | `URL`, `DATE`, `MISC` |
+| Low-signal | `DATE`, `MISC` |
 
 Low-signal categories can be noisy and may be disabled by default or tuned in settings.
 
 ## What Pattern Detection Handles Best
 
 Pattern recognizers are strongest when the text has a stable format, such as email addresses, credit card numbers, IBANs, IP addresses, and some phone numbers.
+
+## Private Links And File Paths
+
+Links and file paths are checked in every paste, not only in code. Public references such as `https://docs.python.org/3/library/re.html` or `/usr/local/bin` are left alone so the AI can still use them. A link is replaced (`URL`) when it:
+
+- points at an internal host (`.internal`, `.corp`, `.local`, `.lan`, a single-word host such as `http://jenkins:8080`) or an IP address;
+- contains a user name or password (`postgres://user:password@host`);
+- carries an identifier in its path, query or fragment: an email address, a UUID, a long number, hex digest or random-looking token, or a value for a key such as `token`, `key`, `session`, `email` or `user`;
+- opens a private document or meeting (Google Docs and Drive, Dropbox, OneDrive, Notion, Figma, Teams, Zoom and similar), a company's own workspace (`acme.sharepoint.com`, `acme.atlassian.net`, `acme.slack.com`), or a personal profile (`linkedin.com/in/…`, a social-network handle, `medium.com/@…`).
+
+A file path is replaced (`FILE_PATH`) when it names an account (`/home/<name>`, `/Users/<name>`, `C:\Users\<name>`, `/mnt/c/Users/<name>`), is a network share (`\\server\share\…`), or carries an identifier.
+
+With synthetic replacements, the stand-in keeps the shape of the original so the AI treats it as a working link or path: the scheme, port, path depth, separators, file extensions and query keys stay, and service names such as `jira`, `wiki` or `docs.google.com` are kept. Hosts, account names, identifiers, credentials and project or client names are swapped for neutral values, for example `https://jira.acme.corp/browse/PAY-1234` → `https://jira.example.corp/browse/QXR-5821` or `C:\Users\mmueller\Clients\Acme\report.xlsx` → `C:\Users\casey_dev\Clients\Cedar\report.xlsx`. When the AI repeats the stand-in, it is turned back into the original.
 
 ## Secrets in Source Code
 

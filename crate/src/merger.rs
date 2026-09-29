@@ -74,6 +74,8 @@ fn is_authoritative_structured_type(entity_type: EntityType) -> bool {
             | EntityType::IpAddress
             | EntityType::Date
             | EntityType::Secret
+            | EntityType::Url
+            | EntityType::FilePath
     )
 }
 

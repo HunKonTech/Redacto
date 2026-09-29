@@ -22,6 +22,8 @@ pub enum EntityType {
     Misc,
     Secret,
     Hostname,
+    /// A filesystem path that names an account, a share or an identifier.
+    FilePath,
     /// A source-code identifier renamed by the extension. Never produced by
     /// the pipeline; exists so the TypeScript contract stays in sync.
     Identifier,
@@ -48,6 +50,7 @@ impl EntityType {
             EntityType::Misc => "MISC",
             EntityType::Secret => "SECRET",
             EntityType::Hostname => "HOSTNAME",
+            EntityType::FilePath => "FILE_PATH",
             EntityType::Identifier => "IDENTIFIER",
         }
     }
@@ -208,6 +211,7 @@ mod tests {
         EntityType::Misc,
         EntityType::Secret,
         EntityType::Hostname,
+        EntityType::FilePath,
         EntityType::Identifier,
     ];
 
@@ -229,6 +233,7 @@ mod tests {
             ("\"BANK_ACCOUNT\"", EntityType::BankAccount),
             ("\"SECRET\"", EntityType::Secret),
             ("\"HOSTNAME\"", EntityType::Hostname),
+            ("\"FILE_PATH\"", EntityType::FilePath),
             ("\"IDENTIFIER\"", EntityType::Identifier),
         ];
 

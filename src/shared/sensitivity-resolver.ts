@@ -24,6 +24,7 @@ export const CATEGORY_THRESHOLDS: Record<EntityType, CategoryThreshold> = {
   USERNAME:     { baseline: 0.50, delta: 0.20 },
   IP_ADDRESS:   { baseline: 0.50, delta: 0.20 },
   HOSTNAME:     { baseline: 0.50, delta: 0.20 },
+  FILE_PATH:    { baseline: 0.50, delta: 0.20 },
   IDENTIFIER:   { baseline: 0.50, delta: 0.20 }, // never detected; renamed after review
   LOCATION:     { baseline: 0.50, delta: 0.20 },
   ORGANIZATION: { baseline: 0.50, delta: 0.20 },

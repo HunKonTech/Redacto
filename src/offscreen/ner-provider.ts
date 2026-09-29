@@ -216,6 +216,7 @@ export const NER_THRESHOLD_BY_ENTITY_TYPE: Readonly<Record<EntityType, number>> 
   // Regex-only code recognizers; NER labels never map here.
   SECRET: 0.80,
   HOSTNAME: 0.80,
+  FILE_PATH: 0.80,
   IDENTIFIER: 0.80,
   // MISC catches AI4Privacy labels we don't have a dedicated bucket for —
   // keep conservative to avoid distracting users with weak guesses.
@@ -241,6 +242,7 @@ const BARDSAI_NER_THRESHOLD_BY_ENTITY_TYPE: Readonly<Record<EntityType, number>>
   // Regex-only code recognizers; NER labels never map here.
   SECRET: 0.80,
   HOSTNAME: 0.80,
+  FILE_PATH: 0.80,
   IDENTIFIER: 0.80,
   // BardsAI has explicit sensitive-data labels that the app currently
   // collapses to MISC. Keep recall higher for those categories.

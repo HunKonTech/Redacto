@@ -143,11 +143,11 @@ const CATEGORY_DESCRIPTIONS: Record<GroupName, string> = {
   Identity: 'Names, usernames',
   Contact: 'Email, phone, address',
   Financial: 'Cards, IBAN, accounts',
-  Network: 'IP addresses, internal hosts',
+  Network: 'IP addresses, hosts, private links and paths',
   Location: 'Places and regions',
   Password: 'Secrets and keys',
   Organization: 'Companies and orgs',
-  'Low-signal': 'URLs, dates, misc',
+  'Low-signal': 'Dates, misc',
 };
 
 function categoriesFromSettings(settings: Settings): DetectionCategory[] {

@@ -15,11 +15,11 @@ export const GROUP_MEMBERS: Readonly<Record<GroupName, readonly EntityType[]>> =
   Identity: ['PERSON', 'USERNAME'],
   Contact: ['EMAIL', 'PHONE', 'ADDRESS'],
   Financial: ['CREDIT_CARD', 'IBAN', 'BANK_ACCOUNT', 'SSN'],
-  Network: ['IP_ADDRESS', 'HOSTNAME'],
+  Network: ['IP_ADDRESS', 'HOSTNAME', 'URL', 'FILE_PATH'],
   Location: ['LOCATION'],
   Password: ['PASSWORD', 'SECRET'],
   Organization: ['ORGANIZATION'],
-  'Low-signal': ['URL', 'DATE', 'MISC'],
+  'Low-signal': ['DATE', 'MISC'],
 };
 
 export const GROUP_DEFAULT_ON: Readonly<Record<GroupName, boolean>> = {
