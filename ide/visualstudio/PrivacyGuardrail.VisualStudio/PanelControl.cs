@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -44,13 +45,26 @@ namespace PrivacyGuardrail.VisualStudio
             var root = Path.Combine(Path.GetDirectoryName(typeof(PanelControl).Assembly.Location), "webview");
             // WebView2's default profile folder sits next to devenv.exe, which is not writable.
             var environment = await CoreWebView2Environment.CreateAsync(null, Path.Combine(PanelStorage.DataDirectory, "WebView2"));
+            // No white flash in a dark theme while the page loads.
+            web.DefaultBackgroundColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
             await web.EnsureCoreWebView2Async(environment);
 
             var core = web.CoreWebView2;
             core.SetVirtualHostNameToFolderMapping(Host, root, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += OnWebMessage;
             core.NavigationStarting += (sender, args) => ready = false;
+            VSColorTheme.ThemeChanged += OnThemeChanged;
             core.Navigate($"https://{Host}/index.html");
+        }
+
+        private void OnThemeChanged(ThemeChangedEventArgs args)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                web.DefaultBackgroundColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
+                if (ready) Send(new JObject { ["type"] = "theme", ["theme"] = PanelTheme.Snapshot(this) });
+            }).FileAndForget("PrivacyGuardrail/Theme");
         }
 
         /// <summary>Show <paramref name="text"/> anonymized in the panel.</summary>
@@ -85,7 +99,7 @@ namespace PrivacyGuardrail.VisualStudio
             switch ((string)message["type"])
             {
                 case "ready":
-                    Send(new JObject { ["type"] = "init", ["hostName"] = "Visual Studio", ["storage"] = storage.Snapshot() });
+                    Send(new JObject { ["type"] = "init", ["hostName"] = "Visual Studio", ["storage"] = storage.Snapshot(), ["theme"] = PanelTheme.Snapshot(this) });
                     ready = true;
                     Flush();
                     break;

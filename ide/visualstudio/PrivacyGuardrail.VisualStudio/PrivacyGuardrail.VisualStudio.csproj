@@ -58,6 +58,7 @@
     <Compile Include="PanelToolWindow.cs" />
     <Compile Include="PanelControl.cs" />
     <Compile Include="PanelStorage.cs" />
+    <Compile Include="PanelTheme.cs" />
     <Compile Include="SelectionReader.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -85,6 +86,8 @@
     <Reference Include="System" />
     <!-- MenuCommandService, the base of OleMenuCommandService. -->
     <Reference Include="System.Design" />
+    <!-- System.Drawing.Color, what VSColorTheme returns. -->
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>

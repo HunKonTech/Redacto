@@ -11,9 +11,11 @@
  *   `window.__pgHostMessage(message)`. Messages posted before that are queued.
  */
 
-import type { HostToWebview, WebviewToHost } from './protocol';
+import type { HostToWebview, IdeHostKind, WebviewToHost } from './protocol';
 
 export interface HostBridge {
+  /** Which IDE's webview this is, told apart by its transport. */
+  host: IdeHostKind;
   post(message: WebviewToHost): void;
   onMessage(listener: (message: HostToWebview) => void): void;
 }
@@ -62,13 +64,17 @@ export function createHostBridge(win: HostWindow = globalThis as HostWindow): Ho
   const vscode = typeof win.acquireVsCodeApi === 'function' ? win.acquireVsCodeApi() : null;
 
   let send: (message: WebviewToHost) => void;
+  let host: IdeHostKind;
   if (vscode) {
+    host = 'vscode';
     send = (message) => vscode.postMessage(message);
     win.addEventListener?.('message', (event: MessageEvent) => deliver(event.data));
   } else if (webview2) {
+    host = 'visualstudio';
     send = (message) => webview2.postMessage(message);
     webview2.addEventListener('message', (event) => deliver(event.data));
   } else {
+    host = 'jetbrains';
     const queue: WebviewToHost[] = [];
     send = (message) => {
       if (win.__pgJcefPost) win.__pgJcefPost(JSON.stringify(message));
@@ -81,6 +87,7 @@ export function createHostBridge(win: HostWindow = globalThis as HostWindow): Ho
   }
 
   return {
+    host,
     post: send,
     onMessage: (listener) => void listeners.push(listener),
   };

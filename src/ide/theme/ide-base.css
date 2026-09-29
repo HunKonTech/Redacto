@@ -1,0 +1,252 @@
+/*
+ * Privacy Guardrail — IDE look, shared by every host
+ *
+ * Loaded only by the IDE webview (src/ide/ide-webview.ts); the extension and
+ * the web page keep the panel's own design. Everything here reads the
+ * `--ide-*` variables below, which the host stylesheets (vscode.css,
+ * visualstudio.css, jetbrains.css) map to the IDE's theme, or the host sets
+ * from its own colors (ide-theme.ts). The component rules are prefixed with
+ * `#app` so they win over the panel's scoped Svelte styles.
+ */
+
+html[data-ide-host] {
+  --ide-bg: #ffffff;
+  --ide-fg: #1f1f1f;
+  --ide-muted: #6e6e6e;
+  --ide-border: rgb(128 128 128 / 26%);
+  --ide-card-bg: var(--ide-bg);
+  --ide-card-border: var(--ide-border);
+  --ide-section-bg: transparent;
+  --ide-section-fg: var(--ide-fg);
+  --ide-input-bg: #ffffff;
+  --ide-input-fg: var(--ide-fg);
+  --ide-input-border: rgb(128 128 128 / 40%);
+  --ide-focus: #0078d4;
+  --ide-accent: var(--ide-focus);
+  --ide-link: var(--ide-accent);
+  --ide-button-bg: #0078d4;
+  --ide-button-fg: #ffffff;
+  --ide-button-hover: var(--ide-button-bg);
+  --ide-button2-bg: transparent;
+  --ide-button2-fg: var(--ide-fg);
+  --ide-button2-border: var(--ide-input-border);
+  --ide-button2-hover: var(--ide-list-hover);
+  --ide-list-hover: rgb(128 128 128 / 12%);
+  --ide-list-active-bg: rgb(0 120 212 / 14%);
+  --ide-list-active-fg: var(--ide-fg);
+  --ide-tab-bar-bg: var(--ide-bg);
+  --ide-tab-border: var(--ide-border);
+  --ide-tab-active-fg: var(--ide-fg);
+  --ide-tab-inactive-fg: var(--ide-muted);
+  --ide-tab-active-border: var(--ide-focus);
+  --ide-toggle-off: rgb(128 128 128 / 45%);
+  --ide-toggle-on: var(--ide-button-bg);
+  --ide-toggle-knob: #ffffff;
+  --ide-error: #e51400;
+  --ide-success: #388a34;
+  --ide-warning: #bf8803;
+  --ide-toast-bg: var(--ide-card-bg);
+  --ide-toast-fg: var(--ide-fg);
+  --ide-shadow: rgb(0 0 0 / 22%);
+  --ide-code-bg: var(--ide-input-bg);
+  --ide-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ide-font-size: 13px;
+  --ide-mono-font: ui-monospace, Consolas, monospace;
+  --ide-radius: 2px;
+  --ide-radius-lg: var(--ide-radius);
+
+  /* The panel's own tokens (src/shared/styles/tokens.css), in IDE terms. */
+  --font-sans: var(--ide-font);
+  --font-mono: var(--ide-mono-font);
+  --color-header: var(--ide-tab-bar-bg);
+  --color-surface: var(--ide-bg);
+  --color-card: var(--ide-card-bg);
+  --color-border: var(--ide-border);
+  --color-border-strong: var(--ide-input-border);
+  --color-ink: var(--ide-fg);
+  --color-muted: var(--ide-muted);
+  --color-subtle: var(--ide-muted);
+  --color-accent: var(--ide-accent);
+  --color-accent-soft: var(--ide-list-active-bg);
+  --color-glow: var(--ide-tab-active-border);
+  --color-success: var(--ide-success);
+  --color-danger: var(--ide-error);
+  --radius-sm: var(--ide-radius);
+  --radius-md: var(--ide-radius);
+  --radius-lg: var(--ide-radius-lg);
+  --border-hairline: 1px solid var(--ide-border);
+}
+
+/* Fallbacks for a dark theme the host sent no colors for. */
+html[data-ide-host][data-ide-theme="dark"],
+html[data-ide-host][data-ide-theme="high-contrast"] {
+  --ide-bg: #1f1f1f;
+  --ide-fg: #cccccc;
+  --ide-muted: #9d9d9d;
+  --ide-border: rgb(128 128 128 / 30%);
+  --ide-input-bg: #313131;
+  --ide-input-border: rgb(128 128 128 / 45%);
+  --ide-list-active-bg: rgb(0 120 212 / 28%);
+  --ide-error: #f48771;
+  --ide-success: #73c991;
+  --ide-warning: #cca700;
+  --ide-shadow: rgb(0 0 0 / 50%);
+  color-scheme: dark;
+
+  /* Entity colors readable on a dark background. */
+  --color-group-identity-bg: rgb(167 139 250 / 24%);
+  --color-group-identity-fg: #c4b5fd;
+  --color-group-contact-bg: rgb(96 165 250 / 22%);
+  --color-group-contact-fg: #93c5fd;
+  --color-group-financial-bg: rgb(232 121 249 / 22%);
+  --color-group-financial-fg: #f0abfc;
+  --color-group-network-bg: rgb(45 212 191 / 20%);
+  --color-group-network-fg: #5eead4;
+  --color-group-location-bg: rgb(74 222 128 / 20%);
+  --color-group-location-fg: #86efac;
+  --color-group-password-bg: rgb(251 113 133 / 22%);
+  --color-group-password-fg: #fda4af;
+  --color-group-organization-bg: rgb(251 146 60 / 22%);
+  --color-group-organization-fg: #fdba74;
+  --color-group-low-signal-bg: rgb(148 163 184 / 22%);
+  --color-group-low-signal-fg: #cbd5e1;
+}
+
+html[data-ide-host] body {
+  background: var(--ide-bg);
+  color: var(--ide-fg);
+  font-family: var(--ide-font);
+  font-size: var(--ide-font-size);
+}
+
+/* ── Header: the IDE titles the view already, so only the tabs stay. ── */
+[data-ide-host] #app .panel-header {
+  background: var(--ide-tab-bar-bg);
+  color: var(--ide-fg);
+  border-bottom: 1px solid var(--ide-tab-border);
+}
+[data-ide-host] #app .brand-row { display: none; }
+[data-ide-host] #app .tab-nav { gap: 2px; padding: 0 8px; border-top: 0; }
+[data-ide-host] #app .tab-nav button {
+  flex: 0 1 auto;
+  padding: 7px 8px 6px;
+  border-bottom: 1px solid transparent;
+  color: var(--ide-tab-inactive-fg);
+  font-weight: 400;
+  box-shadow: none;
+}
+[data-ide-host] #app .tab-nav button:hover { color: var(--ide-tab-active-fg); }
+[data-ide-host] #app .tab-nav button.active {
+  border-bottom-color: var(--ide-tab-active-border);
+  color: var(--ide-tab-active-fg);
+  font-weight: 400;
+  box-shadow: none;
+}
+[data-ide-host] #app .tab-nav button:focus-visible { outline: 1px solid var(--ide-focus); outline-offset: -1px; }
+[data-ide-host] #app .panel-body { padding: 8px 8px 16px; }
+
+/* ── Cards ── */
+[data-ide-host] #app .card {
+  border: 1px solid var(--ide-card-border);
+  border-radius: var(--ide-radius-lg);
+  background: var(--ide-card-bg);
+}
+[data-ide-host] #app .card-head { background: var(--ide-section-bg); }
+[data-ide-host] #app .card-title { color: var(--ide-section-fg); }
+
+/* ── Text fields ── */
+[data-ide-host] #app textarea,
+[data-ide-host] #app .input,
+[data-ide-host] #app select,
+[data-ide-host] #app .synthetic-edit {
+  border: 1px solid var(--ide-input-border);
+  border-radius: var(--ide-radius);
+  background: var(--ide-input-bg);
+  color: var(--ide-input-fg);
+}
+[data-ide-host] #app textarea:focus,
+[data-ide-host] #app .input:focus,
+[data-ide-host] #app select:focus,
+[data-ide-host] #app .synthetic-edit:focus {
+  border-color: var(--ide-focus);
+  background: var(--ide-input-bg);
+  outline: none;
+}
+[data-ide-host] #app .input[aria-invalid="true"] { border-color: var(--ide-error); }
+[data-ide-host] #app .marked {
+  border: 1px solid var(--ide-input-border);
+  border-radius: var(--ide-radius);
+  background: var(--ide-code-bg);
+}
+[data-ide-host] #app .hint code,
+[data-ide-host] #app .intro code { background: var(--ide-code-bg); }
+
+/* ── Buttons ── */
+[data-ide-host] #app .primary,
+[data-ide-host] #app .add-btn {
+  border: 1px solid transparent;
+  border-radius: var(--ide-radius);
+  background: var(--ide-button-bg);
+  color: var(--ide-button-fg);
+}
+[data-ide-host] #app .primary:hover:not(:disabled),
+[data-ide-host] #app .add-btn:hover { background: var(--ide-button-hover); }
+[data-ide-host] #app .secondary,
+[data-ide-host] #app .action-btn {
+  border: 1px solid var(--ide-button2-border);
+  border-radius: var(--ide-radius);
+  background: var(--ide-button2-bg);
+  color: var(--ide-button2-fg);
+}
+[data-ide-host] #app .secondary:hover,
+[data-ide-host] #app .action-btn:hover { border-color: var(--ide-button2-border); background: var(--ide-button2-hover); }
+[data-ide-host] #app .action-btn.danger { border-color: var(--ide-error); color: var(--ide-error); }
+[data-ide-host] #app .action-btn.danger:hover { border-color: var(--ide-error); background: var(--ide-list-hover); }
+[data-ide-host] #app :is(.primary, .add-btn, .secondary, .action-btn):focus-visible {
+  outline: 1px solid var(--ide-focus);
+  outline-offset: 2px;
+}
+[data-ide-host] #app .icon:hover,
+[data-ide-host] #app .icon:focus-visible,
+[data-ide-host] #app .delete-btn:hover,
+[data-ide-host] #app .pin-btn:hover { background: var(--ide-list-hover); }
+[data-ide-host] #app .icon.danger:hover,
+[data-ide-host] #app .delete-btn:hover { color: var(--ide-error); }
+[data-ide-host] #app .pin-btn.pinned { color: var(--ide-warning); }
+[data-ide-host] #app .source-line .link { color: var(--ide-link); }
+
+/* ── Lists ── */
+[data-ide-host] #app .items label:hover,
+[data-ide-host] #app .entry:not(.selected):hover { background: var(--ide-list-hover); }
+[data-ide-host] #app .entry.selected {
+  border-left-color: var(--ide-focus);
+  background: var(--ide-list-active-bg);
+  color: var(--ide-list-active-fg);
+}
+[data-ide-host] #app .entry-main:focus-visible { outline: 1px solid var(--ide-focus); outline-offset: -1px; }
+
+/* ── Switches and segmented controls ── */
+[data-ide-host] #app .toggle { background: var(--ide-toggle-off); }
+[data-ide-host] #app .toggle.checked { background: var(--ide-toggle-on); }
+[data-ide-host] #app .toggle span { background: var(--ide-toggle-knob); }
+[data-ide-host] #app .toggle:focus-visible { outline: 1px solid var(--ide-focus); outline-offset: 2px; }
+[data-ide-host] #app .segmented {
+  border: 1px solid var(--ide-input-border);
+  border-radius: var(--ide-radius);
+  background: var(--ide-input-bg);
+}
+[data-ide-host] #app .segmented button { border-radius: var(--ide-radius); color: var(--ide-muted); }
+[data-ide-host] #app .segmented button.active {
+  background: var(--ide-button-bg);
+  color: var(--ide-button-fg);
+  box-shadow: none;
+}
+
+/* ── Toast ── */
+[data-ide-host] #app .toast {
+  border: 1px solid var(--ide-border);
+  border-radius: var(--ide-radius-lg);
+  background: var(--ide-toast-bg);
+  color: var(--ide-toast-fg);
+  box-shadow: 0 2px 8px var(--ide-shadow);
+}

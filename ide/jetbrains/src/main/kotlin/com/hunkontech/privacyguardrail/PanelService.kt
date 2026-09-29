@@ -2,11 +2,15 @@ package com.hunkontech.privacyguardrail
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationNamesInfo
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.colors.EditorColorsListener
+import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -69,6 +73,10 @@ class PanelService(private val project: Project) : Disposable {
 
         Disposer.register(this, jsQuery)
         Disposer.register(this, created)
+        // Follow the IDE theme and the editor font.
+        val bus = ApplicationManager.getApplication().messageBus.connect(this)
+        bus.subscribe(LafManagerListener.TOPIC, LafManagerListener { sendTheme() })
+        bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener { sendTheme() })
         browser = created
         query = jsQuery
         return created.component
@@ -101,6 +109,14 @@ class PanelService(private val project: Project) : Disposable {
         cef.executeJavaScript("window.__pgHostMessage && window.__pgHostMessage($message);", cef.url, 0)
     }
 
+    private fun sendTheme() {
+        if (!ready) return
+        send(JsonObject().apply {
+            addProperty("type", "theme")
+            add("theme", PanelTheme.snapshot())
+        })
+    }
+
     private fun onMessage(json: String) {
         val message = try {
             JsonParser.parseString(json).asJsonObject
@@ -115,6 +131,7 @@ class PanelService(private val project: Project) : Disposable {
                     addProperty("type", "init")
                     addProperty("hostName", ApplicationNamesInfo.getInstance().fullProductName)
                     add("storage", storage.snapshot())
+                    add("theme", PanelTheme.snapshot())
                 })
                 ready = true
                 flush()

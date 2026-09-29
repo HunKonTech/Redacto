@@ -24,6 +24,15 @@ WebView2), so they run one shared page, `dist-ide/webview/`:
 - `src/ide/host-bridge.ts` and `src/ide/protocol.ts` define the messages the
   page exchanges with the host (`ready`/`init`, `anonymize`, `storage.*`, `copy`).
 
+- `src/ide/ide-theme.ts` and `src/ide/theme/` give the panel each IDE's look
+  (only in the IDE build; the extension and the web page keep their design).
+  `<html data-ide-host>` selects `vscode.css`, `visualstudio.css` or
+  `jetbrains.css` on top of `ide-base.css`, which maps the panel's tokens to
+  `--ide-*` variables. VS Code webviews already carry the theme as
+  `--vscode-*` variables; Visual Studio (`PanelTheme.cs`, from `VSColorTheme`)
+  and JetBrains (`PanelTheme.kt`, from `UIManager`) send their colors and fonts
+  in `init` and again as a `theme` message when the IDE theme changes.
+
 The hosts are thin:
 
 | IDE | Folder | Panel | Context menus | Storage (`local`) |

@@ -16,6 +16,7 @@ describe('IDE host bridge', () => {
     handlers[0]({ data: { type: 'anonymize', text: 'x', source: 'editor' } });
     handlers[0]({ data: 'not a message' });
 
+    expect(bridge.host).toBe('vscode');
     expect(postMessage).toHaveBeenCalledWith({ type: 'ready' });
     expect(received).toHaveBeenCalledTimes(1);
     expect(received).toHaveBeenCalledWith({ type: 'anonymize', text: 'x', source: 'editor' });
@@ -31,6 +32,7 @@ describe('IDE host bridge', () => {
     bridge.post({ type: 'copy', text: 'y' });
     handler?.({ data: { type: 'init', hostName: 'Visual Studio', storage: {} } });
 
+    expect(bridge.host).toBe('visualstudio');
     expect(webview.postMessage).toHaveBeenCalledWith({ type: 'copy', text: 'y' });
     expect(received).toHaveBeenCalledWith({ type: 'init', hostName: 'Visual Studio', storage: {} });
   });
@@ -48,6 +50,7 @@ describe('IDE host bridge', () => {
     bridge.post({ type: 'copy', text: 'z' });
     win.__pgHostMessage('{"type":"anonymize","text":"t","source":"console"}');
 
+    expect(bridge.host).toBe('jetbrains');
     expect(sent.map((json) => JSON.parse(json))).toEqual([{ type: 'ready' }, { type: 'copy', text: 'z' }]);
     expect(received).toHaveBeenCalledWith({ type: 'anonymize', text: 't', source: 'console' });
   });

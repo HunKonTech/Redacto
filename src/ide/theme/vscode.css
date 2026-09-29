@@ -1,0 +1,95 @@
+/*
+ * VS Code: the view looks like a native sidebar view — flat sections with
+ * section headers, panel-style tabs, and the workbench's own colors and fonts
+ * (the `--vscode-*` variables VS Code puts on every webview).
+ */
+
+html[data-ide-host="vscode"][data-ide-theme] {
+  --ide-bg: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --ide-fg: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  --ide-muted: var(--vscode-descriptionForeground);
+  --ide-border: var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, var(--vscode-panel-border)));
+  --ide-card-bg: transparent;
+  --ide-card-border: transparent;
+  --ide-section-bg: var(--vscode-sideBarSectionHeader-background, transparent);
+  --ide-section-fg: var(--vscode-sideBarSectionHeader-foreground, var(--ide-fg));
+  --ide-input-bg: var(--vscode-input-background);
+  --ide-input-fg: var(--vscode-input-foreground);
+  --ide-input-border: var(--vscode-input-border, var(--vscode-widget-border, transparent));
+  --ide-focus: var(--vscode-focusBorder);
+  --ide-accent: var(--vscode-textLink-foreground);
+  --ide-link: var(--vscode-textLink-foreground);
+  --ide-button-bg: var(--vscode-button-background);
+  --ide-button-fg: var(--vscode-button-foreground);
+  --ide-button-hover: var(--vscode-button-hoverBackground);
+  --ide-button2-bg: var(--vscode-button-secondaryBackground);
+  --ide-button2-fg: var(--vscode-button-secondaryForeground);
+  --ide-button2-border: var(--vscode-button-border, transparent);
+  --ide-button2-hover: var(--vscode-button-secondaryHoverBackground);
+  --ide-list-hover: var(--vscode-list-hoverBackground);
+  --ide-list-active-bg: var(--vscode-list-inactiveSelectionBackground);
+  --ide-list-active-fg: var(--vscode-list-inactiveSelectionForeground, var(--ide-fg));
+  --ide-tab-bar-bg: var(--ide-bg);
+  --ide-tab-border: var(--vscode-sideBarSectionHeader-border, transparent);
+  --ide-tab-active-fg: var(--vscode-panelTitle-activeForeground, var(--ide-fg));
+  --ide-tab-inactive-fg: var(--vscode-panelTitle-inactiveForeground, var(--ide-muted));
+  --ide-tab-active-border: var(--vscode-panelTitle-activeBorder, var(--ide-focus));
+  --ide-toggle-off: var(--vscode-button-secondaryBackground);
+  --ide-toggle-on: var(--vscode-button-background);
+  --ide-toggle-knob: var(--vscode-button-foreground);
+  --ide-error: var(--vscode-errorForeground);
+  --ide-success: var(--vscode-testing-iconPassed, #73c991);
+  --ide-warning: var(--vscode-editorWarning-foreground);
+  --ide-toast-bg: var(--vscode-notifications-background);
+  --ide-toast-fg: var(--vscode-notifications-foreground);
+  --ide-shadow: var(--vscode-widget-shadow, rgb(0 0 0 / 36%));
+  --ide-code-bg: var(--vscode-textCodeBlock-background, var(--ide-input-bg));
+  --ide-font: var(--vscode-font-family);
+  --ide-font-size: var(--vscode-font-size, 13px);
+  --ide-mono-font: var(--vscode-editor-font-family);
+  --ide-radius: 2px;
+  --ide-radius-lg: 0;
+}
+
+/* High contrast: VS Code draws borders instead of fills. */
+html[data-ide-host="vscode"][data-ide-theme="high-contrast"] {
+  --ide-card-border: var(--vscode-contrastBorder);
+  --ide-button2-border: var(--vscode-contrastBorder);
+  --ide-list-active-bg: transparent;
+}
+html[data-ide-host="vscode"][data-ide-theme="high-contrast"] #app .entry.selected { outline: 1px dotted var(--vscode-contrastActiveBorder); outline-offset: -1px; }
+
+/* Panel-style tabs: small caps, a thin underline. */
+[data-ide-host="vscode"] #app .tab-nav { gap: 0; padding: 0 12px; }
+[data-ide-host="vscode"] #app .tab-nav button {
+  margin-right: 16px;
+  padding: 8px 0 5px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Sections instead of cards. */
+[data-ide-host="vscode"] #app .panel-body { padding: 0 0 12px; }
+[data-ide-host="vscode"] #app .stack { gap: 0; }
+[data-ide-host="vscode"] #app .card { margin-bottom: 0; border-width: 0 0 1px; border-bottom-color: var(--ide-border); }
+[data-ide-host="vscode"] #app .card-head { min-height: 22px; padding: 3px 12px; border-bottom: 0; box-sizing: border-box; }
+[data-ide-host="vscode"] #app .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+[data-ide-host="vscode"] #app .card-hint { font-weight: 400; letter-spacing: 0; text-transform: none; }
+[data-ide-host="vscode"] #app .card .body { padding: 6px 12px 12px; }
+
+/* Workbench controls: 2px corners, focus outline instead of a border. */
+[data-ide-host="vscode"] #app :is(textarea, .input, select, .synthetic-edit):focus {
+  border-color: var(--ide-input-border);
+  outline: 1px solid var(--ide-focus);
+  outline-offset: -1px;
+}
+[data-ide-host="vscode"] #app :is(.primary, .add-btn, .secondary, .action-btn) {
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+}
+[data-ide-host="vscode"] #app :is(.primary, .add-btn, .secondary, .action-btn):focus-visible { outline-offset: 2px; }
+[data-ide-host="vscode"] #app .toggle.sm { --toggle-width: 30px; --toggle-height: 16px; --toggle-knob: 12px; }
+[data-ide-host="vscode"] #app .toast { border-radius: 4px; }

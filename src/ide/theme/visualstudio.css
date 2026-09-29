@@ -1,0 +1,70 @@
+/*
+ * Visual Studio 2022: a tool window in the shell's style — Segoe UI 12px,
+ * bordered groups, and the colors of the current VS theme (sent by the host
+ * from VSColorTheme; the values here are the Light / Dark theme fallbacks).
+ */
+
+html[data-ide-host="visualstudio"] {
+  --ide-bg: #f9f9f9;
+  --ide-fg: #1e1e1e;
+  --ide-muted: #6d6d6d;
+  --ide-border: #e0e0e0;
+  --ide-card-bg: #ffffff;
+  --ide-section-bg: #f3f3f3;
+  --ide-input-bg: #ffffff;
+  --ide-input-border: #c5c5c5;
+  --ide-focus: #005fb8;
+  --ide-button-bg: #005fb8;
+  --ide-button-hover: #0258a8;
+  --ide-button2-bg: #fdfdfd;
+  --ide-button2-border: #cccccc;
+  --ide-button2-hover: #e8e8ec;
+  --ide-list-hover: #e8e8ec;
+  --ide-list-active-bg: #cce8ff;
+  --ide-toast-bg: #ffffff;
+  --ide-font: "Segoe UI", system-ui, sans-serif;
+  --ide-font-size: 12px;
+  --ide-mono-font: "Cascadia Mono", Consolas, "Courier New", monospace;
+  --ide-radius: 4px;
+  --ide-radius-lg: 4px;
+}
+html[data-ide-host="visualstudio"][data-ide-theme="dark"],
+html[data-ide-host="visualstudio"][data-ide-theme="high-contrast"] {
+  --ide-bg: #1f1f1f;
+  --ide-fg: #e0e0e0;
+  --ide-muted: #9d9d9d;
+  --ide-border: #3d3d3d;
+  --ide-card-bg: #262626;
+  --ide-section-bg: #2b2b2b;
+  --ide-input-bg: #1f1f1f;
+  --ide-input-border: #4a4a4a;
+  --ide-focus: #4cc2ff;
+  --ide-button-bg: #4cc2ff;
+  --ide-button-fg: #000000;
+  --ide-button-hover: #47b1e8;
+  --ide-button2-bg: #2d2d2d;
+  --ide-button2-border: #474747;
+  --ide-button2-hover: #3d3d3d;
+  --ide-list-hover: #3d3d3d;
+  --ide-list-active-bg: #264f78;
+  --ide-toast-bg: #2b2b2b;
+}
+
+/* Tool window tabs: sentence case, a 2px accent under the selected one. */
+[data-ide-host="visualstudio"] #app .tab-nav { padding: 0 6px; }
+[data-ide-host="visualstudio"] #app .tab-nav button { padding: 6px 10px 5px; border-bottom-width: 2px; font-size: 12px; }
+[data-ide-host="visualstudio"] #app .tab-nav button.active { font-weight: 600; }
+
+/* Groups: a bordered box with a header strip. */
+[data-ide-host="visualstudio"] #app .card-head { padding: 7px 10px; border-bottom-color: var(--ide-border); }
+[data-ide-host="visualstudio"] #app .card-title { font-size: 12px; font-weight: 600; }
+[data-ide-host="visualstudio"] #app .card-hint { font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+/* Shell buttons: 24px high. */
+[data-ide-host="visualstudio"] #app :is(.primary, .add-btn, .secondary, .action-btn) {
+  min-height: 24px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 400;
+}
+[data-ide-host="visualstudio"] #app .toggle.sm { --toggle-width: 32px; --toggle-height: 16px; --toggle-knob: 12px; }

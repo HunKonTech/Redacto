@@ -9,18 +9,28 @@
  */
 
 import '../shared/styles/tokens.css';
+// After the panel's tokens: each IDE's look (see ide-theme.ts).
+import './theme/ide-base.css';
+import './theme/vscode.css';
+import './theme/visualstudio.css';
+import './theme/jetbrains.css';
 import { createChromeShim, installChromeShim } from './chrome-shim';
 import { createHostBridge } from './host-bridge';
 import { withIdeDefaults } from './ide-defaults';
+import { applyIdeHost, applyIdeTheme, watchVsCodeTheme } from './ide-theme';
 import type { HostToWebview } from './protocol';
 
 type InitMessage = Extract<HostToWebview, { type: 'init' }>;
 
 const bridge = createHostBridge();
+const root = document.documentElement;
+applyIdeHost(root, bridge.host);
+if (bridge.host === 'vscode') watchVsCodeTheme(root, document.body);
 
 const init = new Promise<InitMessage>((resolve) => {
   bridge.onMessage((message) => {
     if (message.type === 'init') resolve(message);
+    if (message.type === 'theme') applyIdeTheme(root, message.theme);
   });
 });
 bridge.post({ type: 'ready' });
@@ -28,7 +38,8 @@ bridge.post({ type: 'ready' });
 void start();
 
 async function start(): Promise<void> {
-  const { hostName, storage } = await init;
+  const { hostName, storage, theme } = await init;
+  if (theme) applyIdeTheme(root, theme);
 
   // Everything below reads `chrome.*` when it loads, so it is imported only
   // once the shim is in place. (webpack inlines these; see webpack.ide.config.js.)

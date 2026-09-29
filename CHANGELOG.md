@@ -16,6 +16,7 @@ The project follows public beta release notes for `0.x` versions.
 - New option **Protect web searches** (Options → Web search, off by default) for Bing, Google, DuckDuckGo, Ecosia, Brave Search and Startpage. Pastes into the search box are reviewed like on the chat sites, and each search is held until its query has been checked; personal data you approve is replaced with placeholders before the search is sent. Switching it on asks the browser for access to those sites. Searches typed into the address bar and the suggestions an engine requests while you type are not covered.
 - A name that Local AI finds inside a code identifier is now replaced the same way at every occurrence. The model could split the same name differently in two places (`GitHub` in one, `Git` + `Hub` in the other), so `GitHubService` became `ORGANIZATION_1Service` in one line and `ORGANIZATION_2ORGANIZATION_3Service` in the next; touching parts of one type are now joined and the best-covered occurrence is used everywhere.
 - The IDE plugins (VS Code, JetBrains, Visual Studio) now have a **Settings** tab, the same as the web page, and **Rename code identifiers** is on there by default.
+- The IDE plugins' panel now looks like part of the IDE: it uses the IDE's theme colors and fonts (light, dark and high contrast, following theme changes), drops its own dark header, and matches each IDE's style — sidebar sections in VS Code, grouped boxes in Visual Studio 2022, titled separators in JetBrains IDEs. The browser extension is unchanged.
 
 ## [0.5.0] - Public Beta
 
