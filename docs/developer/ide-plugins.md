@@ -7,9 +7,9 @@ The panel shows the original next to the anonymized text and saves it to
 History, where an AI reply can be restored to the original values. The
 selection itself is never changed.
 
-These plugins are built for **manual installation only**. They are never
-published to the VS Code Marketplace, JetBrains Marketplace or Visual Studio
-Marketplace; the CI workflow attaches them to the GitHub pre-release.
+The CI workflow attaches the plugins to the GitHub pre-release and publishes
+them to the VS Code Marketplace, the JetBrains Marketplace and the Visual
+Studio Marketplace (see [Publishing](#publishing)).
 
 ## How it fits together
 
@@ -70,6 +70,26 @@ model in `prepare-models-and-package`, and the `vscode-extension`,
 `ide-redacto-*` artifacts, which `github-release` attaches to the
 GitHub pre-release (a failed IDE job only leaves its installer out). The Visual Studio job needs a Windows runner with the "Visual Studio
 extension development" workload.
+
+## Publishing
+
+Each IDE job publishes the installer it built, after uploading it as an
+artifact. Publishing is skipped when the secret is missing and a failed
+publish does not fail the job (the installer still reaches the pre-release).
+
+| Marketplace | Secret | Listing |
+| --- | --- | --- |
+| VS Code | `VS_MARKETPLACE_PAT` | publisher `benkoncsik`, `benkoncsik.redacto-vscode` (`vsce publish`) |
+| Visual Studio | `VS_MARKETPLACE_PAT` | publisher `benkoncsik`, internal name `Redacto` (`VsixPublisher.exe`, `ide/visualstudio/PrivacyGuardrail.VisualStudio/publishManifest.json`) |
+| JetBrains | `JETBRAINS_MARKETPLACE_TOKEN` (optional signing: `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD`) | plugin id `com.hunkontech.privacyguardrail` (`gradlew publishPlugin`) |
+
+Versions: JetBrains and Visual Studio use the build version (`0.5.0.17`);
+VS Code has no fourth part, so it gets `0.5.17` (the run number as patch).
+
+The JetBrains Marketplace only accepts updates for an existing plugin: upload
+the first `redacto-jetbrains-*.zip` by hand at
+<https://plugins.jetbrains.com/plugin/add> and wait for approval; until then
+the publish step warns "Cannot find plugin".
 
 ## Install
 

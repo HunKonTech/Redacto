@@ -2,8 +2,9 @@
 //
 // Built by scripts/ide/build-jetbrains.js (`npm run build:ide:jetbrains`) around
 // the shared side panel in ../../dist-ide/webview. The result is a zip for
-// "Install Plugin from Disk…"; no publishing (publishPlugin / signPlugin) is
-// configured, on purpose — this plugin is never uploaded to the Marketplace.
+// "Install Plugin from Disk…". `publishPlugin` uploads it to the JetBrains
+// Marketplace with the PUBLISH_TOKEN env var (CI sets it from the
+// JETBRAINS_MARKETPLACE_TOKEN secret); signing is optional.
 
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.0.21"
@@ -39,6 +40,14 @@ intellijPlatform {
             sinceBuild = "242"
             untilBuild = provider { null }
         }
+    }
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+    }
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
 }
 

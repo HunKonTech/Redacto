@@ -1,6 +1,6 @@
 // Build the JetBrains plugin (.zip) around dist-ide/webview.
 // Output: release/ide/redacto-jetbrains-<version>.zip — for
-// "Install Plugin from Disk…" only; no publishing task is configured.
+// "Install Plugin from Disk…"; CI publishes it with `gradlew publishPlugin`.
 // Needs JDK 21 (the Gradle wrapper fetches Gradle and the IntelliJ Platform).
 const fs = require('fs');
 const path = require('path');

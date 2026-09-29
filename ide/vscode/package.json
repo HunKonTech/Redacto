@@ -1,11 +1,22 @@
 {
   "name": "redacto-vscode",
   "displayName": "Redacto",
-  "description": "Anonymize selected code or console output on this device and restore the originals in AI replies. Local builds only \u2014 never published.",
+  "description": "Anonymize selected code or console output on this device and restore the originals in AI replies.",
   "version": "0.5.0",
   "private": true,
-  "publisher": "local",
+  "publisher": "benkoncsik",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HunKonTech/pii-guardrail-browser-extension.git"
+  },
+  "keywords": [
+    "privacy",
+    "anonymize",
+    "pii",
+    "secrets",
+    "ai"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },

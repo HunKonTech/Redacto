@@ -2,8 +2,8 @@
 <!--
   Redacto — Visual Studio 2022 extension (VSIX).
   Built by scripts/ide/build-visualstudio.js around the shared side panel,
-  which it copies into webview\ first. Manual installation only: nothing here
-  publishes to the Visual Studio Marketplace.
+  which it copies into webview\ first. CI publishes the VSIX to the Visual
+  Studio Marketplace with publishManifest.json.
 -->
 <Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>

@@ -18,13 +18,14 @@ function version(env = process.env) {
 }
 
 /**
- * VS Code needs a semver version, which has no fourth part: the build number
- * becomes a numeric pre-release tag (`0.5.0.17` -> `0.5.0-17`), which still
- * orders builds of one base version by build number.
+ * VS Code needs a plain x.y.z version (the Marketplace rejects both a fourth
+ * part and semver pre-release tags): the build number becomes the patch part
+ * (`0.5.0.17` -> `0.5.17`). The run number only grows, so builds stay ordered
+ * across base versions too; the base's own patch part is dropped.
  */
 function semverVersion(ver) {
-  const match = /^(\d+\.\d+\.\d+)\.(\d+)$/.exec(ver);
-  return match ? `${match[1]}-${match[2]}` : ver;
+  const match = /^(\d+\.\d+)\.\d+\.(\d+)$/.exec(ver);
+  return match ? `${match[1]}.${match[2]}` : ver;
 }
 
 function requireWebview() {

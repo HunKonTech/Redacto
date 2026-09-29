@@ -1,6 +1,7 @@
 // Build the Visual Studio 2022 extension (.vsix) around dist-ide/webview.
 // Output: release/ide/redacto-visualstudio-<version>.vsix — for
-// manual installation only; nothing here publishes to the Marketplace.
+// manual installation, and CI publishes it to the Visual Studio Marketplace
+// (publishManifest.json next to the project).
 // Windows only: needs MSBuild with the "Visual Studio extension development"
 // workload (VSSDK) on PATH.
 const fs = require('fs');

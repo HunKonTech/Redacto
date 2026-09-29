@@ -1,14 +1,14 @@
 <idea-plugin>
     <id>com.hunkontech.privacyguardrail</id>
     <name>Redacto</name>
-    <vendor>Redacto</vendor>
+    <vendor url="https://github.com/HunKonTech/pii-guardrail-browser-extension">HunKonTech</vendor>
     <description><![CDATA[
     Anonymize selected code or console output on this device, and restore the
     original values in an AI reply. Select text in an editor or a Run/Debug
     console, right-click → <b>Anonymize with Redacto</b>: the
     Redacto tool window shows the original next to the anonymized
-    text and saves it to History. Your code is never changed.<br/>
-    Local builds only — this plugin is not published to the Marketplace.
+    text and saves it to History. Your code is never changed. Detection
+    (rules + a local AI model) runs on this device.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

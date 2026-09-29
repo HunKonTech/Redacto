@@ -12,8 +12,9 @@ describe('IDE plugin version', () => {
     expect(version({})).toBe(packageVersion);
   });
 
-  test('turns the build number into a semver pre-release tag for VS Code', () => {
-    expect(semverVersion('0.5.0.17')).toBe('0.5.0-17');
+  test('turns the build number into the patch part for VS Code', () => {
+    expect(semverVersion('0.5.0.17')).toBe('0.5.17');
+    expect(semverVersion('0.6.1.18')).toBe('0.6.18');
     expect(semverVersion('0.5.0')).toBe('0.5.0');
   });
 });

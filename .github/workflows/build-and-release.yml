@@ -200,14 +200,17 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
 
-  # IDE plugin installers (VS Code, JetBrains, Visual Studio) for manual
-  # installation: never published to a marketplace, but attached to the GitHub
-  # pre-release (the `ide-redacto-*` artifacts) next to the browser
-  # packages.
+  # IDE plugin installers (VS Code, JetBrains, Visual Studio): attached to the
+  # GitHub pre-release (the `ide-redacto-*` artifacts) next to the browser
+  # packages, and published to each IDE's marketplace. A publish step is
+  # skipped without its secret and never fails the job, so the installer
+  # still reaches the pre-release (see docs/developer/ide-plugins.md).
   vscode-extension:
     name: IDE installer (VS Code)
     needs: [prepare-models-and-package]
     runs-on: [self-hosted, linux]
+    env:
+      VSCE_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -234,10 +237,18 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Publish to the VS Code Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        continue-on-error: true
+        working-directory: ide/vscode
+        run: npx vsce publish --packagePath ../../release/ide/redacto-vscode-*.vsix --pat "$VSCE_PAT"
+
   jetbrains-plugin:
     name: IDE installer (JetBrains)
     needs: [prepare-models-and-package]
     runs-on: [self-hosted, linux]
+    env:
+      PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -270,12 +281,34 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # The Marketplace only takes updates: the first version of the plugin
+      # has to be uploaded by hand (docs/developer/ide-plugins.md).
+      - name: Publish to the JetBrains Marketplace
+        if: ${{ env.PUBLISH_TOKEN != '' }}
+        continue-on-error: true
+        working-directory: ide/jetbrains
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          version=$(node -p "require('../../scripts/ide/common').version()")
+          if ! ./gradlew --no-daemon publishPlugin -PpluginVersion="$version" 2>&1 | tee "$RUNNER_TEMP/jetbrains-publish.log"; then
+            if grep -q 'Cannot find plugin' "$RUNNER_TEMP/jetbrains-publish.log"; then
+              echo "::warning::The plugin is not on the JetBrains Marketplace yet: upload the first redacto-jetbrains-*.zip by hand at https://plugins.jetbrains.com/plugin/add; later runs publish updates."
+            fi
+            exit 1
+          fi
+
   visualstudio-extension:
     name: IDE installer (Visual Studio)
     needs: [prepare-models-and-package]
     # Needs Visual Studio 2022 / Build Tools with the "Visual Studio extension
     # development" workload on the runner.
     runs-on: [self-hosted, windows]
+    env:
+      VS_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -304,6 +337,36 @@ jobs:
           path: release/ide/redacto-visualstudio-*.vsix
           if-no-files-found: error
           retention-days: 30
+
+      # VsixPublisher.exe ships with the "Visual Studio extension development"
+      # workload and in the Microsoft.VSSDK.BuildTools package the build restored.
+      - name: Publish to the Visual Studio Marketplace
+        if: ${{ env.VS_PAT != '' }}
+        continue-on-error: true
+        shell: powershell
+        run: |
+          $version = node -p "require('./scripts/ide/common').version()"
+          $vsix = (Resolve-Path "release/ide/redacto-visualstudio-$version.vsix").Path
+          $manifest = (Resolve-Path 'ide/visualstudio/PrivacyGuardrail.VisualStudio/publishManifest.json').Path
+
+          $candidates = @()
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) {
+            foreach ($vs in (& $vswhere -all -prerelease -property installationPath)) {
+              $candidates += Join-Path $vs 'VSSDK\VisualStudioIntegration\Tools\Bin\VsixPublisher.exe'
+            }
+          }
+          $packages = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
+          $buildTools = Join-Path $packages 'microsoft.vssdk.buildtools'
+          if (Test-Path $buildTools) {
+            $candidates += Get-ChildItem $buildTools -Recurse -Filter VsixPublisher.exe | ForEach-Object { $_.FullName }
+          }
+          $publisher = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $publisher) { throw 'VsixPublisher.exe not found (Visual Studio extension development workload or Microsoft.VSSDK.BuildTools).' }
+
+          Write-Host "VsixPublisher: $publisher"
+          & $publisher publish -payload $vsix -publishManifest $manifest -personalAccessToken $env:VS_PAT -ignoreWarnings 'VSIXValidatorWarning01,VSIXValidatorWarning02'
+          if ($LASTEXITCODE -ne 0) { throw "VsixPublisher.exe exited with code $LASTEXITCODE" }
 
   # The side panel as a static page on GitHub Pages (Settings → Pages →
   # Source: GitHub Actions). Everything runs in the visitor's browser.
