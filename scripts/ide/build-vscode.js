@@ -3,7 +3,7 @@
 // installation only; nothing here publishes to the Marketplace.
 const fs = require('fs');
 const path = require('path');
-const { ROOT, OUT_DIR, version, copyWebview, run } = require('./common');
+const { ROOT, OUT_DIR, version, semverVersion, copyWebview, run } = require('./common');
 
 const dir = path.join(ROOT, 'ide', 'vscode');
 const ver = version();
@@ -17,7 +17,7 @@ run('npm run compile', dir);
 fs.mkdirSync(OUT_DIR, { recursive: true });
 const out = path.join(OUT_DIR, `privacy-guardrail-vscode-${ver}.vsix`);
 run(
-  `npx vsce package ${ver} --no-git-tag-version --no-update-package-json --no-dependencies --allow-missing-repository --out "${out}"`,
+  `npx vsce package ${semverVersion(ver)} --no-git-tag-version --no-update-package-json --no-dependencies --allow-missing-repository --out "${out}"`,
   dir,
 );
 console.log(`[ide] ${path.relative(ROOT, out)}`);

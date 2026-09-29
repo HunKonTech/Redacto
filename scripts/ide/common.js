@@ -2,13 +2,29 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { ciBuildVersion } = require('../build-number');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const WEBVIEW_DIR = path.join(ROOT, 'dist-ide', 'webview');
 const OUT_DIR = path.join(ROOT, 'release', 'ide');
 
-function version() {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+/**
+ * The plugin version: the CI build version (`0.5.0.17`, as the browser
+ * packages and the web page carry it), package.json's version outside CI.
+ */
+function version(env = process.env) {
+  const packageVersion = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+  return ciBuildVersion(packageVersion, env) ?? packageVersion;
+}
+
+/**
+ * VS Code needs a semver version, which has no fourth part: the build number
+ * becomes a numeric pre-release tag (`0.5.0.17` -> `0.5.0-17`), which still
+ * orders builds of one base version by build number.
+ */
+function semverVersion(ver) {
+  const match = /^(\d+\.\d+\.\d+)\.(\d+)$/.exec(ver);
+  return match ? `${match[1]}-${match[2]}` : ver;
 }
 
 function requireWebview() {
@@ -29,4 +45,4 @@ function run(command, cwd) {
   execSync(command, { cwd, stdio: 'inherit' });
 }
 
-module.exports = { ROOT, WEBVIEW_DIR, OUT_DIR, version, copyWebview, run };
+module.exports = { ROOT, WEBVIEW_DIR, OUT_DIR, version, semverVersion, copyWebview, run };
