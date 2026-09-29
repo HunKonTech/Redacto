@@ -348,7 +348,7 @@ export function createOptionsModel(): OptionsModel {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `privacy-guardrail-vault-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `redacto-vault-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     },

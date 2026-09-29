@@ -1,6 +1,6 @@
 # Releasing
 
-This guide describes the intended public beta release workflow for `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
+This guide describes the intended public beta release workflow for `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
 
 ## Release Invariants
 
@@ -24,7 +24,7 @@ The official package builder creates the reviewed Chrome Web Store upload artifa
    git ls-files docs/issues
    ```
 
-2. Confirm the public repo target is `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+2. Confirm the public repo target is `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 3. Confirm all public docs use beta wording and avoid guarantees of perfect detection, prevention, or regulatory compliance.
 
 See `docs/release/public-source-boundary.md` and `docs/release/public-initial-commit.md`.
@@ -95,9 +95,9 @@ Before publishing a release, confirm the Apache-2.0 redistribution duties:
 - `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md` are present in the repository and in the package dry-run output.
 - Webpack-generated `*.LICENSE.txt` sidecar files for bundled third-party code remain in `dist/` and are not excluded from the release ZIP.
 - Existing copyright, patent, trademark, and attribution notices in third-party source or assets remain intact.
-- If a third-party source file is modified and redistributed, that file carries a prominent change notice naming Privacy Guardrail/DFKI as the modifier and describing that the file was changed.
+- If a third-party source file is modified and redistributed, that file carries a prominent change notice naming Redacto as the modifier and describing that the file was changed.
 - Any upstream third-party `NOTICE` file for redistributed code or model assets is carried forward readably, either as a `NOTICE` file, source/documentation notice, or customary generated display.
-- The supplementary Terms of Use still match the intended release train and the distribution remains unentgeltlich; paid or project-specific distribution needs a fresh legal review.
+- The Terms of Use still match the intended release train and the distribution remains free and non-commercial.
 
 ## Package
 
@@ -116,8 +116,8 @@ The command:
 - zips only runtime files from `dist/`
 - requires the legal files `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md`
 - excludes source maps and private/source-only/generated-local paths
-- writes `release/privacy-guardrail-<version>.zip`
-- writes `release/privacy-guardrail-<version>.sha256` for the exact zip
+- writes `release/redacto-<version>.zip`
+- writes `release/redacto-<version>.sha256` for the exact zip
 
 For local package-content checks against an existing `dist/` tree without the clean-worktree guard or build step, run:
 
@@ -132,7 +132,7 @@ The dry run is not a release artifact. It exists to verify include/exclude behav
 For the public beta:
 
 1. Create the fresh public initial commit from the curated tree.
-2. Push to `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+2. Push to `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 3. Tag the release version, for example `v0.3.1`.
 4. Create a GitHub Release marked as a pre-release.
 5. Attach the exact Chrome extension zip and checksum.

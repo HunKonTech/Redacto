@@ -1,12 +1,12 @@
 <idea-plugin>
     <id>com.hunkontech.privacyguardrail</id>
-    <name>Privacy Guardrail</name>
-    <vendor>Privacy Guardrail</vendor>
+    <name>Redacto</name>
+    <vendor>Redacto</vendor>
     <description><![CDATA[
     Anonymize selected code or console output on this device, and restore the
     original values in an AI reply. Select text in an editor or a Run/Debug
-    console, right-click → <b>Anonymize with Privacy Guardrail</b>: the
-    Privacy Guardrail tool window shows the original next to the anonymized
+    console, right-click → <b>Anonymize with Redacto</b>: the
+    Redacto tool window shows the original next to the anonymized
     text and saves it to History. Your code is never changed.<br/>
     Local builds only — this plugin is not published to the Marketplace.
     ]]></description>
@@ -14,7 +14,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="Privacy Guardrail"
+        <toolWindow id="Redacto"
                     anchor="right"
                     icon="/icons/pg.svg"
                     factoryClass="com.hunkontech.privacyguardrail.PanelToolWindowFactory"/>
@@ -23,16 +23,16 @@
     <actions>
         <action id="PrivacyGuardrail.AnonymizeSelection"
                 class="com.hunkontech.privacyguardrail.AnonymizeSelectionAction"
-                text="Anonymize with Privacy Guardrail"
-                description="Show the selection anonymized in the Privacy Guardrail tool window (the selection is not changed)"
+                text="Anonymize with Redacto"
+                description="Show the selection anonymized in the Redacto tool window (the selection is not changed)"
                 icon="/icons/pg.svg">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="ConsoleEditorPopupMenu" anchor="last"/>
         </action>
         <action id="PrivacyGuardrail.AnonymizeClipboard"
                 class="com.hunkontech.privacyguardrail.AnonymizeClipboardAction"
-                text="Anonymize Clipboard with Privacy Guardrail"
-                description="Show the clipboard text (e.g. copied from the terminal) anonymized in the Privacy Guardrail tool window"
+                text="Anonymize Clipboard with Redacto"
+                description="Show the clipboard text (e.g. copied from the terminal) anonymized in the Redacto tool window"
                 icon="/icons/pg.svg">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>

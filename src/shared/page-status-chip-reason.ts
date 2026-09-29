@@ -85,7 +85,7 @@ export function chipReasonMessageForStatus(
 
   return {
     ...message,
-    detail: `${loadFailureMessage} Pattern detection remains active. You can retry from Privacy Guardrail settings.`,
+    detail: `${loadFailureMessage} Pattern detection remains active. You can retry from Redacto settings.`,
   };
 }
 
@@ -94,7 +94,7 @@ export function chipReasonMessage(reason: ChipReason): ChipMessage {
     case 'composer-not-found':
       return {
         title: 'Message box not recognized',
-        detail: 'Privacy Guardrail cannot find this page’s message box, so text here is not reviewed and reviewed text may not be inserted. Reload the page — if that does not help, the site has changed and the extension needs an update.',
+        detail: 'Redacto cannot find this page’s message box, so text here is not reviewed and reviewed text may not be inserted. Reload the page — if that does not help, the site has changed and the extension needs an update.',
       };
     case 'pattern-only':
       return {
@@ -114,7 +114,7 @@ export function chipReasonMessage(reason: ChipReason): ChipMessage {
     case 'model-failed':
       return {
         title: 'Local AI model failed to load',
-        detail: 'Pattern detection remains active. You can retry from Privacy Guardrail settings.',
+        detail: 'Pattern detection remains active. You can retry from Redacto settings.',
       };
     case 'low-memory-warning':
       return {

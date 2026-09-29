@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Identity Vault
+ * Redacto — Identity Vault
  *
  * Global, cross-session, cross-provider mapping between detected PII and
  * the values used to anonymise it. The vault gives three properties that a

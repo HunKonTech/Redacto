@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Review Overlay state model
+ * Redacto — Review Overlay state model
  *
  * Holds the reactive state for the Svelte review overlay using Svelte
  * stores (the established pattern in this codebase — see

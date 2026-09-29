@@ -1,10 +1,10 @@
 # Privacy Policy
 
-This privacy policy describes how the **Privacy Guardrail** Chrome extension processes
+This privacy policy describes how the **Redacto** Chrome extension processes
 personal data, in accordance with Articles 13 and 14 of the EU General Data Protection
 Regulation (GDPR).
 
-Privacy Guardrail is a public-beta Chrome extension that helps you **detect, review, mark,
+Redacto is a public-beta Chrome extension that helps you **detect, review, mark,
 replace, and later restore** personal data in text *before* you paste it into supported
 large-language-model (LLM) chat applications. It runs **locally in your browser**. It is an
 **assistive tool only and does not guarantee** that all sensitive content will be detected,
@@ -15,29 +15,23 @@ substituting personal data; the result may still allow re-identification.
 
 ## 1. Controller (Verantwortlicher)
 
-The controller responsible for the extension within the meaning of Art. 4(7) GDPR is:
+The controller responsible for the extension within the meaning of Art. 4(7) GDPR is its
+maintainer, a private individual who publishes Redacto free of charge and for non-commercial
+purposes:
 
-Deutsches Forschungszentrum für Künstliche Intelligenz GmbH (DFKI)
-Trippstadter Str. 122
-67663 Kaiserslautern, Germany
-Tel.: +49 631 20575 0
-Email: info@dfki.de
+Benedek Koncsik
+Email: koncsik.benedek.andras@gmail.com
 
-Geschäftsführung: Prof. Dr. Antonio Krüger, Helmut Ditzer
-Registergericht: Amtsgericht Kaiserslautern, Registernummer: HRB 2313
-VAT ID: DE 148 646 973
+See the [Legal Notice](IMPRESSUM.md).
 
-Project contact: Department Data Science and its Applications (DSA), DFKI —
-Prof. Dr. Sebastian Vollmer, sebastian.vollmer@dfki.de
-
-See the [Impressum](IMPRESSUM.md) for the full legal notice.
+Redacto is a fork of Privacy Guardrail by DFKI. DFKI is not the controller for Redacto and
+does not receive any data from it.
 
 ## 2. Data Protection Officer
 
-You can reach the DFKI Data Protection Officer at:
-
-Tel.: +49 631 20575 0
-Email: datenschutz@dfki.de
+No data protection officer has been appointed, because the maintainer does not process
+personal data of users on a large scale (Art. 37 GDPR). Contact the maintainer at the address
+in §1 for any data-protection question.
 
 ## 3. Purposes of Processing
 
@@ -59,21 +53,21 @@ The extension processes data on your device for the following purposes:
   amount of personal data you disclose to third-party AI services, and operating a functional,
   secure research prototype. All processing remains local to your device.
 
-Because all processing happens locally on your end device and DFKI does not receive any of the
-processed content, DFKI does not act as a controller over the substance of the text you process.
+Because all processing happens locally on your end device and the maintainer does not receive any of the
+processed content, the maintainer does not act as a controller over the substance of the text you process.
 
 ## 5. Recipients & Non-Transmission
 
-DFKI does **not** receive, store, or evaluate user content from the extension. In particular,
+The maintainer does **not** receive, store, or evaluate user content from the extension. In particular,
 the extension does **not** transmit user content, prompts, responses, detection results,
-placeholder mappings, identity-vault data, local feedback records/logs, or model input to DFKI
-or to DFKI-operated/project-operated servers. There is no telemetry back-channel.
+placeholder mappings, identity-vault data, local feedback records/logs, or model input to the maintainer
+or to maintainer-operated/project-operated servers. There is no telemetry back-channel.
 
 Voluntary reports you submit outside the extension, for example through GitHub Issues or by
-email to `pii@dfki.de`, are separate from extension operation and contain only what you choose
+email to `koncsik.benedek.andras@gmail.com`, are separate from extension operation and contain only what you choose
 to send.
 
-Privacy Guardrail does **not** include:
+Redacto does **not** include:
 
 - telemetry
 - analytics
@@ -154,7 +148,7 @@ extension acts on what it reports. What it reports travels only as a message wit
 are already on; the text is not inspected, not stored, and never leaves your browser.
 
 In every case, clipboard content is processed **locally in your browser**. As stated in §5, it is
-never transmitted to DFKI.
+never transmitted to the maintainer.
 
 ## 7. AI Services (ChatGPT, Claude, Gemini)
 
@@ -176,7 +170,7 @@ processes the data you submit.
 The extension itself causes **no** transfer of personal data to third countries; nothing is
 transmitted off your device by the extension. However, if you choose to submit text to an AI
 service (see §7), that provider may process your submission in a third country under its own
-terms. Any such transfer is governed by the provider, not by DFKI or this extension.
+terms. Any such transfer is governed by the provider, not by the maintainer or this extension.
 
 ## 9. Local Storage, Retention, and Deletion
 
@@ -194,7 +188,7 @@ you use:
 | `pg_system_check` | Result of the local system/compatibility check | To show whether Local AI can run on your device |
 
 **Where it is stored:** locally in your browser profile, on your device. It is **not** collected
-by DFKI.
+by the maintainer.
 
 **With cross-session memory switched off:** no original values are written to local extension
 storage at all. The placeholder ↔ original-value pairs needed to restore what you replaced are
@@ -202,7 +196,7 @@ held in `chrome.storage.session` instead, under `pg_conversation_records`. That 
 by the browser when the browser session ends, so restoration survives a page reload and moving
 between conversations, and nothing outlives the session.
 
-**Local-storage necessity (§ 25 TDDDG):** the extension uses `chrome.storage.local` only to
+**Local-storage necessity (Art. 5(3) ePrivacy Directive, e.g. § 25 TDDDG):** the extension uses `chrome.storage.local` only to
 provide functions you explicitly request, including applying your settings, keeping
 records of which placeholders a conversation used, maintaining stable local replacement
 identities and the original values they stand for,
@@ -227,7 +221,7 @@ server-side copy. The feedback log is additionally capped at the most recent 100
 
 Depending on the text you choose to process, the extension may touch **special categories of
 personal data** (Art. 9 GDPR) — for example data revealing health, religion, or similar. Any
-such data is **processed locally on your device only** and is **not transmitted to DFKI**. You
+such data is **processed locally on your device only** and is **not transmitted to the maintainer**. You
 decide what text to process and what to send onward to an AI service.
 
 ## 11. Automated Decision-Making / Profiling
@@ -248,9 +242,9 @@ Under the GDPR you have the right to:
 - **object** to processing (Art. 21),
 - **data portability** (Art. 20).
 
-Because data processed by the extension stays on your device and DFKI holds none of it, you can
+Because data processed by the extension stays on your device and the maintainer holds none of it, you can
 exercise most of these rights directly by viewing, editing, or deleting your local data (see §9).
-For any request concerning DFKI as controller, contact the addresses in §1 and §2.
+For any request concerning the maintainer as controller, contact the address in §1.
 
 You also have the right to **lodge a complaint with a supervisory authority** (Art. 77 GDPR), in
 particular in the EU member state of your residence, workplace, or the place of the alleged
@@ -279,16 +273,15 @@ examples **synthetic or sanitized**.
 
 ## 15. Confidential Reporting
 
-For sensitive security or privacy reports, contact **pii@dfki.de** directly. Do not use public
+For sensitive security or privacy reports, contact **koncsik.benedek.andras@gmail.com** directly. Do not use public
 GitHub Issues for sensitive reports. See [SECURITY.md](SECURITY.md) for what to include.
 
 ## 16. Limits of Detection
 
-Privacy Guardrail is **assistive only**. It does **not guarantee** complete detection, marking,
+Redacto is **assistive only**. It does **not guarantee** complete detection, marking,
 or removal of personal or sensitive data, and it is **not a compliance product**. Detection can
 miss content or mis-flag content. Always review text yourself before sending it to any AI service.
 
-## 17. Impressum
+## 17. Legal Notice
 
-For the full legal notice (provider identification under § 5 DDG), see the
-[Impressum](IMPRESSUM.md).
+For the provider identification, see the [Legal Notice](IMPRESSUM.md).

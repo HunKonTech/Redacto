@@ -1,4 +1,4 @@
-// Privacy Guardrail — JetBrains IDE plugin.
+// Redacto — JetBrains IDE plugin.
 //
 // Built by scripts/ide/build-jetbrains.js (`npm run build:ide:jetbrains`) around
 // the shared side panel in ../../dist-ide/webview. The result is a zip for

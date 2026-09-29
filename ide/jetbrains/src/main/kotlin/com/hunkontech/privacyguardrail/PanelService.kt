@@ -29,7 +29,7 @@ import javax.swing.JComponent
 import javax.swing.SwingConstants
 
 /**
- * One Privacy Guardrail panel per project: the shared side panel in a JCEF
+ * One Redacto panel per project: the shared side panel in a JCEF
  * browser, plus the bridge it talks to (protocol: src/ide/protocol.ts in the
  * repository root). Selections go to the panel, which shows the original next
  * to the anonymized text; nothing is written back to the editor.
@@ -48,10 +48,10 @@ class PanelService(private val project: Project) : Disposable {
     fun createComponent(): JComponent {
         browser?.let { return it.component }
         if (!JBCefApp.isSupported()) {
-            return JBLabel("Privacy Guardrail needs JCEF (the IDE's embedded browser), which is not available here.", SwingConstants.CENTER)
+            return JBLabel("Redacto needs JCEF (the IDE's embedded browser), which is not available here.", SwingConstants.CENTER)
         }
         val root = PanelAssets.webviewDir()
-            ?: return JBLabel("Privacy Guardrail: the panel files are missing from the plugin.", SwingConstants.CENTER)
+            ?: return JBLabel("Redacto: the panel files are missing from the plugin.", SwingConstants.CENTER)
         JBCefApp.getInstance()
         PanelAssets.register(root)
 
@@ -121,7 +121,7 @@ class PanelService(private val project: Project) : Disposable {
         val message = try {
             JsonParser.parseString(json).asJsonObject
         } catch (e: Exception) {
-            LOG.warn("Privacy Guardrail: unreadable panel message", e)
+            LOG.warn("Redacto: unreadable panel message", e)
             return
         }
         val storage = service<PanelStorage>()
@@ -148,7 +148,7 @@ class PanelService(private val project: Project) : Disposable {
     }
 
     companion object {
-        const val TOOL_WINDOW_ID = "Privacy Guardrail"
+        const val TOOL_WINDOW_ID = "Redacto"
         private val LOG = logger<PanelService>()
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Synthetic Value Pool
+ * Redacto — Synthetic Value Pool
  *
  * Generates realistic-but-clearly-fake replacements for detected PII so that
  * downstream LLMs receive natural-looking text rather than awkward

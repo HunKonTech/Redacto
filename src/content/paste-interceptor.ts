@@ -299,7 +299,7 @@ export class PasteInterceptor {
       const errorMessage = getErrorMessage(err);
 
       if (isExtensionReloadError(errorMessage)) {
-        debugWarn('[PG:content] Extension reloaded; refresh this page to reattach Privacy Guardrail.');
+        debugWarn('[PG:content] Extension reloaded; refresh this page to reattach Redacto.');
         this.savedSelection = null;
         this.callbacks.onError('Extension reloaded. Refresh this page and paste again.');
         return;

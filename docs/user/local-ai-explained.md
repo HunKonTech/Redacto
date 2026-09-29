@@ -1,6 +1,6 @@
 # Local AI Explained
 
-Privacy Guardrail has two local detection layers:
+Redacto has two local detection layers:
 
 - deterministic pattern recognizers for structured values such as emails, credit cards, IBANs, IP addresses, and similar formats
 - optional Local AI for context-sensitive text such as names, locations, organizations, addresses, usernames, passwords, and miscellaneous sensitive fragments
@@ -21,7 +21,7 @@ The detection model ships as a single compact 4-bit (q4f16) build that keeps Loc
 
 Local AI is not the same thing as the Local AI runtime. The setting controls whether the model-backed detection layer is allowed to run; the runtime is the loaded in-browser model execution environment.
 
-When Local AI is turned off, Privacy Guardrail unloads the Local AI runtime so Chrome can reclaim those resources. Pattern detection remains active.
+When Local AI is turned off, Redacto unloads the Local AI runtime so Chrome can reclaim those resources. Pattern detection remains active.
 
 When Local AI is on, the runtime may be loaded by a paste scan, an explicit warmup action, the popup on capable systems, or supported-page activity on capable systems. A capable system currently means:
 
@@ -45,7 +45,7 @@ Local AI inference is resource-intensive. The extension checks the browser-repor
 
 The browser only reports memory in coarse buckets, so these checks are heuristic. Real-world performance also depends on what else the browser and operating system are doing.
 
-Chrome does not expose reliable production GPU-memory information to the extension. Some WebGPU memory details exist only behind developer flags, so Privacy Guardrail does not use GPU-memory thresholds for Windows or other platforms today. On Apple silicon, system and GPU memory are shared, so the browser-reported memory threshold is the practical guardrail.
+Chrome does not expose reliable production GPU-memory information to the extension. Some WebGPU memory details exist only behind developer flags, so Redacto does not use GPU-memory thresholds for Windows or other platforms today. On Apple silicon, system and GPU memory are shared, so the browser-reported memory threshold is the practical guardrail.
 
 ## Pattern-Only Fallback
 
@@ -80,4 +80,4 @@ When protection is degraded, treat the review as pattern-only or partial and ins
 
 ## Limits
 
-Local AI is assistive. It can miss sensitive text, flag harmless text, or behave differently across languages, formatting, and context. Privacy Guardrail does not guarantee complete detection, prevention of disclosure, or regulatory compliance.
+Local AI is assistive. It can miss sensitive text, flag harmless text, or behave differently across languages, formatting, and context. Redacto does not guarantee complete detection, prevention of disclosure, or regulatory compliance.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Privacy Guardrail — Visual Studio 2022 extension (VSIX).
+  Redacto — Visual Studio 2022 extension (VSIX).
   Built by scripts/ide/build-visualstudio.js around the shared side panel,
   which it copies into webview\ first. Manual installation only: nothing here
   publishes to the Visual Studio Marketplace.

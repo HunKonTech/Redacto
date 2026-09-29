@@ -106,7 +106,7 @@
 	</article>
 
 	<LegalCard {openPrivacyPolicy} {openTermsOfUse} {openImpressum} />
-	<div class="version-note">Privacy Guardrail · {$nerModel}</div>
+	<div class="version-note">Redacto · {$nerModel}</div>
 </div>
 
 <style>

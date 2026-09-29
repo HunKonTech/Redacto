@@ -1,6 +1,6 @@
 # Managing Local Data
 
-Privacy Guardrail stores its data in Chrome extension local storage for your browser profile. The project does not collect this data.
+Redacto stores its data in Chrome extension local storage for your browser profile. The project does not collect this data.
 
 ## What May Be Stored
 

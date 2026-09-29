@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Placeholder Variant Matcher
+ * Redacto — Placeholder Variant Matcher
  *
  * Pure module for tolerantly matching the placeholders we emit
  * (`[PERSON_1]`, `[EMAIL_2]`, …) when an LLM mangles them on the way

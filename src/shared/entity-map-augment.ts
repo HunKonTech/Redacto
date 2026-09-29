@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Entity-Map Augmentation (shared)
+ * Redacto — Entity-Map Augmentation (shared)
  *
  * Pure helper that takes a stored conversation entity map plus the
  * identity vault and returns the augmented `EntityMap` used for

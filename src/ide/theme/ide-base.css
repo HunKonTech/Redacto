@@ -1,5 +1,5 @@
 /*
- * Privacy Guardrail — IDE look, shared by every host
+ * Redacto — IDE look, shared by every host
  *
  * Loaded only by the IDE webview (src/ide/ide-webview.ts); the extension and
  * the web page keep the panel's own design. Everything here reads the

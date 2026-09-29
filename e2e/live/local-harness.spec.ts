@@ -214,7 +214,7 @@ test('rejects a covered closed-shadow control', async ({ page }) => {
   ).rejects.toThrow('covered');
 });
 
-test('rejects closed-shadow access outside Privacy Guardrail surfaces', async ({ page }) => {
+test('rejects closed-shadow access outside Redacto surfaces', async ({ page }) => {
   await expect(
     clickExtensionShadowControl(page, '#provider-dialog', { id: 'continue' }),
   ).rejects.toMatchObject({ kind: 'harness-error' });

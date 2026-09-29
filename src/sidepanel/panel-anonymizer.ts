@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Side panel anonymizer
+ * Redacto — Side panel anonymizer
  *
  * The paste flow of the chat pages, for text pasted into the side panel:
  * detect, let the user switch items off, anonymize, and — once the result is

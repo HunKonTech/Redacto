@@ -1,5 +1,5 @@
 // Build the Visual Studio 2022 extension (.vsix) around dist-ide/webview.
-// Output: release/ide/privacy-guardrail-visualstudio-<version>.vsix — for
+// Output: release/ide/redacto-visualstudio-<version>.vsix — for
 // manual installation only; nothing here publishes to the Marketplace.
 // Windows only: needs MSBuild with the "Visual Studio extension development"
 // workload (VSSDK) on PATH.
@@ -22,6 +22,6 @@ run('msbuild PrivacyGuardrail.VisualStudio.csproj /restore /p:Configuration=Rele
 
 const built = path.join(dir, 'bin', 'Release', 'PrivacyGuardrail.VisualStudio.vsix');
 fs.mkdirSync(OUT_DIR, { recursive: true });
-const out = path.join(OUT_DIR, `privacy-guardrail-visualstudio-${ver}.vsix`);
+const out = path.join(OUT_DIR, `redacto-visualstudio-${ver}.vsix`);
 fs.copyFileSync(built, out);
 console.log(`[ide] ${path.relative(ROOT, out)}`);

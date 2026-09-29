@@ -1,6 +1,6 @@
 # Detected Categories And Limitations
 
-Privacy Guardrail detects a beta set of structured and free-text personal or sensitive data categories before paste.
+Redacto detects a beta set of structured and free-text personal or sensitive data categories before paste.
 
 Supported beta sites:
 
@@ -87,4 +87,4 @@ Local AI can help identify context-sensitive spans such as person names, organiz
 - Restoration depends on local placeholder or vault records and may not handle every response rewrite.
 - Unsupported sites are outside the first public beta scope.
 
-Privacy Guardrail supports local review before sending. It does not guarantee perfect detection, prevention, or regulatory compliance.
+Redacto supports local review before sending. It does not guarantee perfect detection, prevention, or regulatory compliance.

@@ -1,6 +1,6 @@
 # Model Assets
 
-Privacy Guardrail runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses model assets packaged with the extension. The public beta source is published at `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+Redacto runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses model assets packaged with the extension. The public beta source is published at `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 
 ## Release Model
 

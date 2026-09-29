@@ -108,7 +108,7 @@ export class CriticalLocalAiModal {
         <section class="pg-critical-modal" data-theme="${this.theme}" role="dialog" aria-modal="true" aria-labelledby="pg-critical-modal-title">
           <h2 class="pg-critical-modal-title" id="pg-critical-modal-title">Local AI detection is off to protect this browser</h2>
           <p class="pg-critical-modal-body">
-            Privacy Guardrail detected critical browser-reported memory and turned off Local AI detection once to reduce the risk of browser slowdowns or freezes.
+            Redacto detected critical browser-reported memory and turned off Local AI detection once to reduce the risk of browser slowdowns or freezes.
           </p>
           <ul class="pg-critical-modal-list">
             <li>Pattern detection remains active for structured personal data.</li>

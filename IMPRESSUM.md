@@ -1,46 +1,28 @@
-# Impressum / Legal Notice
+# Legal Notice / Impressum
 
-Provider identification under § 5 DDG (Digitale-Dienste-Gesetz).
+## Provider
 
-## Publisher
+Redacto is published by a private individual, free of charge and for
+non-commercial purposes:
 
-Deutsches Forschungszentrum für Künstliche Intelligenz GmbH (DFKI)
+Benedek Koncsik
+Email: koncsik.benedek.andras@gmail.com
 
-Geschäftsführung:
-Prof. Dr. Antonio Krüger
-Helmut Ditzer
+For security or privacy reports, see [SECURITY.md](SECURITY.md). For general
+questions, see [SUPPORT.md](SUPPORT.md).
 
-Trippstadter Str. 122,
-67663 Kaiserslautern
-Tel.: +49 631 20575 0
-info@dfki.de
+## Origin of the software
 
-Registergericht: Amtsgericht Kaiserslautern
-Registernummer: HRB 2313
+Redacto is a modified version of Privacy Guardrail, developed by the
+Deutsches Forschungszentrum für Künstliche Intelligenz GmbH (DFKI) and
+published under the Apache License, Version 2.0. DFKI is not the provider of
+Redacto and is not responsible for it. See [FORK.md](FORK.md) and
+[NOTICE](NOTICE).
 
-ID-Nummer: DE 148 646 973
+## Liability for content and links
 
-## Responsible For This Project
-
-Department: Data Science and its Applications (DSA), DFKI
-Project lead: Prof. Dr. Sebastian Vollmer
-Project contact: sebastian.vollmer@dfki.de
-
-## Data Protection Officer
-
-Tel.: +49 631 20575 0; datenschutz@dfki.de
-
-## Responsibility For Editorial Content
-
-Responsible for content under § 18 Abs. 2 MStV:
-
-Christian Heyer
-Trippstadter Str. 122
-67663 Kaiserslautern
-Deutschland
-Tel.: +49 631 20575 1710
-communications-kl@dfki.de
-
-## Notes
-
-This Impressum applies to the Privacy Guardrail Chrome extension and the public source repository. The extension is a public-beta research prototype published by DFKI. See `README.md`, `PRIVACY.md`, and `SECURITY.md` for product, privacy, and security information.
+The content of this repository and of the extension was prepared with care,
+but no guarantee is given for its accuracy, completeness or timeliness. This
+project links to external websites (for example the supported chat services
+and third-party licenses); their operators are solely responsible for their
+content.

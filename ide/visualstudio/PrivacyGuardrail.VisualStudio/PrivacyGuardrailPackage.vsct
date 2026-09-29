@@ -18,13 +18,13 @@
         <Parent guid="guidCommandSet" id="grpCodeWindow" />
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
-          <ButtonText>Anonymize with Privacy Guardrail</ButtonText>
+          <ButtonText>Anonymize with Redacto</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidCommandSet" id="cmdOpenPanel" priority="0x0100" type="Button">
         <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
         <Strings>
-          <ButtonText>Privacy Guardrail</ButtonText>
+          <ButtonText>Redacto</ButtonText>
         </Strings>
       </Button>
     </Buttons>

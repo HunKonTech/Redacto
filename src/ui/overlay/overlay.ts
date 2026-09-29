@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Review Overlay (Svelte 5 + Shadow DOM)
+ * Redacto — Review Overlay (Svelte 5 + Shadow DOM)
  *
  * Thin imperative wrapper around the Svelte ReviewOverlay component.
  * Owns the host element, the closed shadow root, the global keyboard

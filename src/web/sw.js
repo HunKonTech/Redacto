@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — the web page's service worker (offline use)
+ * Redacto — the web page's service worker (offline use)
  *
  * Serves the page from Cache Storage so it keeps working without a network:
  *

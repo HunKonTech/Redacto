@@ -20,7 +20,7 @@
 		<div class="info">
 			<span class="row-label">When canceling a scan</span>
 			<p class="hint">
-				Choose what Privacy Guardrail does with the pending paste after you explicitly cancel a running scan.
+				Choose what Redacto does with the pending paste after you explicitly cancel a running scan.
 				“Paste without checking” bypasses personal-data detection for that paste.
 			</p>
 		</div>

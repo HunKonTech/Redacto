@@ -1,20 +1,13 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-privacy-guardrail-white.png">
-  <img align="left" alt="Privacy Guardrail" src="docs/assets/logo-privacy-guardrail-black.png" height="120">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/redacto-logo-white.png">
+  <img alt="Redacto" src="docs/assets/redacto-logo-black.png" height="90">
 </picture>
-<a href="https://www.dfki.de/" title="Deutsches Forschungszentrum für Künstliche Intelligenz">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/DFKI-Logo_ohne_RGB_weiss.png">
-    <img align="right" alt="DFKI" src="docs/assets/dfki_Logo_digital_black.png" height="72">
-  </picture>
-</a>
-<br clear="all">
 
-# Privacy Guardrail
+# Redacto
 
-Privacy Guardrail is a Manifest V3 Chrome extension that detects personally identifiable information (PII) before text is pasted into supported LLM chat apps. Detection runs **entirely on your device**: deterministic recognizers compiled from Rust to WebAssembly, plus optional transformer NER through ONNX Runtime Web. No pasted text leaves the browser, and the project has no telemetry.
+Redacto is a Manifest V3 Chrome extension that detects personally identifiable information (PII) before text is pasted into supported LLM chat apps. Detection runs **entirely on your device**: deterministic recognizers compiled from Rust to WebAssembly, plus optional transformer NER through ONNX Runtime Web. No pasted text leaves the browser, and the project has no telemetry.
 
-Developed at the [German Research Center for Artificial Intelligence (DFKI)](https://www.dfki.de/), Data Science and its Applications research department.
+Redacto is an independent, non-commercial fork of [Privacy Guardrail](https://github.com/dfki-dsa/pii-guardrail-browser-extension), developed at the German Research Center for Artificial Intelligence (DFKI). It is **not affiliated with or endorsed by DFKI**. See [Fork and license](#fork-and-license).
 
 > **Status — public beta (`0.x`).** Detection is assistive: it helps you catch personal data before it leaves your machine, but it will not catch everything and is not a compliance or DLP product. See [Known limitations](#known-limitations).
 
@@ -28,6 +21,7 @@ Developed at the [German Research Center for Artificial Intelligence (DFKI)](htt
 - [Documentation](#documentation)
 - [For developers](#for-developers)
 - [Roadmap](#roadmap)
+- [Fork and license](#fork-and-license)
 - [Acknowledgements](#acknowledgements)
 
 ## Supported chat apps
@@ -143,16 +137,17 @@ Directional themes — none are commitments, and order may change with evidence 
 - Mobile support for AI workflows on smartphones.
 - Support for additional AI chat platforms.
 
+## Fork and license
+
+Redacto is maintained by Benedek Koncsik. It is a modified version of Privacy Guardrail, Copyright 2026 Deutsches Forschungszentrum für Künstliche Intelligenz GmbH (DFKI), and like the original it is licensed under the [Apache License, Version 2.0](LICENSE). The original attribution is kept in [`NOTICE`](NOTICE); what this fork changed is described in [`FORK.md`](FORK.md) and [`CHANGELOG.md`](CHANGELOG.md). Third-party components keep their own licenses ([`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
+
+The Privacy Guardrail name and logos and the DFKI name and logo belong to DFKI and are not used by this fork except to describe its origin.
+
 ## Acknowledgements
 
-<table width="100%"><tr>
-<td align="left" width="120"><a href="https://www.dfki.de/web/forschung/forschungsbereiche/data-science-und-ihre-anwendungen" title="Data Science and its Applications, DFKI">
-  <img alt="DSA — Data Science and its Applications" src="docs/assets/dsa-logo.png" height="120">
-</a></td>
-<td>
-Privacy Guardrail is developed in the <a href="https://dsa.dfki.de">Data Science and its Applications research department</a> at the <a href="https://www.dfki.de/">German Research Center for Artificial Intelligence (DFKI)</a>.</td></tr></table>
+Redacto builds on Privacy Guardrail, developed in the Data Science and its Applications research department at the German Research Center for Artificial Intelligence (DFKI).
 
-### Contributors
+### Original Privacy Guardrail contributors
 
 - Andrea Sipka
 - Björn Busch-Geertsema — Lead Developer

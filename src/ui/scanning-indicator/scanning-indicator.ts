@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Scanning Indicator (Shadow DOM)
+ * Redacto — Scanning Indicator (Shadow DOM)
  *
  * Persistent status toast shown while PII detection is actively running.
  */

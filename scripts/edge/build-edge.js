@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Build Privacy Guardrail for Microsoft Edge.
+ * Build Redacto for Microsoft Edge.
  *
  * Edge runs the same Manifest V3 extension as Chrome, so this builds the
  * regular `dist/` output and stages it for Edge:
  *
- *   release/edge/privacy-guardrail-edge-<version>/      unpacked, for "Load unpacked"
- *   release/edge/privacy-guardrail-edge-<version>.zip   for Edge Add-ons (Partner Center)
- *   release/edge/privacy-guardrail-edge-<version>.sha256
+ *   release/edge/redacto-edge-<version>/      unpacked, for "Load unpacked"
+ *   release/edge/redacto-edge-<version>.zip   for Edge Add-ons (Partner Center)
+ *   release/edge/redacto-edge-<version>.sha256
  *
  * The package contents go through the same filter as the Chrome release
  * package (no source maps, no nested manifest.json, required legal files).
@@ -74,7 +74,7 @@ function build(options) {
 
 function stage(version) {
   const { entries, excluded } = listPackageEntries(path.join(ROOT_DIR, 'dist'));
-  const baseName = `privacy-guardrail-edge-${version}`;
+  const baseName = `redacto-edge-${version}`;
   const unpackedDir = path.join(OUTPUT_DIR, baseName);
   const zipPath = path.join(OUTPUT_DIR, `${baseName}.zip`);
   const checksumPath = path.join(OUTPUT_DIR, `${baseName}.sha256`);

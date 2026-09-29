@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — web search content script.
+ * Redacto — web search content script.
  *
  * Registered dynamically on the search engines in `SEARCH_ENGINE_ORIGINS`
  * while "Protect web searches" is on and the user has granted those sites.
@@ -183,7 +183,7 @@ const interceptor = new PasteInterceptor(adapter, {
       else interceptor.pasteAnonymized(reviewed);
     });
   },
-  onError: (error) => showIndicator(`⚠ Privacy Guardrail error: ${error}`, 3000),
+  onError: (error) => showIndicator(`⚠ Redacto error: ${error}`, 3000),
   onCanceled: () => undefined,
 }, {
   waitForReady: () => ready,
@@ -211,6 +211,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 void ready.then(() => {
   if (settings?.debug) {
-    debugLog(`[PG:search] Privacy Guardrail search protection ${isActive() ? 'active' : 'inactive'} on ${location.hostname}`);
+    debugLog(`[PG:search] Redacto search protection ${isActive() ? 'active' : 'inactive'} on ${location.hostname}`);
   }
 });

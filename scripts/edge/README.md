@@ -42,9 +42,9 @@ Output in `release/edge/`:
 
 | Path | Use |
 | --- | --- |
-| `privacy-guardrail-edge-<version>/` | Unpacked extension for **Load unpacked** |
-| `privacy-guardrail-edge-<version>.zip` | Upload to Edge Add-ons (Partner Center) |
-| `privacy-guardrail-edge-<version>.sha256` | Checksum of the zip |
+| `redacto-edge-<version>/` | Unpacked extension for **Load unpacked** |
+| `redacto-edge-<version>.zip` | Upload to Edge Add-ons (Partner Center) |
+| `redacto-edge-<version>.sha256` | Checksum of the zip |
 
 Options:
 
@@ -55,7 +55,7 @@ Options:
 
 1. Open `edge://extensions`.
 2. Turn on **Developer mode** (left sidebar).
-3. Click **Load unpacked** and select `release/edge/privacy-guardrail-edge-<version>/`.
+3. Click **Load unpacked** and select `release/edge/redacto-edge-<version>/`.
 4. Pin the extension from the puzzle-piece menu, then open ChatGPT, Claude or Gemini.
 
 After rebuilding, click **Reload** on the extension card. Edge does not install `.zip` or `.crx` files from outside its store; the zip is only for publishing through Partner Center.

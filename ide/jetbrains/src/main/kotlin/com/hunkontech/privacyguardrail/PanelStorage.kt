@@ -50,7 +50,7 @@ class PanelStorage {
     private fun read(): JsonObject = try {
         if (Files.isRegularFile(file)) JsonParser.parseString(Files.readString(file)).asJsonObject else JsonObject()
     } catch (e: Exception) {
-        LOG.warn("Privacy Guardrail storage unreadable, starting empty", e)
+        LOG.warn("Redacto storage unreadable, starting empty", e)
         JsonObject()
     }
 
@@ -61,7 +61,7 @@ class PanelStorage {
             Files.writeString(tmp, local.toString())
             Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         } catch (e: Exception) {
-            LOG.warn("Privacy Guardrail storage could not be saved", e)
+            LOG.warn("Redacto storage could not be saved", e)
         }
     }
 

@@ -92,7 +92,7 @@ class ProviderFlowPort implements CommonFlowPort {
       const host = this.driver.page.locator('#pg-review-overlay-host');
       const reviewTimeout = this.testCase.expectedReplacementType === 'PERSON' ? 120_000 : 30_000;
       await host.waitFor({ state: 'attached', timeout: reviewTimeout }).catch(() => {
-        throw new LiveE2EError('incompatible', 'review', 'The Privacy Guardrail review surface did not appear');
+        throw new LiveE2EError('incompatible', 'review', 'The Redacto review surface did not appear');
       });
       await clickExtensionShadowControl(
         this.driver.page,

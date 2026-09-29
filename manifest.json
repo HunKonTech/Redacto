@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Privacy Guardrail",
+  "name": "Redacto",
   "version": "0.5.0",
   "description": "Review and replace personal data in text before pasting into LLM chats. Runs locally in your browser. Assistive only.",
   "permissions": [
@@ -85,7 +85,7 @@
       "suggested_key": {
         "default": "Alt+Shift+P"
       },
-      "description": "Open the Privacy Guardrail side panel"
+      "description": "Open the Redacto side panel"
     }
   },
   "action": {

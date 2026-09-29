@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — IDE theme
+ * Redacto — IDE theme
  *
  * Makes the panel look like part of the IDE rather than the browser extension:
  * `<html data-ide-host>` picks the host's stylesheet (`src/ide/theme/`) and

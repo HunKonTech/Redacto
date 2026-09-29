@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — IDE host bridge
+ * Redacto — IDE host bridge
  *
  * One transport over the three webviews the plugins use:
  *

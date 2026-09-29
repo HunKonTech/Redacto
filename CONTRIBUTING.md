@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for helping improve Privacy Guardrail.
+Thank you for helping improve Redacto.
 
 This project is in public beta. Contributions should keep the extension's local-first privacy posture intact.
 

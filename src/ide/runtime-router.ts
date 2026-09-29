@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — `chrome.runtime.sendMessage` inside the IDE webview
+ * Redacto — `chrome.runtime.sendMessage` inside the IDE webview
  *
  * Plays the service worker's part for the messages the side panel and the
  * detection pipeline send, then hands them to the offscreen handler in this

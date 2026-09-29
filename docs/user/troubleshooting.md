@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Privacy Guardrail public beta support is scoped to Chrome desktop stable and:
+Redacto public beta support is scoped to Chrome desktop stable and:
 
 - `chatgpt.com`
 - `chat.openai.com`
@@ -48,7 +48,7 @@ Pattern-based detection can still run when Local AI is off or unavailable, but c
 
 ## Unsupported Site Expectations
 
-Privacy Guardrail does not advertise generic or custom site support for the first public beta. If you need support for another site, file a feature request with synthetic examples and explain the workflow without sharing private content.
+Redacto does not advertise generic or custom site support for the first public beta. If you need support for another site, file a feature request with synthetic examples and explain the workflow without sharing private content.
 
 ## Console Error Collection
 

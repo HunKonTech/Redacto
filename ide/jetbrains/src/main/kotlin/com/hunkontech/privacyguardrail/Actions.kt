@@ -11,7 +11,7 @@ import java.awt.datatransfer.DataFlavor
 
 /**
  * Editor and Run/Debug console context menu: anonymize the selection in the
- * Privacy Guardrail tool window. The selection itself is left as it is.
+ * Redacto tool window. The selection itself is left as it is.
  */
 class AnonymizeSelectionAction : DumbAwareAction() {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT

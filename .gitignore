@@ -13,7 +13,7 @@ generated/
 # One-shot scratch dirs (e.g. optimum-cli ONNX exports staged for the prep script)
 tmp/
 # Packaged extension archives produced for manual install
-privacy-guardrail-*.zip
+redacto-*.zip
 release/*.zip
 release/*.sha256
 release/edge/

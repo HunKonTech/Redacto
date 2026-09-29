@@ -110,11 +110,11 @@
 	});
 </script>
 
-<main class="panel" aria-label="Privacy Guardrail side panel">
+<main class="panel" aria-label="Redacto side panel">
 	<header class="panel-header">
 		<div class="brand-row">
 			<PGLogo size={22} gradId="pg-sidepanel-logo" />
-			<h1>Privacy Guardrail</h1>
+			<h1>Redacto</h1>
 		</div>
 		<nav class="tab-nav" aria-label="Side panel sections">
 			{#each tabs as tab (tab.id)}

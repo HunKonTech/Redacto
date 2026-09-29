@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Already-anonymized text (shared)
+ * Redacto — Already-anonymized text (shared)
  *
  * Text that was anonymized once must not be anonymized again. Copying the
  * side panel's output into a chat page, or a message from one chat into

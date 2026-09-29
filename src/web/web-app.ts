@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — web page entry (GitHub Pages)
+ * Redacto — web page entry (GitHub Pages)
  *
  * The side panel as a plain web page: the same Svelte panel and the same
  * `chrome.*` shim as the IDE webview, with this browser as the "host".

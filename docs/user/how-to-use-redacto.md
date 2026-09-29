@@ -1,6 +1,6 @@
-# How To Use Privacy Guardrail
+# How To Use Redacto
 
-Privacy Guardrail reviews pasted text locally before it is inserted into a supported LLM chat page.
+Redacto reviews pasted text locally before it is inserted into a supported LLM chat page.
 
 Supported beta sites:
 
@@ -13,7 +13,7 @@ Supported beta sites:
 
 1. Copy text you want to paste.
 2. Paste into a supported chat input.
-3. If the paste is long enough to scan, Privacy Guardrail checks it locally.
+3. If the paste is long enough to scan, Redacto checks it locally.
 4. Review the detected spans before insertion.
 5. Keep the spans you want anonymized and ignore spans you do not want changed.
 6. Confirm the reviewed paste.
@@ -40,7 +40,7 @@ For repeated false positives, use the extension settings to add allowlist entrie
 
 ## Restoration
 
-On supported chat pages, Privacy Guardrail watches model responses for placeholders and restores known originals locally where supported. Restoration depends on the local placeholder or vault record still being available. If the model rewrites a placeholder heavily, restoration may be incomplete.
+On supported chat pages, Redacto watches model responses for placeholders and restores known originals locally where supported. Restoration depends on the local placeholder or vault record still being available. If the model rewrites a placeholder heavily, restoration may be incomplete.
 
 ## Side Panel
 
@@ -53,4 +53,4 @@ The side panel stays open next to every tab. Open it with **Open side panel** in
 
 If a scan is taking too long, use the cancel control. Depending on your settings, the extension may ask whether to paste the original text or drop the pending paste.
 
-Privacy Guardrail is an assistive beta tool. Review the final text yourself before sending it.
+Redacto is an assistive beta tool. Review the final text yourself before sending it.

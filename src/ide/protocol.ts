@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — IDE host protocol
+ * Redacto — IDE host protocol
  *
  * The messages the IDE webview (the side panel running inside VS Code,
  * a JetBrains IDE or Visual Studio) exchanges with the plugin hosting it.

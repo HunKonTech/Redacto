@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Content Script
+ * Redacto — Content Script
  *
  * Injected into curated LLM chat pages. Orchestrates:
  * 1. Paste interception → WASM detection → review overlay → anonymized insert
@@ -300,7 +300,7 @@ function reportComposerLookup(match: ComposerMatch): void {
     // that failed before building one.
     if (!pageStatusChip) {
       showIndicator(
-        '⚠ Privacy Guardrail could not find this page’s message box',
+        '⚠ Redacto could not find this page’s message box',
         INIT_FAILURE_INDICATOR_MS,
       );
     }
@@ -1123,7 +1123,7 @@ const interceptor = new PasteInterceptor(adapter, {
   onError: (error) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showIndicator(`\u26A0 Privacy Guardrail error: ${error}`, 3000);
+    showIndicator(`\u26A0 Redacto error: ${error}`, 3000);
   },
 
   onCanceled: (explicitUserCancel) => {
@@ -1309,7 +1309,7 @@ async function init(): Promise<void> {
   clipboardInterceptor.start();
 
   if (settings.debug) {
-    debugLog(`[PG:content] Privacy Guardrail active on ${adapter.name} (${window.location.hostname})`);
+    debugLog(`[PG:content] Redacto active on ${adapter.name} (${window.location.hostname})`);
     debugLog(`[PG:content] Adaptive thresholds:`, adaptiveThresholds);
     debugLog(`[PG:content] Conversation scope size: ${scope.size}`);
     debugLog(`[PG:content] Vault size: ${identityVault.records.length}`);
@@ -1339,7 +1339,7 @@ void init().catch((error) => {
 
   void waitForDocumentBody().then(() => {
     showIndicator(
-      '\u26A0 Privacy Guardrail is off for this page \u2014 reload to retry',
+      '\u26A0 Redacto is off for this page \u2014 reload to retry',
       INIT_FAILURE_INDICATOR_MS,
     );
   });

@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — IDE webview entry
+ * Redacto — IDE webview entry
  *
  * The browser side panel, running inside an IDE plugin's webview. Waits for
  * the host's `init` (stored History, vault and settings), installs the

@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Conversation filing (content script)
+ * Redacto — Conversation filing (content script)
  *
  * Files this tab's replacement tokens under the conversation they are
  * observed in.

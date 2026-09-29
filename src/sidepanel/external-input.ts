@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Text handed to the side panel from outside
+ * Redacto — Text handed to the side panel from outside
  *
  * The browser side panel only anonymizes what is pasted into it. The IDE
  * plugins host the same panel and hand it the selection the user picked

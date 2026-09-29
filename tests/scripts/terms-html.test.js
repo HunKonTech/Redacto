@@ -4,7 +4,7 @@ describe('terms HTML renderer', () => {
   test('renders markdown into branded standalone HTML without runtime dependencies', () => {
     const html = renderTermsHtml(
       [
-        '# Nutzungsbedingungen Privacy Guardrail',
+        '# Nutzungsbedingungen Redacto',
         '',
         '## Sprachhinweis / Language Notice',
         '',
@@ -19,7 +19,7 @@ describe('terms HTML renderer', () => {
 
     expect(html).toContain('<!doctype html>');
     expect(html).toContain('font-family: "IBM Plex Sans"');
-    expect(html).toContain('legal/logo-privacy-guardrail-black.png');
+    expect(html).toContain('legal/redacto-logo-black.png');
     expect(html).toContain('<h2 id="sprachhinweis-language-notice">');
     expect(html).toContain('English Translation (For Convenience Only)');
     expect(html).toContain('<li>First point</li>');

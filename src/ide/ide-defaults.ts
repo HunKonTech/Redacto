@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — IDE setting defaults
+ * Redacto — IDE setting defaults
  *
  * What is selected in an IDE is mostly code, so the IDE panel renames the
  * identifiers the code declares by default (`codeAnonymization: 'full'`, the

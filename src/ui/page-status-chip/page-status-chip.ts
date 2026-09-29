@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Page Status Chip (Shadow DOM)
+ * Redacto — Page Status Chip (Shadow DOM)
  *
  * Persistent page-level chip surfacing degraded-protection states on
  * supported chat pages. Renders one reason at a time and supports

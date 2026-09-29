@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Transcript scan (content script)
+ * Redacto — Transcript scan (content script)
  *
  * Reads what is actually on the page, using no site knowledge whatsoever.
  *

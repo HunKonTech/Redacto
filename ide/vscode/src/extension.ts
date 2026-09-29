@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — VS Code host
+ * Redacto — VS Code host
  *
  * Hosts the shared side panel (`webview/`, built by `npm run build:ide-webview`
  * in the repository root) in an Activity Bar view and hands it the selection
@@ -82,7 +82,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
 
   async anonymize(text: string, source: SelectionSource): Promise<void> {
     if (!text.trim()) {
-      void vscode.window.showInformationMessage('Privacy Guardrail: nothing selected to anonymize.');
+      void vscode.window.showInformationMessage('Redacto: nothing selected to anonymize.');
       return;
     }
     this.pending.push({ text, source });

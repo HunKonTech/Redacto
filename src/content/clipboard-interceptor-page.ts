@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Clipboard Interceptor (page / main world)
+ * Redacto — Clipboard Interceptor (page / main world)
  *
  * Runs in the page's main world at document_start. Monkey-patches
  * `navigator.clipboard.writeText` and (defensively) `Clipboard.prototype`

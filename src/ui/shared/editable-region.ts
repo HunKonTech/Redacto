@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Editable regions (shared UI)
+ * Redacto — Editable regions (shared UI)
  *
  * One answer to "can the user type here", used by everything that must not
  * touch text the user is composing.

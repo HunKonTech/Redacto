@@ -1,6 +1,6 @@
 {
-  "name": "privacy-guardrail-vscode",
-  "displayName": "Privacy Guardrail",
+  "name": "redacto-vscode",
+  "displayName": "Redacto",
   "description": "Anonymize selected code or console output on this device and restore the originals in AI replies. Local builds only \u2014 never published.",
   "version": "0.5.0",
   "private": true,
@@ -19,7 +19,7 @@
       "activitybar": [
         {
           "id": "privacyGuardrail",
-          "title": "Privacy Guardrail",
+          "title": "Redacto",
           "icon": "media/shield.svg"
         }
       ]
@@ -36,19 +36,19 @@
     "commands": [
       {
         "command": "privacyGuardrail.anonymizeSelection",
-        "title": "Privacy Guardrail: Anonymize selection"
+        "title": "Redacto: Anonymize selection"
       },
       {
         "command": "privacyGuardrail.anonymizeTerminalSelection",
-        "title": "Privacy Guardrail: Anonymize terminal selection"
+        "title": "Redacto: Anonymize terminal selection"
       },
       {
         "command": "privacyGuardrail.anonymizeClipboard",
-        "title": "Privacy Guardrail: Anonymize clipboard (e.g. copied from the Debug Console)"
+        "title": "Redacto: Anonymize clipboard (e.g. copied from the Debug Console)"
       },
       {
         "command": "privacyGuardrail.openPanel",
-        "title": "Privacy Guardrail: Open panel"
+        "title": "Redacto: Open panel"
       }
     ],
     "menus": {

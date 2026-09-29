@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — `chrome.*` for the IDE webview
+ * Redacto — `chrome.*` for the IDE webview
  *
  * The side panel and the detection pipeline are written against the extension
  * APIs. Inside an IDE webview there is no extension, so this provides the part

@@ -2,7 +2,6 @@
   import { debugError } from '../shared/debug-log';
   import { createAppModels, tabs } from "./popup-model.svelte";
   import DetectTab from "./components/DetectTab.svelte";
-  import DFKILogo from "./components/DFKILogo.svelte";
   import PGLogo from "./components/PGLogo.svelte";
   import ProtectTab from "./components/ProtectTab.svelte";
   import SettingsTab from "./components/SettingsTab.svelte";
@@ -27,12 +26,12 @@
 </script>
 
 <div class="page-frame">
-  <main class="popup-shell" aria-label="Privacy Guardrail popup">
+  <main class="popup-shell" aria-label="Redacto popup">
     <header class="shell-header">
       <div class="brand-row">
         <div class="logo-box"><PGLogo size={24} /></div>
         <div class="brand-copy">
-          <h1>Privacy Guardrail <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
+          <h1>Redacto <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
           <p>v{$version} · {$modelLabel}</p>
         </div>
         <Toggle
@@ -40,16 +39,6 @@
           label="Master protection"
           onchange={(checked) => protection.setEnabled(checked)}
         />
-        <a
-          class="dfki-mark"
-          href="https://www.dfki.de"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="by DFKI"
-          title="by DFKI"
-        >
-          <DFKILogo height={32} />
-        </a>
       </div>
 
       <nav class="tab-nav" aria-label="Popup sections">
@@ -207,20 +196,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .dfki-mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: rgb(255 255 255 / 80%);
-    text-decoration: none;
-    flex-shrink: 0;
-    transition: color 120ms ease;
-  }
-  .dfki-mark:hover,
-  .dfki-mark:focus-visible {
-    color: white;
-    outline: none;
   }
   .tab-nav {
     display: flex;

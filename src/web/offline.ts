@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — offline use of the web page
+ * Redacto — offline use of the web page
  *
  * Registers the service worker (sw.js) and drives the footer line that says
  * whether the page, and the local AI model, work without a network. The

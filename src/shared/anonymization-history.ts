@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Anonymization history (shared)
+ * Redacto — Anonymization history (shared)
  *
  * What was anonymized, when, and the `token -> original` pairs it used, so the
  * side panel can list past anonymizations and turn an AI reply to any one of

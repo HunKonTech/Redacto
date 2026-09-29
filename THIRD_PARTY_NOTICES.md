@@ -1,9 +1,10 @@
 # Third-Party Notices
 
-Privacy Guardrail project code is licensed under the Apache License, Version 2.0.
-The complete Apache-2.0 license text is provided in `LICENSE`. DFKI's own
-copyright notice is provided in `NOTICE`, and the supplementary Terms of Use are
-provided in `TERMS.md`.
+Redacto project code is licensed under the Apache License, Version 2.0.
+The complete Apache-2.0 license text is provided in `LICENSE`. Redacto is a
+modified version of Privacy Guardrail by DFKI; DFKI's copyright notice and the
+Redacto modification notice are provided in `NOTICE` (see also `FORK.md`), and
+the Terms of Use are provided in `TERMS.md`.
 
 This file records third-party software, runtime assets, model assets, fonts,
 logos, service names, and redistribution notices relevant to official public
@@ -59,7 +60,7 @@ must remain readable in the release package.
 
 ## Rust And WebAssembly Components
 
-Privacy Guardrail includes a deterministic recognizer compiled from Rust to
+Redacto includes a deterministic recognizer compiled from Rust to
 WebAssembly. The Rust dependency versions are recorded in `crate/Cargo.lock`.
 The direct runtime dependencies declared in `crate/Cargo.toml` are:
 
@@ -94,7 +95,7 @@ The package includes prepared runtime files under
 - `onnx/model_q4f16.onnx.data`
 
 The `model_q4f16.onnx` and `model_q4f16.onnx.data` files are modified/generated
-Privacy Guardrail release artifacts. They are produced from upstream BardsAI
+Redacto release artifacts. They are produced from upstream BardsAI
 model files by the repository's conversion scripts using ONNX Runtime
 MatMulNBits 4-bit weight-only quantization and ONNX external-data packaging.
 They are not upstream-original BardsAI files.
@@ -123,6 +124,22 @@ The BardsAI model card citation for the upstream model is:
   publisher = {Hugging Face}
 }
 ```
+
+## Code Identifier Classifier Model
+
+Release packages built with the optional identifier-classifier step include
+the Redacto code-identifier classifier:
+
+- Model ID: `koncsik/code-identifier-classifier` (Hugging Face)
+- Author: Benedek Koncsik, trained with `tools/identifier-classifier`
+- License: Apache-2.0, like the Redacto project code
+- Base model: `huggingface/CodeBERTa-small-v1` by default (see
+  `tools/identifier-classifier/README.md`); its license terms apply to the
+  fine-tuned weights and must be checked before each release that includes a
+  model trained from a different base
+- Training data: identifiers extracted from the permissively licensed (MIT,
+  Apache-2.0, BSD) repositories listed in `tools/identifier-classifier/repos.json`;
+  no source code from them is redistributed with the model
 
 ## Non-Packaged Model Assets
 
@@ -153,15 +170,14 @@ The font files are redistributed unmodified as bundled browser assets.
 
 ## Project Logos And DFKI Marks
 
-The DFKI name, DFKI logo, Privacy Guardrail name, and project logos are not
-licensed under the Apache License, Version 2.0, except as required for
-reasonable and customary use in describing the origin of the work and
-reproducing the `NOTICE` file.
+The Redacto logo and icons (`docs/assets/redacto-logo.svg`, rendered by
+`scripts/render-logo.mjs`) are original to this fork.
 
-Official packages may include project logo assets under `assets/` and
-`legal/`. Third parties redistributing modified versions must not imply DFKI
-endorsement and must respect the trademark limitation in Section 6 of the
-Apache-2.0 license and the supplementary Terms of Use.
+The DFKI name, DFKI logo, Privacy Guardrail name, and Privacy Guardrail logos
+are not licensed under the Apache License, Version 2.0, except as required for
+reasonable and customary use in describing the origin of the work and
+reproducing the `NOTICE` file. Redacto does not include them and uses the names
+only to describe its origin. Redacto is not affiliated with or endorsed by DFKI.
 
 ## Service Names
 
@@ -172,13 +188,13 @@ compatibility, provenance, or runtime behavior.
 
 ## Separation Of Licenses
 
-The Apache-2.0 license in `LICENSE` applies to Privacy Guardrail project code
+The Apache-2.0 license in `LICENSE` applies to Redacto project code
 unless a file states otherwise. It does not replace or relicense third-party
 dependencies, model files, runtime binaries, fonts, browser platform
 components, service names, or trademarks.
 
 For third-party components, the applicable license is the license of the
-respective rights holder. Redistribution of modified Privacy Guardrail packages
+respective rights holder. Redistribution of modified Redacto packages
 must keep the legal files, readable third-party notices, existing upstream
 copyright, patent, trademark, attribution, and NOTICE entries, and prominent
 change notices for files modified by the redistributor.

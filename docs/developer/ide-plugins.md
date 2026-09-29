@@ -2,7 +2,7 @@
 
 The side panel's **Anonymize** and **History & restore** tabs are also
 available inside IDEs. Select code in an editor, or text in a console /
-terminal / Output window, right-click → **Anonymize with Privacy Guardrail**.
+terminal / Output window, right-click → **Anonymize with Redacto**.
 The panel shows the original next to the anonymized text and saves it to
 History, where an AI reply can be restored to the original values. The
 selection itself is never changed.
@@ -38,7 +38,7 @@ The hosts are thin:
 | IDE | Folder | Panel | Context menus | Storage (`local`) |
 | --- | --- | --- | --- | --- |
 | VS Code | `ide/vscode` | Activity Bar view | editor, Output, terminal (+ "Anonymize clipboard" command) | `globalState` |
-| JetBrains | `ide/jetbrains` | "Privacy Guardrail" tool window (JCEF, served as `https://pg.local/`) | editor, Run/Debug console (+ Tools → Anonymize Clipboard) | `<config>/privacy-guardrail/storage.json` |
+| JetBrains | `ide/jetbrains` | "Redacto" tool window (JCEF, served as `https://pg.local/`) | editor, Run/Debug console (+ Tools → Anonymize Clipboard) | `<config>/privacy-guardrail/storage.json` |
 | Visual Studio 2022 | `ide/visualstudio` | tool window (WebView2, `https://pg.local/`) | code editor, Output window | `%LOCALAPPDATA%\PrivacyGuardrail\storage.json` |
 
 `session` storage lives in memory for as long as the IDE runs, like
@@ -56,9 +56,9 @@ rule-based detection.
 ```bash
 npm run build:wasm
 npm run build:ide-webview           # dist-ide/webview (NER_MODEL_ASSETS_REQUIRED=1 to require the model)
-npm run build:ide:vscode            # release/ide/privacy-guardrail-vscode-<version>.vsix
-npm run build:ide:jetbrains         # release/ide/privacy-guardrail-jetbrains-<version>.zip  (JDK 21)
-npm run build:ide:visualstudio      # release/ide/privacy-guardrail-visualstudio-<version>.vsix  (Windows, VSSDK)
+npm run build:ide:vscode            # release/ide/redacto-vscode-<version>.vsix
+npm run build:ide:jetbrains         # release/ide/redacto-jetbrains-<version>.zip  (JDK 21)
+npm run build:ide:visualstudio      # release/ide/redacto-visualstudio-<version>.vsix  (Windows, VSSDK)
 ```
 
 The `build:ide:*` scripts rebuild the panel first; `scripts/ide/build-*.js`
@@ -67,14 +67,14 @@ package an existing `dist-ide/webview` only (that is what CI runs).
 In CI (`.github/workflows/build-and-release.yml`) the panel is built with the
 model in `prepare-models-and-package`, and the `vscode-extension`,
 `jetbrains-plugin` and `visualstudio-extension` jobs upload
-`ide-privacy-guardrail-*` artifacts, which `github-release` attaches to the
+`ide-redacto-*` artifacts, which `github-release` attaches to the
 GitHub pre-release (a failed IDE job only leaves its installer out). The Visual Studio job needs a Windows runner with the "Visual Studio
 extension development" workload.
 
 ## Install
 
 - **VS Code**: Extensions view → `…` → *Install from VSIX…*, or
-  `code --install-extension privacy-guardrail-vscode-<version>.vsix`.
+  `code --install-extension redacto-vscode-<version>.vsix`.
 - **JetBrains IDEs** (2024.2+): Settings → Plugins → ⚙ → *Install Plugin from Disk…* → the `.zip`.
 - **Visual Studio 2022**: double-click the `.vsix` (VSIXInstaller). Open the
-  panel from View → Other Windows → Privacy Guardrail.
+  panel from View → Other Windows → Redacto.

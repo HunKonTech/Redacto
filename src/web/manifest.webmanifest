@@ -1,6 +1,6 @@
 {
-  "name": "Privacy Guardrail — Anonymize & restore",
-  "short_name": "Privacy Guardrail",
+  "name": "Redacto — Anonymize & restore",
+  "short_name": "Redacto",
   "description": "Anonymize text before sending it to an AI chat, and restore the original values in the reply. Runs entirely in your browser, also offline.",
   "id": "./",
   "start_url": "./",

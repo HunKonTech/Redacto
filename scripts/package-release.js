@@ -213,9 +213,9 @@ function createReleasePackage(options = {}) {
   // A CI build is named after its build version (0.5.0.9), as its manifest is.
   const packageVersion = ciBuildVersion(version, options.env ?? process.env) ?? version;
   const { entries, excluded } = listPackageEntries(distDir);
-  const fileName = `privacy-guardrail-${packageVersion}.zip`;
+  const fileName = `redacto-${packageVersion}.zip`;
   const zipPath = path.join(releaseDir, fileName);
-  const checksumPath = path.join(releaseDir, `privacy-guardrail-${packageVersion}.sha256`);
+  const checksumPath = path.join(releaseDir, `redacto-${packageVersion}.sha256`);
 
   if (dryRun) {
     return {

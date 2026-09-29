@@ -15,7 +15,7 @@
 	<p class="group-label">Legal</p>
 	<div class="links">
 		<a href={PUBLIC_PROJECT_LINKS.privacy} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-		<a href={PUBLIC_PROJECT_LINKS.impressum} target="_blank" rel="noopener noreferrer">Impressum</a>
+		<a href={PUBLIC_PROJECT_LINKS.impressum} target="_blank" rel="noopener noreferrer">Legal notice</a>
 		{#if TERMS_PUBLISHED}
 			<a href={termsUrl} target="_blank" rel="noopener noreferrer">Terms of Use</a>
 		{:else}

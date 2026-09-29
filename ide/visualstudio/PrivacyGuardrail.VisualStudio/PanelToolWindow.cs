@@ -8,7 +8,7 @@ namespace PrivacyGuardrail.VisualStudio
     {
         public PanelToolWindow() : base(null)
         {
-            Caption = "Privacy Guardrail";
+            Caption = "Redacto";
             Panel = new PanelControl();
             Content = Panel;
         }

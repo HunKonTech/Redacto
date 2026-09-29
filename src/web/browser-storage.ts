@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — the web page's storage
+ * Redacto — the web page's storage
  *
  * Plays the IDE host's part for the web page (web-app.ts): seeds the
  * `chrome.storage` shim from this browser's Web Storage and writes its

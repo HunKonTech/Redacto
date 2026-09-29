@@ -10,8 +10,8 @@ using Task = System.Threading.Tasks.Task;
 namespace PrivacyGuardrail.VisualStudio
 {
     /// <summary>
-    /// Privacy Guardrail for Visual Studio: the shared side panel in a tool
-    /// window, and "Anonymize with Privacy Guardrail" on the code editor's and
+    /// Redacto for Visual Studio: the shared side panel in a tool
+    /// window, and "Anonymize with Redacto" on the code editor's and
     /// the Output window's context menus. The panel shows the original next to
     /// the anonymized text; the selection itself is never changed.
     /// </summary>

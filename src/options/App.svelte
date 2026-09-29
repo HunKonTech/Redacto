@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import DFKILogo from '../popup/components/DFKILogo.svelte';
 	import PGLogo from '../popup/components/PGLogo.svelte';
 	import { createOptionsModel } from './options-model.svelte';
 	import AllowlistCard from './components/AllowlistCard.svelte';
@@ -40,20 +39,9 @@
 		<div class="brand-row">
 			<div class="logo-box"><PGLogo size={24} /></div>
 			<div class="brand-copy">
-				<h1>Privacy Guardrail <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
+				<h1>Redacto <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
 				<p>Extension Settings</p>
 			</div>
-			<a
-				class="dfki-mark"
-				href="https://www.dfki.de"
-				target="_blank"
-				rel="noopener noreferrer"
-				aria-label="by DFKI"
-				title="by DFKI"
-			>
-				<span class="dfki-by">by</span>
-				<DFKILogo height={32} />
-			</a>
 		</div>
 	</header>
 
@@ -203,22 +191,6 @@
 		margin: 2px 0 0;
 		color: rgb(255 255 255 / 65%);
 		font-size: 12px;
-	}
-	.dfki-mark {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		color: rgb(255 255 255 / 80%);
-		text-decoration: none;
-		flex-shrink: 0;
-	}
-	.dfki-mark:hover, .dfki-mark:focus-visible { color: white; outline: none; }
-	.dfki-by {
-		font-size: 10px;
-		font-weight: 400;
-		letter-spacing: 0.3px;
-		color: rgb(255 255 255 / 60%);
-		text-transform: lowercase;
 	}
 
 	.content { padding: 0 24px; }
