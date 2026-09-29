@@ -13,6 +13,7 @@
  */
 
 import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shared/anonymizer';
+import { createHistoryEntry, saveHistoryEntry, usedMappings } from '../shared/anonymization-history';
 import { EntityMap } from '../shared/entity-map';
 import { emptyVaultData, loadIdentityVault, saveIdentityVault, type IdentityVaultData } from '../shared/identity-vault';
 import { detectionOptionsFromSettings } from '../shared/detection-config';
@@ -88,7 +89,7 @@ function renameIdentifiersEnabled(): boolean {
 function anonymizeApproved(text: string, approvedSpans: PiiSpan[]): string {
   const current = settings!;
   const options = { renameIdentifiers: renameIdentifiersEnabled() };
-  let result: { text: string; renamedIdentifiers: number };
+  let result: { text: string; entityMap: EntityMap; renamedIdentifiers: number };
   if (current.identityVaultEnabled) {
     const vaultResult = anonymizeWithVault(
       text,
@@ -105,6 +106,23 @@ function anonymizeApproved(text: string, approvedSpans: PiiSpan[]): string {
     result = vaultResult;
   } else {
     result = anonymize(text, approvedSpans, new EntityMap(), options);
+  }
+
+  // Listed in the side panel's history like a chat paste, so a reply built on
+  // the anonymized query can be restored there.
+  if (result.text !== text) {
+    saveHistoryEntry(
+      createHistoryEntry({
+        source: 'paste',
+        site: window.location.hostname,
+        originalText: text,
+        anonymizedText: result.text,
+        mappings: usedMappings(result.text, result.entityMap),
+        replacedCount: approvedSpans.length,
+        renamedIdentifiers: result.renamedIdentifiers,
+      }),
+      current.identityVaultEnabled,
+    ).catch((err) => debugError('[PG:search] history save failed', err));
   }
 
   const parts = [];
