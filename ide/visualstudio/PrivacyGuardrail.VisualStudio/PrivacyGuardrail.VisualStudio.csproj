@@ -71,6 +71,7 @@
     <Content Include="LICENSE">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="Resources\Redacto.png" />
     <Content Include="icon.png">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

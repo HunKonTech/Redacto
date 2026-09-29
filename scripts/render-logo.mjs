@@ -34,6 +34,21 @@ export function markSvg(palette = PALETTES.color, id = 'rd') {
 </svg>`;
 }
 
+// Single-colour mark for IDE toolbars and tool windows (24×24): the page outline,
+// text lines as strokes and the redacted parts as solid bars.
+export function glyphSvg(color = 'currentColor', size = 24) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-linecap="round">
+  <rect x="2.75" y="2.75" width="18.5" height="18.5" rx="4.5" stroke-width="1.5"/>
+  <path d="M7.2 7.85h2.7M15.4 12h1.4M7.2 16.15h4.6" stroke-width="1.4"/>
+  <g fill="${color}" stroke="none">
+    <rect x="11.4" y="6.5" width="6.1" height="2.7" rx=".8"/>
+    <rect x="6.5" y="10.65" width="7.4" height="2.7" rx=".8"/>
+    <rect x="13.4" y="14.8" width="4.1" height="2.7" rx=".8"/>
+  </g>
+</svg>
+`;
+}
+
 function fontFace() {
   const font = fs.readFileSync(path.join(root, 'src/assets/fonts/ibm-plex-sans-600.woff2')).toString('base64');
   return `@font-face{font-family:Plex;font-weight:600;src:url(data:font/woff2;base64,${font}) format('woff2');}`;
@@ -89,6 +104,20 @@ for (const size of [192, 512]) {
   const html = `<html><body style="margin:0">${webSvg.replace('width="512" height="512"', `width="${size}" height="${size}"`)}</body></html>`;
   await shot(page, html, size, size, path.join(root, `src/web/icons/icon-${size}.png`), false);
 }
+
+// IDE plugins: VS Code's activity bar tints the glyph itself; JetBrains wants a
+// light- and a dark-theme file; Visual Studio menu commands take a 16×16 PNG.
+fs.writeFileSync(path.join(root, 'ide/vscode/media/redacto.svg'), glyphSvg());
+const jbIcons = path.join(root, 'ide/jetbrains/src/main/resources/icons');
+fs.writeFileSync(path.join(jbIcons, 'redacto.svg'), glyphSvg('#6C707E', 16));
+fs.writeFileSync(path.join(jbIcons, 'redacto_dark.svg'), glyphSvg('#CED0D6', 16));
+await shot(
+  page,
+  svgPage(markSvg(PALETTES.color), 16),
+  16,
+  16,
+  path.join(root, 'ide/visualstudio/PrivacyGuardrail.VisualStudio/Resources/Redacto.png'),
+);
 
 const assets = path.join(root, 'docs/assets');
 await shot(page, wordmarkHtml('#0B1220', 640, 180, 150, 104), 640, 180, path.join(assets, 'redacto-logo-black.png'));
