@@ -429,3 +429,30 @@ jobs:
             release-artifacts/*.zip
             release-artifacts/*.sha256
             release-artifacts/*.vsix
+
+  # Release announcement on X. Runs last, and only when the GitHub pre-release
+  # was published; without the four X_* secrets the script skips the post, and
+  # a failed post never fails the workflow.
+  post-to-x:
+    name: Announce release on X
+    needs:
+      - prepare-models-and-package
+      - github-release
+    if: ${{ needs.github-release.result == 'success' && github.event_name == 'push' }}
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post release announcement to X
+        continue-on-error: true
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          NEW_VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
+        run: |
+          python3 scripts/post_x_release.py \
+            --app-name "Redacto" \
+            --tag "v${NEW_VERSION}" \
+            --release-url "https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${NEW_VERSION}"
