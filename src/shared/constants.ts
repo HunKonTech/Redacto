@@ -258,6 +258,7 @@ export const DEFAULT_SETTINGS: Settings = {
   curatedUrls: DEFAULT_CURATED_URLS,
   allowlist: [],
   blocklist: [],
+  publicDomains: [],
   nerProvider: 'transformers',
   nerModel: DEFAULT_NER_MODEL,
   // q4f16 external data keeps the offscreen document around 1 GB while loaded.

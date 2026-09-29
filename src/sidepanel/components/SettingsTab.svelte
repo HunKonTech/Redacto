@@ -3,6 +3,7 @@
 	import Toggle from '../../popup/components/Toggle.svelte';
 	import AllowlistCard from '../../options/components/AllowlistCard.svelte';
 	import BlocklistCard from '../../options/components/BlocklistCard.svelte';
+	import PublicDomainsCard from '../../options/components/PublicDomainsCard.svelte';
 	import CodeBlocksCard from '../../options/components/CodeBlocksCard.svelte';
 	import SensitivityCard from '../../options/components/SensitivityCard.svelte';
 	import VaultCard from '../../options/components/VaultCard.svelte';
@@ -76,6 +77,14 @@
 		addEntry={model.addAllowlistEntry}
 		removeEntry={model.removeAllowlistEntry}
 		clearError={model.clearAllowlistError}
+	/>
+
+	<PublicDomainsCard
+		{settings}
+		error={model.publicDomainError}
+		addDomain={model.addPublicDomain}
+		removeDomain={model.removePublicDomain}
+		clearError={model.clearPublicDomainError}
 	/>
 
 	<BlocklistCard

@@ -18,6 +18,7 @@ import type {
 import { SEARCH_ENGINE_ORIGINS } from '../shared/search-engines';
 import { GROUP_NAMES } from '../shared/category-groups';
 import { findConflictingPattern } from '../shared/list-conflicts';
+import { normalizeDomain } from '../shared/public-domains';
 import {
   type IdentityRecord,
   type IdentityVaultData,
@@ -46,6 +47,7 @@ export type OptionsModel = {
   vaultRecords: Writable<IdentityRecord[]>;
   allowlistError: Writable<ListError>;
   blocklistError: Writable<ListError>;
+  publicDomainError: Writable<ListError>;
   systemCompatibility: Writable<SystemCompatibilityStatus | null>;
   localAiWarmupState: Writable<'idle' | 'loading' | 'ready' | 'failed'>;
   groupNames: readonly GroupName[];
@@ -64,6 +66,10 @@ export type OptionsModel = {
   addAllowlistEntry: (pattern: string) => Promise<boolean>;
   removeAllowlistEntry: (index: number) => Promise<void>;
   clearAllowlistError: () => void;
+
+  addPublicDomain: (raw: string) => Promise<boolean>;
+  removePublicDomain: (domain: string) => Promise<void>;
+  clearPublicDomainError: () => void;
 
   addBlocklistEntry: (pattern: string, scope: EntityType) => Promise<boolean>;
   removeBlocklistEntry: (index: number) => Promise<void>;
@@ -114,6 +120,7 @@ export function createOptionsModel(): OptionsModel {
   const vaultRecords = writable<IdentityRecord[]>([]);
   const allowlistError = writable<ListError>(null);
   const blocklistError = writable<ListError>(null);
+  const publicDomainError = writable<ListError>(null);
   const systemCompatibility = writable<SystemCompatibilityStatus | null>(null);
   const localAiWarmupState = writable<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
@@ -260,6 +267,7 @@ export function createOptionsModel(): OptionsModel {
     vaultRecords,
     allowlistError,
     blocklistError,
+    publicDomainError,
     systemCompatibility,
     localAiWarmupState,
     groupNames: GROUP_NAMES,
@@ -305,6 +313,27 @@ export function createOptionsModel(): OptionsModel {
       await saveAndBroadcast({ allowlist: next });
     },
     clearAllowlistError: () => allowlistError.set(null),
+
+    addPublicDomain: async (raw) => {
+      if (!currentSettings) return false;
+      const domain = normalizeDomain(raw);
+      if (!domain) {
+        publicDomainError.set('Enter a domain such as acme.com.');
+        return false;
+      }
+      if (currentSettings.publicDomains.includes(domain)) {
+        publicDomainError.set(`${domain} is already on the list.`);
+        return false;
+      }
+      await saveAndBroadcast({ publicDomains: [...currentSettings.publicDomains, domain] });
+      publicDomainError.set(null);
+      return true;
+    },
+    removePublicDomain: async (domain) => {
+      if (!currentSettings) return;
+      await saveAndBroadcast({ publicDomains: currentSettings.publicDomains.filter((d) => d !== domain) });
+    },
+    clearPublicDomainError: () => publicDomainError.set(null),
 
     addBlocklistEntry: async (raw, scope) => {
       const pattern = raw.trim();

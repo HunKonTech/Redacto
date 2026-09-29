@@ -3,6 +3,7 @@
 	import PGLogo from '../popup/components/PGLogo.svelte';
 	import { createOptionsModel } from './options-model.svelte';
 	import AllowlistCard from './components/AllowlistCard.svelte';
+	import PublicDomainsCard from './components/PublicDomainsCard.svelte';
 	import BlocklistCard from './components/BlocklistCard.svelte';
 	import CancelDetectionCard from './components/CancelDetectionCard.svelte';
 	import CodeBlocksCard from './components/CodeBlocksCard.svelte';
@@ -74,6 +75,14 @@
 			addEntry={model.addAllowlistEntry}
 			removeEntry={model.removeAllowlistEntry}
 			clearError={model.clearAllowlistError}
+		/>
+
+		<PublicDomainsCard
+			settings={model.settings}
+			error={model.publicDomainError}
+			addDomain={model.addPublicDomain}
+			removeDomain={model.removePublicDomain}
+			clearError={model.clearPublicDomainError}
 		/>
 
 		<BlocklistCard

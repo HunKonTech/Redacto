@@ -30,7 +30,9 @@ Pattern recognizers are strongest when the text has a stable format, such as ema
 
 ## Private Links And File Paths
 
-Links and file paths are checked in every paste, not only in code. Public references such as `https://docs.python.org/3/library/re.html` or `/usr/local/bin` are left alone so the AI can still use them. A link is replaced (`URL`) when it:
+Links and file paths are checked in every paste, not only in code. A link is replaced (`URL`) unless it points to a well-known public site — documentation, code hosting, package registries, Wikipedia, large platforms and government sites (`.gov`, `gov.hu`, `europa.eu`, …) — so a company's own website (`https://www.acme.hu/rolunk`, `linkedin.com/company/acme`) is replaced too. You can add sites to keep under **Options → Public domains** (subdomains included); `/usr/local/bin` and similar system paths are left alone.
+
+Even on a public site, a link is replaced when it:
 
 - points at an internal host (`.internal`, `.corp`, `.local`, `.lan`, a single-word host such as `http://jenkins:8080`) or an IP address;
 - contains a user name or password (`postgres://user:password@host`);

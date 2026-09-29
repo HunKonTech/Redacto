@@ -35,7 +35,8 @@ pub fn detect_with_external_spans(
     if config.code_mode != CodeMode::Off {
         regex_spans = code::combine_with_regex(regex_spans, code::detect_code_secrets(text));
     }
-    regex_spans = url_path::combine_with_regex(regex_spans, url_path::detect_links_and_paths(text));
+    let link_spans = url_path::detect_links_and_paths(text, &config.public_domains);
+    regex_spans = url_path::combine_with_regex(regex_spans, link_spans);
 
     // Stage 2: NER (if enabled and model is loaded)
     let mut ner_spans = if config.ner_enabled && ner::is_model_loaded() {
@@ -44,10 +45,11 @@ pub fn detect_with_external_spans(
         Vec::new()
     };
     ner_spans.extend(valid_external_ner_spans(text, external_ner_spans));
-    // Only private links are anonymized; a model-tagged public URL stays so
-    // the assistant can still follow it.
+    // A model-tagged URL to a public site stays so the assistant can still
+    // follow it; everything else is replaced like a pattern-matched link.
     ner_spans.retain(|span| {
-        span.entity_type != EntityType::Url || url_path::is_sensitive_url(&span.text)
+        span.entity_type != EntityType::Url
+            || url_path::is_sensitive_url(&span.text, &config.public_domains)
     });
 
     // Stage 3: Checksum validation (filter out invalid regex matches)

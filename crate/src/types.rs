@@ -120,6 +120,9 @@ pub struct PipelineConfig {
     pub ner_enabled: bool,
     /// Which source-code recognizers run (secrets, internal hosts, home-directory usernames).
     pub code_mode: CodeMode,
+    /// Extra domains whose links stay as they are, on top of the built-in public list.
+    #[serde(default)]
+    pub public_domains: Vec<String>,
 }
 
 /// How much of the source-code stage runs.
@@ -144,6 +147,7 @@ impl Default for PipelineConfig {
             context_window: 5,
             ner_enabled: false,
             code_mode: CodeMode::Off,
+            public_domains: Vec::new(),
         }
     }
 }
@@ -155,6 +159,7 @@ pub struct PipelineConfigOverrides {
     pub context_window: Option<usize>,
     pub ner_enabled: Option<bool>,
     pub code_mode: Option<CodeMode>,
+    pub public_domains: Option<Vec<String>>,
 }
 
 impl PipelineConfig {
@@ -183,6 +188,9 @@ impl PipelineConfig {
         }
         if let Some(code_mode) = overrides.code_mode {
             config.code_mode = code_mode;
+        }
+        if let Some(public_domains) = overrides.public_domains {
+            config.public_domains = public_domains;
         }
         config
     }
@@ -270,5 +278,13 @@ mod tests {
         assert_eq!(config.code_mode, CodeMode::Secrets);
         let full = PipelineConfig::from_json_or_default(r#"{"code_mode":"full"}"#);
         assert_eq!(full.code_mode, CodeMode::Full);
+    }
+
+    #[test]
+    fn pipeline_config_accepts_public_domains() {
+        let config = PipelineConfig::from_json_or_default(r#"{"public_domains":["acme.hu"]}"#);
+
+        assert_eq!(config.public_domains, vec!["acme.hu".to_string()]);
+        assert!(PipelineConfig::default().public_domains.is_empty());
     }
 }

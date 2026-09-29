@@ -119,6 +119,97 @@ const PROFILE_DOMAINS: &[&str] = &[
     "wa.me",
 ];
 
+/// Sites whose links are safe to pass on: documentation, code hosting,
+/// package registries, reference works and large platforms, plus public
+/// institutions. Every other host is assumed to belong to an organisation
+/// and its links are replaced. Users extend this with `public_domains`.
+const KNOWN_PUBLIC_DOMAINS: &[&str] = &[
+    "wikipedia.org",
+    "wikimedia.org",
+    "wiktionary.org",
+    "wikidata.org",
+    "github.com",
+    "githubusercontent.com",
+    "gitlab.com",
+    "bitbucket.org",
+    "stackoverflow.com",
+    "stackexchange.com",
+    "superuser.com",
+    "serverfault.com",
+    "askubuntu.com",
+    "mozilla.org",
+    "python.org",
+    "pypi.org",
+    "npmjs.com",
+    "crates.io",
+    "docs.rs",
+    "rust-lang.org",
+    "go.dev",
+    "golang.org",
+    "nodejs.org",
+    "microsoft.com",
+    "apple.com",
+    "google.com",
+    "youtube.com",
+    "youtu.be",
+    "w3.org",
+    "w3schools.com",
+    "readthedocs.io",
+    "readthedocs.org",
+    "arxiv.org",
+    "doi.org",
+    "ietf.org",
+    "rfc-editor.org",
+    "kernel.org",
+    "debian.org",
+    "ubuntu.com",
+    "archlinux.org",
+    "docker.com",
+    "kubernetes.io",
+    "amazon.com",
+    "cloudflare.com",
+    "jsdelivr.net",
+    "unpkg.com",
+    "apache.org",
+    "gnu.org",
+    "oracle.com",
+    "jetbrains.com",
+    "visualstudio.com",
+    "typescriptlang.org",
+    "react.dev",
+    "reactjs.org",
+    "vuejs.org",
+    "angular.dev",
+    "angular.io",
+    "svelte.dev",
+    "nextjs.org",
+    "php.net",
+    "cppreference.com",
+    "nuget.org",
+    "rubygems.org",
+    "mvnrepository.com",
+    "openai.com",
+    "anthropic.com",
+    "reddit.com",
+    "medium.com",
+    "dev.to",
+    "linkedin.com",
+    "facebook.com",
+    "instagram.com",
+    "x.com",
+    "twitter.com",
+    "tiktok.com",
+    "example.com",
+    "example.org",
+    "example.net",
+    "localhost",
+    "gov",
+    "gov.uk",
+    "gov.hu",
+    "europa.eu",
+    "int",
+];
+
 /// First path segments on profile hosts that are site pages, not handles.
 const PROFILE_SITE_PAGES: &[&str] = &[
     "home",
@@ -185,14 +276,14 @@ const SHARED_HOME_DIRS: &[&str] = &[
 ];
 
 /// Run the link and path recognizers against the input text.
-pub fn detect_links_and_paths(text: &str) -> Vec<PiiSpan> {
+pub fn detect_links_and_paths(text: &str, public_domains: &[String]) -> Vec<PiiSpan> {
     let mut spans = Vec::new();
     let mut urls: Vec<(usize, usize)> = Vec::new();
 
     for mat in URL_RE.find_iter(text) {
         let end = mat.start() + trim_trailing_punctuation(mat.as_str()).len();
         urls.push((mat.start(), end));
-        if is_sensitive_url(&text[mat.start()..end]) {
+        if is_sensitive_url(&text[mat.start()..end], public_domains) {
             spans.push(span(mat.start(), end, text, EntityType::Url, URL_SCORE));
         }
     }
@@ -251,8 +342,10 @@ pub fn starts_a_filesystem_path(text: &str, start: usize) -> bool {
     }
 }
 
-/// Whether a link (with or without scheme) points at something private.
-pub fn is_sensitive_url(url: &str) -> bool {
+/// Whether a link (with or without scheme) should be replaced: it points at
+/// something private, carries an identifier, or belongs to a host that is
+/// neither built-in public nor listed in `public_domains`.
+pub fn is_sensitive_url(url: &str, public_domains: &[String]) -> bool {
     let parts = UrlParts::parse(url);
 
     if parts.scheme.eq_ignore_ascii_case("file") {
@@ -294,6 +387,20 @@ pub fn is_sensitive_url(url: &str) -> bool {
         .any(|segment| segment.starts_with('@') || carries_identifier(segment))
         || query_is_sensitive(parts.query)
         || query_is_sensitive(parts.fragment)
+        || !is_public_host(&host, public_domains)
+}
+
+fn is_public_host(host: &str, public_domains: &[String]) -> bool {
+    KNOWN_PUBLIC_DOMAINS.iter().any(|d| host_matches(host, d))
+        || public_domains.iter().any(|d| {
+            host_matches(
+                host,
+                d.trim()
+                    .trim_start_matches("www.")
+                    .to_ascii_lowercase()
+                    .as_str(),
+            )
+        })
 }
 
 struct UrlParts<'a> {
@@ -351,7 +458,11 @@ fn is_private_host(host: &str) -> bool {
 
 fn is_profile_link(host: &str, segments: &[&str]) -> bool {
     if host_matches(host, "linkedin.com") {
-        return matches!(segments.first(), Some(&"in") | Some(&"pub")) && segments.len() > 1;
+        // People (`in`, `pub`) and organisations (`company`, `school`, `showcase`).
+        return matches!(
+            segments.first(),
+            Some(&"in" | &"pub" | &"company" | &"school" | &"showcase")
+        ) && segments.len() > 1;
     }
     PROFILE_DOMAINS.iter().any(|d| host_matches(host, d))
         && segments
@@ -461,7 +572,7 @@ mod tests {
     use super::*;
 
     fn found(text: &str, entity_type: EntityType) -> Vec<String> {
-        detect_links_and_paths(text)
+        detect_links_and_paths(text, &[])
             .into_iter()
             .filter(|s| s.entity_type == entity_type)
             .map(|s| s.text)
@@ -484,6 +595,39 @@ mod tests {
         assert!(urls("https://www.youtube.com/watch?v=dQw4w9WgXcQ").is_empty());
         assert!(urls("http://localhost:3000/api/health").is_empty());
         assert!(urls("https://x.com/explore").is_empty());
+        assert!(urls("https://data.gov.hu/dataset/budget").is_empty());
+        assert!(urls("https://learn.microsoft.com/en-us/dotnet/").is_empty());
+    }
+
+    #[test]
+    fn detects_organisation_websites() {
+        assert_eq!(
+            urls("See https://www.acme.hu/rolunk."),
+            vec!["https://www.acme.hu/rolunk"]
+        );
+        assert_eq!(urls("http://acme-group.com"), vec!["http://acme-group.com"]);
+        assert_eq!(urls("www.acme.hu/kapcsolat"), vec!["www.acme.hu/kapcsolat"]);
+        assert_eq!(
+            urls("https://www.linkedin.com/company/acme-kft/"),
+            vec!["https://www.linkedin.com/company/acme-kft/"]
+        );
+    }
+
+    #[test]
+    fn user_public_domains_are_left_alone_unless_the_link_is_private() {
+        let public = vec!["acme.hu".to_string(), "www.partner.com".to_string()];
+        let found = |text: &str| -> Vec<String> {
+            detect_links_and_paths(text, &public)
+                .into_iter()
+                .map(|s| s.text)
+                .collect()
+        };
+        assert!(found("https://www.acme.hu/rolunk").is_empty());
+        assert!(found("https://shop.partner.com/").is_empty());
+        assert_eq!(
+            found("https://www.acme.hu/login?token=abc123"),
+            vec!["https://www.acme.hu/login?token=abc123"]
+        );
     }
 
     #[test]
@@ -619,7 +763,7 @@ mod tests {
             span(29, 38, text, EntityType::Email, 0.9),
             span(39, 47, text, EntityType::IpAddress, 0.9),
         ];
-        let combined = combine_with_regex(inner, detect_links_and_paths(text));
+        let combined = combine_with_regex(inner, detect_links_and_paths(text, &[]));
         let types: Vec<EntityType> = combined.iter().map(|s| s.entity_type).collect();
         assert_eq!(types, vec![EntityType::IpAddress, EntityType::Url]);
     }

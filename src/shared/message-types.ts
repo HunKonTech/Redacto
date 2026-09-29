@@ -79,6 +79,8 @@ export interface PipelineConfig {
   ner_enabled: boolean;
   /** Source-code recognizers: credentials, internal hostnames, home-directory usernames. */
   code_mode: CodeAnonymizationMode;
+  /** Domains whose links stay as they are, on top of the built-in public list. */
+  public_domains?: string[];
 }
 
 /**
@@ -359,6 +361,8 @@ export interface Settings {
   curatedUrls: string[];
   allowlist: AllowlistEntry[];
   blocklist: BlocklistEntry[];
+  /** Sites whose links are left as they are; every other link is replaced. */
+  publicDomains: string[];
   nerProvider: NerProviderMode;
   nerModel: NerModelKey;
   /** ONNX artifact used when Local AI runs on WebGPU. The wasm fallback

@@ -95,3 +95,12 @@ describe('round trip through the vault', () => {
       .toBe('Open https://wiki.acme.internal/HR/Onboarding and load /home/anna/exports/q3.csv.');
   });
 });
+
+describe('organisation websites', () => {
+  test('keep their site sections and lose the company domain', () => {
+    expect(syntheticLink('https://www.acme.hu/rolunk/kapcsolat', standIns))
+      .toBe('https://www.example.com/rolunk/kapcsolat');
+    expect(syntheticLink('https://acme-group.com/en-us/about-us', standIns))
+      .toBe('https://example.com/en-us/about-us');
+  });
+});

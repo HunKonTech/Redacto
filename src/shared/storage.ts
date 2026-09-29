@@ -2,6 +2,7 @@ import type { Settings, FeedbackEntry, NerModelKey, NerProviderMode, NerWebGpuDt
 import { ENTITY_TYPES } from './message-types';
 import { DEFAULT_CURATED_URLS, DEFAULT_SETTINGS, LOCAL_AI_UNLOAD_TIMEOUT_CHOICES, NER_WEBGPU_DTYPE_CHOICES, runtimeNerModelKey } from './constants';
 import { GROUP_NAMES, GROUP_DEFAULT_ON } from './category-groups';
+import { normalizePublicDomains } from './public-domains';
 
 const SETTINGS_KEY = 'pg_settings';
 const FEEDBACK_KEY = 'pg_feedback';
@@ -123,6 +124,7 @@ function normalizeSettings(raw: unknown): Settings {
   settings.groupThresholds = normalizeGroupThresholds(candidate.groupThresholds);
   settings.allowlist = normalizeAllowlist(candidate.allowlist);
   settings.blocklist = normalizeBlocklist(candidate.blocklist);
+  settings.publicDomains = normalizePublicDomains(candidate.publicDomains);
   if (typeof settings.skipCodeBlocks !== 'boolean') {
     settings.skipCodeBlocks = false;
   }
