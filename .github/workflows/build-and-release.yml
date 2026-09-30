@@ -118,6 +118,7 @@ jobs:
 
       - name: Prepare BardsAI NER model
         env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           MODEL_PYTHON: ${{ steps.python.outputs.path }}
         run: |
           if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
