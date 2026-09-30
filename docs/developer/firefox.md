@@ -24,7 +24,7 @@ addons.mozilla.org rejects packages over 200 MB, and the Local AI model alone is
 
 The release workflow uploads the model: step **Publish Local AI model to Hugging Face** stages it with `scripts/firefox/stage-hf-model.js` and uploads it with `scripts/firefox/upload-hf-model.py`. An unchanged model makes no new commit. It needs:
 
-- repository secret `HF_TOKEN`: a Hugging Face access token with **write** access to the model repository (huggingface.co → Settings → Access Tokens). The repository is created on the first upload.
+- repository secret `HF_TOKEN`: a Hugging Face access token with **write** access to the model repository (huggingface.co → Settings → Access Tokens). The repository is created (public) on the first upload; it must stay public, since the add-on downloads without a token, and the upload step fails if it is private.
 - optional repository variable `MODEL_HF_REPO` to use a different repository.
 
 Without `HF_TOKEN` the step only warns, uploads nothing, and the Firefox build follows the repository's `main` branch.

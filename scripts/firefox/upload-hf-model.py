@@ -17,7 +17,13 @@ def main() -> None:
         sys.exit(__doc__)
     folder, repo_id = sys.argv[1], sys.argv[2]
     api = HfApi()
-    api.create_repo(repo_id, repo_type="model", exist_ok=True)
+    # The add-on downloads without a token, so the repository must be public.
+    api.create_repo(repo_id, repo_type="model", private=False, exist_ok=True)
+    if api.model_info(repo_id).private:
+        sys.exit(
+            f"{repo_id} is private, but the Firefox add-on downloads the model without a token. "
+            "Make it public on huggingface.co (Settings -> Change repository visibility)."
+        )
     api.upload_folder(
         repo_id=repo_id,
         repo_type="model",
