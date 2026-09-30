@@ -185,8 +185,8 @@ jobs:
         with:
           name: redacto-chrome-${{ steps.version.outputs.version }}
           path: |
-            release/redacto-*.zip
-            release/redacto-*.sha256
+            release/redacto-chrome-brave-vivaldi-*.zip
+            release/redacto-chrome-brave-vivaldi-*.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -440,6 +440,8 @@ jobs:
             Build ${{ github.run_number }} of this fork, based on upstream version ${{ vars.BASE_VERSION || 'from package.json' }}, commit ${{ github.sha }}.
 
             See [CHANGELOG.md](https://github.com/HunKonTech/Redacto/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
+
+            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge.
 
             Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
           files: |

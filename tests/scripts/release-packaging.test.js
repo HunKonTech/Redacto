@@ -134,7 +134,7 @@ describe('official release packaging', () => {
     });
 
     expect(result.dryRun).toBe(true);
-    expect(result.zipPath).toBe(path.join(tempRoot, 'release', 'redacto-0.2.0.zip'));
+    expect(result.zipPath).toBe(path.join(tempRoot, 'release', 'redacto-chrome-brave-vivaldi-0.2.0.zip'));
     expect(result.entries).toContain('manifest.json');
     expect(fs.existsSync(result.zipPath)).toBe(false);
   });
@@ -147,8 +147,8 @@ describe('official release packaging', () => {
       env: { PG_BASE_VERSION: '0.2.0', PG_BUILD_NUMBER: '17' },
     });
 
-    expect(result.zipPath).toBe(path.join(tempRoot, 'release', 'redacto-0.2.0.17.zip'));
-    expect(result.checksumPath).toBe(path.join(tempRoot, 'release', 'redacto-0.2.0.17.sha256'));
+    expect(result.zipPath).toBe(path.join(tempRoot, 'release', 'redacto-chrome-brave-vivaldi-0.2.0.17.zip'));
+    expect(result.checksumPath).toBe(path.join(tempRoot, 'release', 'redacto-chrome-brave-vivaldi-0.2.0.17.sha256'));
   });
 
   test('release mode writes a versioned zip and matching SHA-256 checksum', () => {
@@ -160,9 +160,9 @@ describe('official release packaging', () => {
     });
 
     const checksumText = fs.readFileSync(result.checksumPath, 'utf8');
-    expect(path.basename(result.zipPath)).toBe('redacto-0.2.0.zip');
-    expect(path.basename(result.checksumPath)).toBe('redacto-0.2.0.sha256');
-    expect(checksumText).toBe(`${sha256File(result.zipPath)}  redacto-0.2.0.zip\n`);
+    expect(path.basename(result.zipPath)).toBe('redacto-chrome-brave-vivaldi-0.2.0.zip');
+    expect(path.basename(result.checksumPath)).toBe('redacto-chrome-brave-vivaldi-0.2.0.sha256');
+    expect(checksumText).toBe(`${sha256File(result.zipPath)}  redacto-chrome-brave-vivaldi-0.2.0.zip\n`);
 
     const zip = new AdmZip(result.zipPath);
     const zipEntries = zip.getEntries().map((entry) => entry.entryName).sort();

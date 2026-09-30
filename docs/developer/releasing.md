@@ -116,8 +116,8 @@ The command:
 - zips only runtime files from `dist/`
 - requires the legal files `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md`
 - excludes source maps and private/source-only/generated-local paths
-- writes `release/redacto-<version>.zip`
-- writes `release/redacto-<version>.sha256` for the exact zip
+- writes `release/redacto-chrome-brave-vivaldi-<version>.zip`
+- writes `release/redacto-chrome-brave-vivaldi-<version>.sha256` for the exact zip
 
 For local package-content checks against an existing `dist/` tree without the clean-worktree guard or build step, run:
 
