@@ -57,6 +57,7 @@ These requirements are heuristic because Local AI runs a transformer NER model e
 - Intercepts text paste events in supported chat inputs.
 - Detects regex/checksum-backed PII such as email addresses, phone numbers, SSNs, credit cards, IBANs, IP addresses, and dates.
 - Adds local transformer NER for names, addresses, identifiers, credentials, and other free-text PII when model assets are prepared.
+- Renames a pasted code snippet's own identifiers (classes, methods, variables) consistently before sending, while leaving framework and standard-library names alone. A small token classifier decides which names are the user's own (`OWN`) and which are library names (`LIB`): [`koncsik/code-identifier-classifier`](https://huggingface.co/koncsik/code-identifier-classifier), a fine-tuned RoBERTa-style model in quantized ONNX format that runs locally in the extension (training pipeline in [`tools/identifier-classifier`](tools/identifier-classifier)).
 - Shows a review UI before replacing detected spans.
 - Replaces selected spans with stable placeholders such as `[EMAIL_1]` or `[PERSON_1]`.
 - Stores the placeholder map locally in Chrome storage so model responses can be restored later, with restored values visually highlighted.

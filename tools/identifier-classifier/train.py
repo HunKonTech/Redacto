@@ -181,7 +181,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", type=Path, default=HERE / "work" / "dataset")
     parser.add_argument("--out", type=Path, default=HERE / "work" / "model")
-    parser.add_argument("--base-model", default="huggingface/CodeBERTa-small-v1")
+    parser.add_argument("--base-model", default="microsoft/unixcoder-base")
     parser.add_argument("--epochs", type=float, default=3, help="upper bound; the time budget may stop earlier")
     parser.add_argument("--hours", type=float, default=0, help="time budget for training; 0 = no budget, just --epochs")
     parser.add_argument("--lr", type=float, default=5e-5)

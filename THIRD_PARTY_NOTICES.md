@@ -198,3 +198,27 @@ respective rights holder. Redistribution of modified Redacto packages
 must keep the legal files, readable third-party notices, existing upstream
 copyright, patent, trademark, attribution, and NOTICE entries, and prominent
 change notices for files modified by the redistributor.
+
+## Code Identifier Classifier
+
+The **Rename code identifiers** option uses a token classifier that labels
+code identifiers as the user's own (`OWN`) or library/framework names (`LIB`):
+
+- Model ID: `koncsik/code-identifier-classifier`
+- Provider: Benedek Koncsik
+- Source: https://huggingface.co/koncsik/code-identifier-classifier
+- Training pipeline: `tools/identifier-classifier`
+
+The package includes prepared runtime files under
+`models/identifier-classifier/`:
+
+- `config.json`
+- `tokenizer.json`
+- `tokenizer_config.json`
+- `onnx/model_quantized.onnx`
+
+The model is fine-tuned from `microsoft/unixcoder-base`
+(https://huggingface.co/microsoft/unixcoder-base), which is licensed under
+Apache-2.0, and exported to int8-quantized ONNX by the repository's training
+scripts. It is a modified/generated Redacto release artifact, not an upstream
+file.

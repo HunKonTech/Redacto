@@ -7,8 +7,8 @@ kept so the chat model can still read the code. It replaces the hand-written
 `LIBRARY_NAMES` list in `src/shared/code-rename.ts`.
 
 It is a token-classification ("NER") model like the extension's PII models:
-a ~84M-parameter code encoder, fine-tuned on BIO tags `B-OWN I-OWN B-LIB I-LIB O`,
-exported to int8 ONNX (~85 MB).
+a ~125M-parameter code encoder (`microsoft/unixcoder-base`, Apache-2.0), fine-tuned on BIO tags `B-OWN I-OWN B-LIB I-LIB O`,
+exported to int8 ONNX (~125 MB).
 
 ## How the labels are made
 
@@ -67,7 +67,9 @@ pip install -r requirements.txt
 | `train` | fine-tunes the model | `work\model\final` (+ `metrics.json`) |
 | `export` | ONNX + int8, checks agreement with PyTorch | `work\export\code-identifier-classifier` |
 
-Options: `-NoRestore` (skip dependency restore), `-Hours`, `-BaseModel`, `-Epochs`, `-BatchSize`.
+Options: `-NoRestore` (skip dependency restore), `-Hours`, `-BaseModel`, `-Epochs`, `-BatchSize`,
+`-Upload` (push the export to Hugging Face at the end, to `-HfRepo`, default
+`koncsik/code-identifier-classifier`; log in first with `hf auth login`).
 
 ### Long CPU runs
 
@@ -121,12 +123,12 @@ python predict.py --model work\model\final C:\path\to\SomeFile.cs
 
 | `-BaseModel` | Size | Notes |
 |---|---|---|
-| `huggingface/CodeBERTa-small-v1` (default) | 84M, ~85 MB int8 | smallest; pretrained without C#, learns it during fine-tuning |
-| `microsoft/unixcoder-base` | 125M, ~125 MB int8 | stronger code understanding |
-| `answerdotai/ModernBERT-base` | 149M, ~150 MB int8 | pretrained on code and text, long context |
+| `microsoft/unixcoder-base` (default) | 125M, ~125 MB int8 | Apache-2.0; stronger code understanding |
+| `answerdotai/ModernBERT-base` | 149M, ~150 MB int8 | Apache-2.0; pretrained on code and text, long context |
+| `huggingface/CodeBERTa-small-v1` | 84M, ~85 MB int8 | smallest, but its model page states **no licence**: do not ship a model derived from it |
 
-Start with the default; switch only if `lib_recall_at_own98` stays low. On a
-CPU a larger model means fewer training steps in the same `-Hours`.
+Start with the default. On a CPU a larger model means fewer training steps in
+the same `-Hours`; an NVIDIA GPU is strongly recommended for `unixcoder-base`.
 
 ## Adding data
 

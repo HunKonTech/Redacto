@@ -7,7 +7,11 @@
   .\run_all.ps1 -NoRestore           # do not run npm install / dotnet restore
   .\run_all.ps1 -From train          # start at a later step
   .\run_all.ps1 -Hours 48                # give training two days
+  .\run_all.ps1 -From export -Upload    # export again and push it to Hugging Face
   .\run_all.ps1 -From train              # resume an interrupted training run
+
+  -Upload publishes the exported model to -HfRepo after the export, with a
+  model card. Log in once first: `pip install -U huggingface_hub` then `hf auth login`.
 
   Training checkpoints about once an hour. If the PC restarts or the window
   is closed, run `.\run_all.ps1 -From train` again and it continues.
@@ -16,11 +20,13 @@ param(
   [ValidateSet('fetch', 'label', 'dataset', 'train', 'export')]
   [string]$From = 'fetch',
   [switch]$NoRestore,
-  [string]$BaseModel = 'huggingface/CodeBERTa-small-v1',
+  [string]$BaseModel = 'microsoft/unixcoder-base',
   [double]$Epochs = 3,
   [double]$Hours = 36,
   [int]$BatchSize = 16,
-  [string]$Python = 'python'
+  [string]$Python = 'python',
+  [switch]$Upload,
+  [string]$HfRepo = 'koncsik/code-identifier-classifier'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,4 +84,44 @@ if (Step 'export') {
   Write-Host '== 5/5 Exporting to ONNX' -ForegroundColor Cyan
   Invoke-Checked { & $Python (Join-Path $here 'export_onnx.py') --model (Join-Path $model 'final') --out $export --test (Join-Path $dataset 'test.jsonl') }
   Write-Host "Done. Model: $export" -ForegroundColor Green
+}
+
+if ($Upload) {
+  Write-Host "== Uploading to Hugging Face ($HfRepo)" -ForegroundColor Cyan
+  if (-not (Test-Path (Join-Path $export 'onnx\model_quantized.onnx'))) {
+    throw "No exported model in $export. Run the export step first."
+  }
+  $card = @"
+---
+license: apache-2.0
+base_model: $BaseModel
+library_name: transformers.js
+pipeline_tag: token-classification
+tags:
+  - onnx
+  - token-classification
+  - code
+---
+
+# Code identifier classifier
+
+Token classifier that tells, for every identifier in a code snippet, whether it
+is the project's **own** name (`OWN`) or a **library/framework** name (`LIB`)
+(BIO tags ``B-OWN I-OWN B-LIB I-LIB O``). Used by the Redacto browser extension
+to rename a pasted snippet's own identifiers and keep library names readable.
+
+- Base model: [$BaseModel](https://huggingface.co/$BaseModel) (Apache-2.0)
+- Format: int8-quantized ONNX (``onnx/model_quantized.onnx``)
+- Training pipeline: https://github.com/BenKoncsik/pii-guardrail-browser-extension/tree/main/tools/identifier-classifier
+- Labels: derived automatically from open-source C# and TypeScript projects
+  (Roslyn / TypeScript checker resolution), split by repository.
+"@
+  Set-Content -Path (Join-Path $export 'README.md') -Value $card -Encoding utf8
+  $metrics = Join-Path $model 'final\metrics.json'
+  if (Test-Path $metrics) { Copy-Item $metrics (Join-Path $export 'metrics.json') -Force }
+
+  $hf = Get-Command hf -ErrorAction SilentlyContinue
+  if (-not $hf) { throw 'The hf CLI is missing: pip install -U huggingface_hub, then hf auth login.' }
+  Invoke-Checked { hf upload $HfRepo $export . --repo-type model --commit-message "Retrain on $BaseModel" }
+  Write-Host "Uploaded: https://huggingface.co/$HfRepo" -ForegroundColor Green
 }
