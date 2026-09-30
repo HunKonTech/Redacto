@@ -53,3 +53,15 @@ body #app {
   opacity: 0.6;
   cursor: progress;
 }
+
+.pg-web-get h2 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.pg-web-get ul {
+  margin: 0;
+  padding-left: 18px;
+}
