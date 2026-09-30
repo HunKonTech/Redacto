@@ -428,26 +428,27 @@ jobs:
 
             See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
 
-            Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on tag pushes (see `docs/developer/releasing.md`).
+            Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
           files: |
             release-artifacts/*.zip
             release-artifacts/*.sha256
             release-artifacts/*.vsix
 
   # Submits the Edge package to Microsoft Edge Add-ons through the Add-ons API
-  # (v1.1). Runs only for a `v*` tag push or a manual run with `publish_edge`,
-  # and is skipped without the three EDGE_* secrets. The first version of the
+  # (v1.1). Runs on every push (main or `v*` tag) and on manual runs with
+  # `publish_edge`, and is skipped without the three EDGE_* secrets. The first version of the
   # extension has to be submitted by hand in Partner Center (see
   # docs/developer/releasing.md); this job uploads updates to that product.
   edge-publish:
     name: Publish to Microsoft Edge Add-ons
     needs: [prepare-models-and-package]
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.publish_edge }}
+    if: ${{ github.event_name == 'push' || inputs.publish_edge }}
     runs-on: [self-hosted, linux]
     env:
       EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
       EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
       EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+      VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
     steps:
       - name: Download Edge package
         if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
@@ -489,7 +490,7 @@ jobs:
           echo "Publishing submission"
           curl -fsS -D "$RUNNER_TEMP/publish.headers" -o /dev/null -X POST "${auth[@]}" \
             -H "Content-Type: application/json" \
-            -d "{\"notes\": \"Automated release ${GITHUB_REF_NAME} (${GITHUB_SHA})\"}" "$api"
+            -d "{\"notes\": \"Automated release v${VERSION} (${GITHUB_SHA})\"}" "$api"
           wait_for "$api/operations/$(operation_id "$RUNNER_TEMP/publish.headers")"
 
       - name: Skipped (Edge secrets not configured)

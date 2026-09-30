@@ -164,8 +164,10 @@ Chrome Web Store upload is manual for the first public beta. Upload the same rev
 
 The `edge-publish` job of `.github/workflows/build-and-release.yml` uploads the
 Edge package to Microsoft Edge Add-ons through the Add-ons API (v1.1) and
-submits it for certification. It runs on `v*` tag pushes and on manual runs
-with the `publish_edge` input; it is skipped without its secrets.
+submits it for certification. It runs on every push to `main` (the release
+job tags the commit `v<build version>` itself, no tag has to be pushed), on
+`v*` tag pushes and on manual runs with the `publish_edge` input; it is
+skipped without its secrets.
 
 One-time setup:
 
