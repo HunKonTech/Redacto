@@ -5,3 +5,5 @@ optimum[onnxruntime]>=1.23
 onnx>=1.16
 onnxruntime>=1.19
 numpy
+# hf CLI for run_all.ps1 -Upload; <1.0 because transformers 4.x needs it
+huggingface_hub>=0.34,<1.0
