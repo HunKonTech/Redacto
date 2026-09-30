@@ -416,9 +416,13 @@ jobs:
           merge-multiple: true
           path: release-artifacts
 
+      # GITHUB_TOKEN cannot create a tag on a commit that changes
+      # .github/workflows (403 "Resource not accessible by integration");
+      # RELEASE_TOKEN, a PAT with contents + workflows write, can.
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
           tag_name: v${{ needs.prepare-models-and-package.outputs.version }}
           target_commitish: ${{ github.sha }}
           name: Redacto v${{ needs.prepare-models-and-package.outputs.version }}
@@ -480,17 +484,28 @@ jobs:
             [ "$status" = "Succeeded" ]
           }
 
+          # POSTs and expects 202; prints the response body otherwise.
+          # 404 means EDGE_PRODUCT_ID is not a product these credentials own.
+          post() {
+            local headers="$1" code; shift
+            code=$(curl -sS -D "$headers" -o "$RUNNER_TEMP/response.body" -w '%{http_code}' -X POST "${auth[@]}" "$@")
+            if [ "$code" != "202" ]; then
+              echo "::error::Edge Add-ons API returned HTTP $code"
+              cat "$RUNNER_TEMP/response.body"; echo
+              [ "$code" = "404" ] && echo "::error::Check that EDGE_PRODUCT_ID is the Product ID from Partner Center (not the Store/CRX ID), that the first version was submitted by hand, and that the API credentials belong to the same account."
+              return 1
+            fi
+          }
+
           # Location header of a 202 response is the operation ID.
           operation_id() { grep -i '^location:' "$1" | tr -d '\r' | awk '{print $2}' | xargs basename; }
 
           echo "Uploading $zip"
-          curl -fsS -D "$RUNNER_TEMP/upload.headers" -o /dev/null -X POST "${auth[@]}" \
-            -H "Content-Type: application/zip" -T "$zip" "$api/draft/package"
+          post "$RUNNER_TEMP/upload.headers" -H "Content-Type: application/zip" -T "$zip" "$api/draft/package"
           wait_for "$api/draft/package/operations/$(operation_id "$RUNNER_TEMP/upload.headers")"
 
           echo "Publishing submission"
-          curl -fsS -D "$RUNNER_TEMP/publish.headers" -o /dev/null -X POST "${auth[@]}" \
-            -H "Content-Type: application/json" \
+          post "$RUNNER_TEMP/publish.headers" -H "Content-Type: application/json" \
             -d "{\"notes\": \"Automated release v${VERSION} (${GITHUB_SHA})\"}" "$api"
           wait_for "$api/operations/$(operation_id "$RUNNER_TEMP/publish.headers")"
 
