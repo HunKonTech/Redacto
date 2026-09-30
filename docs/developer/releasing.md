@@ -180,3 +180,13 @@ One-time setup:
    `EDGE_API_KEY` (Settings → Secrets and variables → Actions).
 
 Edge rejects a submission while the previous one is still in review.
+A 404 on the upload means `EDGE_PRODUCT_ID` is not a product of these API
+credentials: use the Product ID (a GUID) from the Partner Center URL, not the
+Store / CRX ID, and make sure the first version was submitted by hand.
+
+## GitHub Release Token
+
+`GITHUB_TOKEN` cannot create the `v<build version>` tag on a commit that
+changes `.github/workflows/` (403 "Resource not accessible by integration").
+Add a `RELEASE_TOKEN` secret, a fine-grained PAT for this repository with
+**Contents** and **Workflows** read/write; the release job uses it when set.
