@@ -69,6 +69,7 @@ pip install -r requirements.txt
 | `export` | ONNX + int8, checks agreement with PyTorch | `work\export\code-identifier-classifier` |
 
 Options: `-NoRestore` (skip dependency restore), `-Hours`, `-BaseModel`, `-Epochs`, `-BatchSize`,
+`-GradAccum` (batches accumulated per step: `-BatchSize 4 -GradAccum 4` trains like 16 with less RAM),
 `-Upload` (push the export to Hugging Face at the end, to `-HfRepo`, default
 `koncsik/code-identifier-classifier`; log in first with `hf auth login`).
 
@@ -85,8 +86,9 @@ Options: `-NoRestore` (skip dependency restore), `-Hours`, `-BaseModel`, `-Epoch
 - **Sleep.** While training runs, Windows is told not to go to sleep. Turn
   off automatic *restarts* for updates for those days (Settings → Windows
   Update → Pause updates), since a restart ends the process (resume as above).
-- **Memory.** About 2–4 GB of RAM with the default model. Lower
-  `-BatchSize` (e.g. 8) if the PC starts swapping.
+- **Memory.** `unixcoder-base` needs roughly 12–16 GB of RAM at `-BatchSize 16`
+  on a CPU. With less, use `-BatchSize 4 -GradAccum 4`. Running out of memory
+  can show up as a crash with exit code `-1073741819` instead of an error message.
 - Progress: the console shows steps and, every checkpoint, the validation
   scores (`eval_lib_recall_at_own98` should rise over time).
 

@@ -8,6 +8,7 @@
   .\run_all.ps1 -From train          # start at a later step
   .\run_all.ps1 -Hours 48                # give training two days
   .\run_all.ps1 -From export -Upload    # export again and push it to Hugging Face
+  .\run_all.ps1 -From train -BatchSize 4 -GradAccum 4   # same effective batch, a quarter of the RAM
   .\run_all.ps1 -From train              # resume an interrupted training run
 
   -Upload publishes the exported model to -HfRepo after the export, with a
@@ -25,6 +26,7 @@ param(
   [double]$Epochs = 3,
   [double]$Hours = 36,
   [int]$BatchSize = 16,
+  [int]$GradAccum = 1,
   [string]$Python = 'python',
   [switch]$Upload,
   [string]$HfRepo = 'koncsik/code-identifier-classifier'
@@ -78,7 +80,7 @@ if (Step 'dataset') {
 
 if (Step 'train') {
   Write-Host '== 4/5 Training' -ForegroundColor Cyan
-  Invoke-Checked { & $Python (Join-Path $here 'train.py') --data $dataset --out $model --base-model $BaseModel --epochs $Epochs --hours $Hours --batch-size $BatchSize }
+  Invoke-Checked { & $Python (Join-Path $here 'train.py') --data $dataset --out $model --base-model $BaseModel --epochs $Epochs --hours $Hours --batch-size $BatchSize --grad-accum $GradAccum }
 }
 
 if (Step 'export') {
