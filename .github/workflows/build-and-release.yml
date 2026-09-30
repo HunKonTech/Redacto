@@ -492,7 +492,7 @@ jobs:
             if [ "$code" != "202" ]; then
               echo "::error::Edge Add-ons API returned HTTP $code"
               cat "$RUNNER_TEMP/response.body"; echo
-              [ "$code" = "404" ] && echo "::error::Check that EDGE_PRODUCT_ID is the Product ID from Partner Center (not the Store/CRX ID), that the first version was submitted by hand, and that the API credentials belong to the same account."
+              [ "$code" = "404" ] && echo "::error::Check that EDGE_PRODUCT_ID is the Product ID from Partner Center (not the Store/CRX ID), that no earlier submission is still In review, and that the API key was created with the v1.1 Publish API of the same account."
               return 1
             fi
           }

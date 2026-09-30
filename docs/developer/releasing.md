@@ -182,7 +182,9 @@ One-time setup:
 Edge rejects a submission while the previous one is still in review.
 A 404 on the upload means `EDGE_PRODUCT_ID` is not a product of these API
 credentials: use the Product ID (a GUID) from the Partner Center URL, not the
-Store / CRX ID, and make sure the first version was submitted by hand.
+Store / CRX ID, make sure the first version was submitted by hand, that no
+earlier submission is still *In review*, and that the API key comes from the
+v1.1 Publish API page (*Enable* the new experience before creating it).
 
 ## GitHub Release Token
 
