@@ -129,6 +129,9 @@ jobs:
       - name: Prepare identifier-classifier model (optional)
         id: prepare_identifier_classifier
         continue-on-error: true
+        env:
+          # The model repo is private: a read token (HF_TOKEN secret) is needed.
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
             npm run prepare:model:identifier-classifier -- --force
