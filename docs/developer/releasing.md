@@ -159,3 +159,22 @@ pushed first.
 ## Chrome Web Store Handoff
 
 Chrome Web Store upload is manual for the first public beta. Upload the same reviewed zip that was attached to the GitHub pre-release. Use the listing copy and permission justifications prepared in the Chrome Web Store launch docs, and link to the GitHub-hosted privacy policy and support material.
+
+## Microsoft Edge Add-ons Publishing
+
+The `edge-publish` job of `.github/workflows/build-and-release.yml` uploads the
+Edge package to Microsoft Edge Add-ons through the Add-ons API (v1.1) and
+submits it for certification. It runs on `v*` tag pushes and on manual runs
+with the `publish_edge` input; it is skipped without its secrets.
+
+One-time setup:
+
+1. Submit the first version by hand in Partner Center (Edge → Overview →
+   Create new extension); the API only updates an existing product.
+2. Partner Center → Edge → Publish API → *Create API credentials*. Copy the
+   **Client ID** and **API key** (the key expires after 72 days; renew it).
+3. The **Product ID** is the extension's ID in its Partner Center URL.
+4. Add them as repository secrets: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`,
+   `EDGE_API_KEY` (Settings → Secrets and variables → Actions).
+
+Edge rejects a submission while the previous one is still in review.
