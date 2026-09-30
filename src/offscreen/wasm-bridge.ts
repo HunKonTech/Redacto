@@ -1,3 +1,4 @@
+import { nodeFs } from '../shared/node-fs';
 import type { DetectionOptions, PiiSpan } from '../shared/message-types';
 
 let wasmModule: typeof import('../../crate/pkg/privacy_guardrail_wasm.js') | null =
@@ -9,8 +10,8 @@ function isNodeRuntime(): boolean {
 }
 
 function nodeWasmInitTarget(): Uint8Array {
-  const requireFn = eval('require') as NodeRequire;
-  const fs = requireFn('fs') as typeof import('fs');
+  const fs = nodeFs();
+  if (!fs) throw new Error('Node fs is unavailable (Node 20.16+ is required).');
   return fs.readFileSync(chrome.runtime.getURL('wasm/privacy_guardrail_wasm_bg.wasm'));
 }
 

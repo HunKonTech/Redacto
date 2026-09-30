@@ -60,6 +60,22 @@ npx web-ext lint --source-dir dist-firefox
 
 The CI workflow (`.github/workflows/build-and-release.yml`) builds, lints and attaches the Firefox package to each GitHub release. It does not submit anything to AMO.
 
+## Linter warnings and reviewer notes
+
+`web-ext lint` (and the AMO upload validator) reports warnings, not errors. None of them come from remote or user-controlled code; paste this into **Notes to Reviewer**:
+
+```text
+Redacto detects personal data in text pasted into ChatGPT, Claude and Gemini, locally in the browser. Source: https://github.com/HunKonTech/Redacto (tag v<version>); build steps are below.
+
+Linter warnings:
+- "Unsafe assignment to innerHTML" in popup/options/sidepanel/content scripts: (1) the Svelte 5 runtime creates its compiled, static component templates with <template>.innerHTML (node_modules/svelte/src/internal/client/dom/reconciler.js); (2) our own shadow-DOM widgets (src/ui/*/ *.ts) render fixed templates whose only dynamic parts are our constant CSS, a light/dark theme value, and text passed through escapeHtml(). No page content or pasted text is inserted as HTML.
+- "The Function constructor is eval" in vendor/onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs and offscreen/offscreen.js: Emscripten's embind glue in ONNX Runtime Web 1.x (unmodified npm package onnxruntime-web, bundled via @huggingface/transformers) builds method invokers with new Function from its own fixed strings; plus webpack's global-object shim (new Function("return this"), only reached when globalThis is missing). No string from the network or the page reaches them.
+- "Unsafe call to import": ONNX Runtime loads its own packaged vendor/onnxruntime-web/*.mjs via import(chrome.runtime.getURL(...)).
+- sidePanel.open: guarded Chrome-only call; Firefox uses sidebarAction.open.
+
+Network: the add-on downloads only the Local AI model files (data, no code) from https://huggingface.co/koncsik/redacto-eu-pii-ner-q4f16 at a pinned commit, verifies each file's SHA-256 against redacto-model.json, and stores them in Cache Storage. No user data is sent anywhere.
+```
+
 ## Try it locally
 
 Release Firefox only installs add-ons signed by Mozilla. Until the add-on is signed:
