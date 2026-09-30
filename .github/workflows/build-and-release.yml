@@ -161,6 +161,42 @@ jobs:
       - name: Package Edge release
         run: npm run package:edge -- --require-model
 
+      # The Firefox add-on downloads the Local AI model from Hugging Face
+      # (addons.mozilla.org caps packages at 200 MB). Upload the prepared model
+      # there; an unchanged model makes no new commit. The Firefox build pins
+      # the resulting commit, so each release uses the model it was built with.
+      # Without the HF_TOKEN secret nothing is uploaded and the build follows
+      # the repository's main branch.
+      - name: Publish Local AI model to Hugging Face
+        id: hf-model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MODEL_HF_REPO: ${{ vars.MODEL_HF_REPO || 'koncsik/redacto-eu-pii-ner-q4f16' }}
+        run: |
+          node scripts/firefox/stage-hf-model.js --out release/hf-model
+          if [ -n "$HF_TOKEN" ]; then
+            revision=$(uv run --no-project --with 'huggingface_hub>=0.30' python scripts/firefox/upload-hf-model.py release/hf-model "$MODEL_HF_REPO" | tail -n 1)
+            echo "Model uploaded to https://huggingface.co/$MODEL_HF_REPO at $revision"
+          else
+            echo "::warning::HF_TOKEN secret is not set: the Local AI model was not uploaded to Hugging Face, and the Firefox build downloads from the main branch of $MODEL_HF_REPO."
+            revision=main
+          fi
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "repo=$MODEL_HF_REPO" >> "$GITHUB_OUTPUT"
+
+      # Same sources, Firefox manifest (scripts/firefox/), no packaged model.
+      # The WASM package is already built, so only the webpack build runs again.
+      - name: Package Firefox release
+        env:
+          MODEL_HF_REPO: ${{ steps.hf-model.outputs.repo }}
+          MODEL_REVISION: ${{ steps.hf-model.outputs.revision }}
+        run: |
+          npm run build:ext:firefox
+          npm run package:firefox -- --skip-build
+
+      - name: Lint Firefox package (addons.mozilla.org rules)
+        run: npx --yes web-ext@10 lint --source-dir dist-firefox
+
       - name: Build IDE panel (shared by the IDE plugins)
         env:
           NER_MODEL_ASSETS_REQUIRED: '1'
@@ -185,8 +221,8 @@ jobs:
         with:
           name: redacto-chrome-${{ steps.version.outputs.version }}
           path: |
-            release/redacto-*.zip
-            release/redacto-*.sha256
+            release/redacto-chrome-brave-vivaldi-*.zip
+            release/redacto-chrome-brave-vivaldi-*.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -197,6 +233,16 @@ jobs:
           path: |
             release/edge/redacto-edge-*.zip
             release/edge/redacto-edge-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Firefox package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redacto-firefox-${{ steps.version.outputs.version }}
+          path: |
+            release/firefox/redacto-firefox-*.zip
+            release/firefox/redacto-firefox-*.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -440,6 +486,8 @@ jobs:
             Build ${{ github.run_number }} of this fork, based on upstream version ${{ vars.BASE_VERSION || 'from package.json' }}, commit ${{ github.sha }}.
 
             See [CHANGELOG.md](https://github.com/HunKonTech/Redacto/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
+
+            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge; `redacto-firefox-*.zip` for Firefox 140+ (not on addons.mozilla.org yet, see `docs/developer/firefox.md`; it downloads the Local AI model from Hugging Face on first use).
 
             Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
           files: |

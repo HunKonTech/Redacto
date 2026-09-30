@@ -11,7 +11,7 @@ const {
   missingPreparedModelAssets,
   modelAssetStatusMessage,
 } = require('./extension-packaging');
-const { checkVersion } = require('./version');
+const { RELEASE_PACKAGE_PREFIX, checkVersion } = require('./version');
 const { ciBuildVersion } = require('./build-number');
 
 const DEFAULT_VERSION = null;
@@ -213,9 +213,10 @@ function createReleasePackage(options = {}) {
   // A CI build is named after its build version (0.5.0.9), as its manifest is.
   const packageVersion = ciBuildVersion(version, options.env ?? process.env) ?? version;
   const { entries, excluded } = listPackageEntries(distDir);
-  const fileName = `redacto-${packageVersion}.zip`;
+  const baseName = `${RELEASE_PACKAGE_PREFIX}-${packageVersion}`;
+  const fileName = `${baseName}.zip`;
   const zipPath = path.join(releaseDir, fileName);
-  const checksumPath = path.join(releaseDir, `redacto-${packageVersion}.sha256`);
+  const checksumPath = path.join(releaseDir, `${baseName}.sha256`);
 
   if (dryRun) {
     return {

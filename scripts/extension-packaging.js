@@ -104,14 +104,20 @@ function modelAssetStatusMessage(missingAssets) {
   ].join(' ');
 }
 
-function getNerAssetCopyPatterns(rootDir = process.cwd()) {
+/**
+ * @param {{ includeNerModel?: boolean }} [options] `includeNerModel: false`
+ *   leaves the NER model out (the Firefox build downloads it at runtime).
+ */
+function getNerAssetCopyPatterns(rootDir = process.cwd(), { includeNerModel = true } = {}) {
   return [
-    {
-      from: resolveFromRoot(rootDir, ACTIVE_PREPARED_MODEL_SOURCE_DIR),
-      to: ACTIVE_PACKAGED_MODEL_DIR,
-      noErrorOnMissing: true,
-      globOptions: { ignore: EXCLUDED_MODEL_ASSET_GLOBS },
-    },
+    ...(includeNerModel
+      ? [{
+        from: resolveFromRoot(rootDir, ACTIVE_PREPARED_MODEL_SOURCE_DIR),
+        to: ACTIVE_PACKAGED_MODEL_DIR,
+        noErrorOnMissing: true,
+        globOptions: { ignore: EXCLUDED_MODEL_ASSET_GLOBS },
+      }]
+      : []),
     {
       from: resolveFromRoot(rootDir, PREPARED_IDENTIFIER_CLASSIFIER_SOURCE_DIR),
       to: PACKAGED_IDENTIFIER_CLASSIFIER_DIR,

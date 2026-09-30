@@ -116,8 +116,8 @@ The command:
 - zips only runtime files from `dist/`
 - requires the legal files `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md`
 - excludes source maps and private/source-only/generated-local paths
-- writes `release/redacto-<version>.zip`
-- writes `release/redacto-<version>.sha256` for the exact zip
+- writes `release/redacto-chrome-brave-vivaldi-<version>.zip`
+- writes `release/redacto-chrome-brave-vivaldi-<version>.sha256` for the exact zip
 
 For local package-content checks against an existing `dist/` tree without the clean-worktree guard or build step, run:
 
@@ -159,6 +159,10 @@ pushed first.
 ## Chrome Web Store Handoff
 
 Chrome Web Store upload is manual for the first public beta. Upload the same reviewed zip that was attached to the GitHub pre-release. Use the listing copy and permission justifications prepared in the Chrome Web Store launch docs, and link to the GitHub-hosted privacy policy and support material.
+
+## Firefox
+
+The Firefox package (`redacto-firefox-<version>.zip`) is built from the same sources and attached to every GitHub release. It is not submitted to addons.mozilla.org automatically; see `docs/developer/firefox.md` for the build and the manual AMO steps.
 
 ## Microsoft Edge Add-ons Publishing
 

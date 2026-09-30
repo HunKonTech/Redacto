@@ -47,8 +47,8 @@ git check-ignore \
   coverage/lcov.info \
   node_modules/.package-lock.json \
   redacto-0.2.0.zip \
-  release/redacto-0.2.0.zip \
-  release/redacto-0.2.0.sha256 \
+  release/redacto-chrome-brave-vivaldi-0.2.0.zip \
+  release/redacto-chrome-brave-vivaldi-0.2.0.sha256 \
   benchmarks/cache/openpii/manifest.json \
   benchmarks/corpora/openpii-generated.jsonl \
   benchmarks/results.bardsai.json \

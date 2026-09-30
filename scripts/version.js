@@ -3,8 +3,11 @@ const path = require('path');
 const childProcess = require('child_process');
 
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+// Named after the browsers it installs in: users do not know these are all
+// Chromium browsers. Edge gets its own package (scripts/edge/).
+const RELEASE_PACKAGE_PREFIX = 'redacto-chrome-brave-vivaldi';
 // The optional fourth part is a CI build number (scripts/build-number.js).
-const RELEASE_FILE_PATTERN = /^redacto-(\d+\.\d+\.\d+)(?:\.\d+)?\.(zip|sha256)$/;
+const RELEASE_FILE_PATTERN = new RegExp(`^${RELEASE_PACKAGE_PREFIX}-(\\d+\\.\\d+\\.\\d+)(?:\\.\\d+)?\\.(zip|sha256)$`);
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -103,7 +106,7 @@ function checkVersion(options = {}) {
   for (const fileName of listReleaseFiles(rootDir)) {
     const match = RELEASE_FILE_PATTERN.exec(fileName);
     if (!match) {
-      errors.push(`release/${fileName} must be named redacto-${expectedVersion}.zip or .sha256.`);
+      errors.push(`release/${fileName} must be named ${RELEASE_PACKAGE_PREFIX}-${expectedVersion}.zip or .sha256.`);
       continue;
     }
     if (match[1] !== expectedVersion) {
@@ -179,6 +182,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  RELEASE_PACKAGE_PREFIX,
   checkVersion,
   setVersion,
 };

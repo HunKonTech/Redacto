@@ -19,7 +19,7 @@ function makeTempRepo(files) {
 
 const LOCAL_ONLY_NER_PROVIDER = `
 async function defaultAssetExists(url) {
-  const response = await fetch(url, { method: 'HEAD' });
+  const response = await modelAwareFetch(url, { method: 'HEAD' });
   return response.ok;
 }
 function configureTransformersEnvironment(transformers, getExtensionUrl) {
@@ -40,13 +40,19 @@ describe('privacy boundary check', () => {
     const result = checkPrivacyBoundary();
 
     expect(result.allowedRuntimeFindings).toEqual([
+      ...['model files', 'model file download', 'model manifest'].map((reason) =>
+        expect.objectContaining({
+          file: 'src/background/local-ai-model-downloader.ts',
+          id: 'fetch',
+          reason: expect.stringContaining(reason),
+        })),
       expect.objectContaining({
         file: 'src/offscreen/identifier-classifier-provider.ts',
         id: 'fetch',
         reason: expect.stringContaining('packaged model/runtime files'),
       }),
       expect.objectContaining({
-        file: 'src/offscreen/ner-provider.ts',
+        file: 'src/shared/local-ai-model-download.ts',
         id: 'fetch',
         reason: expect.stringContaining('packaged model/runtime files'),
       }),
@@ -101,7 +107,7 @@ describe('privacy boundary check', () => {
 
   test('runtime scanner reports raw findings before approval filtering', () => {
     const root = makeTempRepo({
-      'src/offscreen/ner-provider.ts': LOCAL_ONLY_NER_PROVIDER,
+      'src/offscreen/ner-provider.ts': LOCAL_ONLY_NER_PROVIDER.replace('modelAwareFetch(', 'fetch('),
     });
 
     expect(scanRuntimeNetworkPrimitives(root)).toEqual([
