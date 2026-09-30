@@ -161,6 +161,16 @@ jobs:
       - name: Package Edge release
         run: npm run package:edge -- --require-model
 
+      # Same sources, Firefox manifest (scripts/firefox/). The WASM package is
+      # already built, so only the webpack build runs again.
+      - name: Package Firefox release
+        run: |
+          NER_MODEL_ASSETS_REQUIRED=1 npm run build:ext:firefox
+          npm run package:firefox -- --skip-build --require-model
+
+      - name: Lint Firefox package (addons.mozilla.org rules)
+        run: npx --yes web-ext@10 lint --source-dir dist-firefox
+
       - name: Build IDE panel (shared by the IDE plugins)
         env:
           NER_MODEL_ASSETS_REQUIRED: '1'
@@ -197,6 +207,16 @@ jobs:
           path: |
             release/edge/redacto-edge-*.zip
             release/edge/redacto-edge-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Firefox package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redacto-firefox-${{ steps.version.outputs.version }}
+          path: |
+            release/firefox/redacto-firefox-*.zip
+            release/firefox/redacto-firefox-*.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -441,7 +461,7 @@ jobs:
 
             See [CHANGELOG.md](https://github.com/HunKonTech/Redacto/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
 
-            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge.
+            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge; `redacto-firefox-*.zip` for Firefox 140+ (not on addons.mozilla.org yet, see `docs/developer/firefox.md`).
 
             Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
           files: |

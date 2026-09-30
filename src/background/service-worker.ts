@@ -32,6 +32,12 @@ import {
   type SystemCheckResult,
 } from "../shared/system-check-storage";
 import { debugError } from '../shared/debug-log';
+import { openSidePanel } from '../shared/side-panel';
+import {
+  closeOffscreenDocument,
+  createOffscreenDocument,
+  hasOffscreenDocument,
+} from "./offscreen-host";
 
 const OFFSCREEN_URL = "offscreen/offscreen.html";
 const SYSTEM_CHECK_OFFSCREEN_URL = "system-check/system-check-offscreen.html";
@@ -94,9 +100,9 @@ function timeout(ms: number): Promise<never> {
 async function closeOffscreenBestEffort(): Promise<void> {
   clearOffscreenIdleTimer();
   try {
-    const existing = await (chrome.offscreen as any).hasDocument();
+    const existing = await hasOffscreenDocument();
     if (existing) {
-      await (chrome.offscreen as any).closeDocument();
+      await closeOffscreenDocument();
     }
   } catch {
     // Best effort: Chrome may already have torn down the document.
@@ -128,7 +134,7 @@ async function scheduleOffscreenIdleUnload(): Promise<void> {
   const settings = await loadSettings();
   if (settings.localAiUnloadTimeoutMs === null) return;
 
-  const existing = await (chrome.offscreen as any).hasDocument();
+  const existing = await hasOffscreenDocument();
   if (!existing) return;
 
   const activePageKeepsRuntime = await hasRecentForegroundSupportedPageActivity(settings);
@@ -197,7 +203,7 @@ async function applyCriticalLocalAiRecommendation(result: SystemCheckResult): Pr
 async function collectPassiveSignals(): Promise<SystemSignalsResponse["payload"]> {
   await closeOffscreenBestEffort();
   try {
-    await (chrome.offscreen as any).createDocument({
+    await createOffscreenDocument({
       url: SYSTEM_CHECK_OFFSCREEN_URL,
       reasons: ["WORKERS"],
       justification: "Passive browser memory and WebGPU compatibility check",
@@ -381,13 +387,13 @@ async function waitForOffscreenReady(attempts = 20, delayMs = 50): Promise<void>
  * returning true before the listener has registered.
  */
 async function ensureOffscreen(): Promise<void> {
-  const existing = await (chrome.offscreen as any).hasDocument();
+  const existing = await hasOffscreenDocument();
   if (!existing) {
     invalidateOffscreenReady();
     if (offscreenCreating) {
       await offscreenCreating;
     } else {
-      offscreenCreating = (chrome.offscreen as any).createDocument({
+      offscreenCreating = createOffscreenDocument({
         url: OFFSCREEN_URL,
         reasons: ["WORKERS"],
         justification: "WASM PII detection pipeline",
@@ -752,7 +758,7 @@ chrome.permissions?.onRemoved?.addListener(syncSearchContentScriptBestEffort);
  */
 chrome.commands?.onCommand?.addListener((command, tab) => {
   if (command !== "open-side-panel" || typeof tab?.windowId !== "number") return;
-  chrome.sidePanel?.open({ windowId: tab.windowId }).catch((err) => {
+  openSidePanel(tab.windowId).catch((err) => {
     debugError("[PG:background] side panel open failed", err);
   });
 });

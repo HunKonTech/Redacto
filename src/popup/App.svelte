@@ -1,5 +1,6 @@
 <script lang="ts">
   import { debugError } from '../shared/debug-log';
+  import { canOpenSidePanel, openSidePanel as openBrowserSidePanel } from '../shared/side-panel';
   import { createAppModels, tabs } from "./popup-model.svelte";
   import DetectTab from "./components/DetectTab.svelte";
   import PGLogo from "./components/PGLogo.svelte";
@@ -18,8 +19,8 @@
   chrome.windows?.getCurrent().then((win) => { windowId = win.id ?? null; }).catch(() => undefined);
 
   function openSidePanel(): void {
-    if (windowId === null || !chrome.sidePanel) return;
-    chrome.sidePanel.open({ windowId }).then(() => window.close()).catch((err) => {
+    if (windowId === null || !canOpenSidePanel()) return;
+    openBrowserSidePanel(windowId).then(() => window.close()).catch((err) => {
       debugError('[PG:popup] side panel open failed', err);
     });
   }

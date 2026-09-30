@@ -4,6 +4,7 @@ node_modules/
 
 # Build output
 dist/
+dist-firefox/
 # Local dev build counter (scripts/build-number.js)
 .build-number
 coverage/
@@ -17,6 +18,7 @@ redacto-*.zip
 release/*.zip
 release/*.sha256
 release/edge/
+release/firefox/
 
 # Rust and WebAssembly artifacts
 crate/target/

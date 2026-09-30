@@ -9,6 +9,7 @@ const {
 } = require('./scripts/extension-packaging');
 const { renderTermsHtml } = require('./scripts/terms-html');
 const { buildManifestVersion } = require('./scripts/build-number');
+const { toFirefoxManifest } = require('./scripts/firefox/firefox-manifest');
 
 class TermsHtmlPlugin {
   constructor(options = {}) {
@@ -42,6 +43,13 @@ module.exports = (_env = {}) => {
     __dirname,
   );
   console.log(`[build] manifest version ${manifestVersion}`);
+  // One code base for every browser; only the manifest and output folder
+  // differ for Firefox (BROWSER=firefox or --env browser=firefox).
+  const browser = _env.browser || process.env.BROWSER || 'chrome';
+  if (!['chrome', 'firefox'].includes(browser)) {
+    throw new Error(`Unknown BROWSER "${browser}"; expected chrome or firefox.`);
+  }
+  console.log(`[build] browser ${browser}`);
 
   return {
     entry: {
@@ -57,7 +65,7 @@ module.exports = (_env = {}) => {
     },
 
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, browser === 'firefox' ? 'dist-firefox' : 'dist'),
       filename: '[name].js',
       clean: true,
     },
@@ -144,7 +152,8 @@ module.exports = (_env = {}) => {
             from: 'manifest.json',
             to: '.',
             transform: (content) => {
-              const manifest = JSON.parse(content.toString());
+              let manifest = JSON.parse(content.toString());
+              if (browser === 'firefox') manifest = toFirefoxManifest(manifest);
               manifest.version = manifestVersion;
               return `${JSON.stringify(manifest, null, 2)}\n`;
             },

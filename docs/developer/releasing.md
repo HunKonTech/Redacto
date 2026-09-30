@@ -160,6 +160,10 @@ pushed first.
 
 Chrome Web Store upload is manual for the first public beta. Upload the same reviewed zip that was attached to the GitHub pre-release. Use the listing copy and permission justifications prepared in the Chrome Web Store launch docs, and link to the GitHub-hosted privacy policy and support material.
 
+## Firefox
+
+The Firefox package (`redacto-firefox-<version>.zip`) is built from the same sources and attached to every GitHub release. It is not submitted to addons.mozilla.org automatically; see `docs/developer/firefox.md` for the build and the manual AMO steps.
+
 ## Microsoft Edge Add-ons Publishing
 
 The `edge-publish` job of `.github/workflows/build-and-release.yml` uploads the
