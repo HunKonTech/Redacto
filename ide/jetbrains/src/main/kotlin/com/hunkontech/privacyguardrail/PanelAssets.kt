@@ -1,6 +1,7 @@
 package com.hunkontech.privacyguardrail
 
 import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.components.service
 import com.intellij.openapi.extensions.PluginId
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
@@ -21,14 +22,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Serves the shared side panel (`<plugin>/webview/`, see build.gradle.kts) to
- * JCEF as https://pg.local/. A real https origin, not file://, because the
- * panel fetches its WASM, ONNX Runtime and model files, which file:// pages
- * may not.
+ * JCEF as https://pg.local/, and the downloaded Local AI model (ModelDownload)
+ * under https://pg.local/downloaded-model/. A real https origin, not file://,
+ * because the panel fetches its WASM, ONNX Runtime and model files, which
+ * file:// pages may not.
  */
 object PanelAssets {
     const val PLUGIN_ID = "com.hunkontech.privacyguardrail"
     private const val HOST = "pg.local"
+    private const val MODEL_PATH = "downloaded-model/"
     const val INDEX_URL = "https://$HOST/index.html"
+    const val MODEL_URL_PREFIX = "https://$HOST/$MODEL_PATH"
 
     private val registered = AtomicBoolean(false)
 
@@ -41,25 +45,28 @@ object PanelAssets {
     /** Call after JBCefApp is initialised, before the first page load. */
     fun register(root: Path) {
         if (!registered.compareAndSet(false, true)) return
-        CefApp.getInstance().registerSchemeHandlerFactory("https", HOST, Factory(root.toAbsolutePath().normalize()))
+        val modelDir = service<ModelDownload>().modelDir.toAbsolutePath().normalize()
+        CefApp.getInstance().registerSchemeHandlerFactory("https", HOST, Factory(root.toAbsolutePath().normalize(), modelDir))
     }
 
-    private class Factory(private val root: Path) : CefSchemeHandlerFactory {
+    private class Factory(private val root: Path, private val modelDir: Path) : CefSchemeHandlerFactory {
         override fun create(
             browser: CefBrowser?,
             frame: CefFrame?,
             schemeName: String?,
             request: CefRequest?,
-        ): CefResourceHandler = FileHandler(root)
+        ): CefResourceHandler = FileHandler(root, modelDir)
     }
 
-    private class FileHandler(private val root: Path) : CefResourceHandlerAdapter() {
+    private class FileHandler(private val webviewRoot: Path, private val modelDir: Path) : CefResourceHandlerAdapter() {
         private var stream: InputStream? = null
         private var length = 0L
         private var mime = "application/octet-stream"
 
         override fun processRequest(request: CefRequest, callback: CefCallback): Boolean {
-            val relative = URI(request.url).path.orEmpty().removePrefix("/").ifEmpty { "index.html" }
+            val path = URI(request.url).path.orEmpty().removePrefix("/").ifEmpty { "index.html" }
+            val (root, relative) =
+                if (path.startsWith(MODEL_PATH)) modelDir to path.removePrefix(MODEL_PATH) else webviewRoot to path
             val file = root.resolve(relative).normalize()
             if (file.startsWith(root) && Files.isRegularFile(file)) {
                 stream = Files.newInputStream(file)

@@ -57,6 +57,11 @@ describe('privacy boundary check', () => {
         reason: expect.stringContaining('packaged model/runtime files'),
       }),
       expect.objectContaining({
+        file: 'src/shared/local-ai-model-download.ts',
+        id: 'fetch',
+        reason: expect.stringContaining('the IDE host serves locally'),
+      }),
+      expect.objectContaining({
         file: 'src/web/sw.js',
         id: 'fetch',
         reason: expect.stringContaining('same-origin site assets only'),

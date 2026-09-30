@@ -71,7 +71,7 @@ PRIVACY POSTURE
 • No clipboard permissions. The extension sees clipboard text only in the paste or copy you make on a supported chat site, and cannot read your clipboard in the background or on other websites.
 • Your original values are stored only in the identity vault, which you can inspect and edit in the options page. What is recorded against a conversation is the placeholders it used, never the originals.
 • With cross-session memory switched off, no original values are written to durable storage at all; restoration lasts only as long as the browser session.
-• The local AI model and runtime are packaged with the extension; there is no remote model fetch.
+• The local AI runtime is packaged with the extension; the model itself is downloaded once, on first use, from the project's Hugging Face repository and verified against SHA-256 checksums. That download carries no user data.
 • Settings, identity vault, allow/block lists, and local feedback logs are stored only in Chrome extension storage on your device.
 • Full details in the project's Privacy Policy: https://github.com/HunKonTech/Redacto/blob/main/PRIVACY.md
 

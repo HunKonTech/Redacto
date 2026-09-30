@@ -2,7 +2,8 @@
  * The side panel as a static web page, `dist-web/`, published on GitHub Pages.
  * Same bundle setup as the IDE panel (webpack.ide.config.js: relative asset
  * URLs, WASM / ONNX Runtime / model assets next to the page); only the entry
- * and the HTML differ, plus the PWA files for offline use. See
+ * and the HTML differ, plus the PWA files for offline use, and the Local AI
+ * model is packaged (the IDE hosts download it instead). See
  * docs/developer/web-page.md.
  */
 const { execSync } = require('child_process');
@@ -81,7 +82,8 @@ class ServiceWorkerPlugin {
 }
 
 module.exports = (env = {}) => {
-  const ide = ideConfig(env);
+  // The page serves the model next to itself (GitHub Pages), so it is packaged.
+  const ide = ideConfig({ ...env, modelSource: 'bundled' });
   const version = webVersion();
   console.log(`[build] web page version ${version}`);
 

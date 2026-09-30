@@ -77,7 +77,7 @@ Release-strict checks with prepared BardsAI assets:
 npm run validate:release-strict
 ```
 
-This path runs the same release metadata and privacy-boundary checks, builds the WASM package, and then builds the extension with `NER_MODEL_ASSETS_REQUIRED=1`. It fails if the prepared BardsAI files are missing from `generated/models/ner/bardsai-eu-pii-anonimization-multilang/`.
+This path runs the same release metadata and privacy-boundary checks, builds the WASM package, and then builds the extension with the model packaged (`MODEL_SOURCE=bundled NER_MODEL_ASSETS_REQUIRED=1`). It fails if the prepared BardsAI files are missing from `generated/models/ner/bardsai-eu-pii-anonimization-multilang/`.
 
 Run the manual smoke checklist in `docs/release/smoke-test-checklist.md` against:
 
@@ -111,8 +111,8 @@ The command:
 
 - requires a clean Git worktree before building
 - verifies release metadata with `version:check`
-- requires prepared BardsAI model assets and ONNX Runtime Web assets
-- runs the WASM release build and the extension build with `NER_MODEL_ASSETS_REQUIRED=1`
+- requires ONNX Runtime Web assets (the Local AI model is not packaged; the extension downloads it on first use, see `docs/developer/model-download.md`)
+- runs the WASM release build and the extension build
 - zips only runtime files from `dist/`
 - requires the legal files `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md`
 - excludes source maps and private/source-only/generated-local paths

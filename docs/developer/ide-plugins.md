@@ -22,7 +22,8 @@ WebView2), so they run one shared page, `dist-ide/webview/`:
   `runtime.sendMessage` runs detection in the page through
   `src/offscreen/offscreen-handler.ts` (WASM rules + the local AI model).
 - `src/ide/host-bridge.ts` and `src/ide/protocol.ts` define the messages the
-  page exchanges with the host (`ready`/`init`, `anonymize`, `storage.*`, `copy`).
+  page exchanges with the host (`ready`/`init`, `anonymize`, `storage.*`, `copy`,
+  and `model.download` / `model` for the Local AI model download, `src/ide/host-model.ts`).
 
 - `src/ide/ide-theme.ts` and `src/ide/theme/` give the panel each IDE's look
   (only in the IDE build; the extension and the web page keep their design).
@@ -49,13 +50,15 @@ use the browser defaults, except that **Rename code identifiers** is on
 
 ## Build
 
-Prepare the model first if the plugins should include the local AI (see
-[building.md](building.md#full-model-build)); without it they fall back to
-rule-based detection.
+The plugins do not contain the Local AI model: the host downloads it from
+Hugging Face when the panel first opens, shows the progress in the IDE and in
+the panel, and serves it to the panel from its data folder (see
+[model-download.md](model-download.md)). Until then, detection is rule-based.
+The model is not needed to build.
 
 ```bash
 npm run build:wasm
-npm run build:ide-webview           # dist-ide/webview (NER_MODEL_ASSETS_REQUIRED=1 to require the model)
+npm run build:ide-webview           # dist-ide/webview (no model; model-source.json says where it is downloaded from)
 npm run build:ide:vscode            # release/ide/redacto-vscode-<version>.vsix
 npm run build:ide:jetbrains         # release/ide/redacto-jetbrains-<version>.zip  (JDK 21)
 npm run build:ide:visualstudio      # release/ide/redacto-visualstudio-<version>.vsix  (Windows, VSSDK)
@@ -64,8 +67,8 @@ npm run build:ide:visualstudio      # release/ide/redacto-visualstudio-<version>
 The `build:ide:*` scripts rebuild the panel first; `scripts/ide/build-*.js`
 package an existing `dist-ide/webview` only (that is what CI runs).
 
-In CI (`.github/workflows/build-and-release.yml`) the panel is built with the
-model in `prepare-models-and-package`, and the `vscode-extension`,
+In CI (`.github/workflows/build-and-release.yml`) the panel is built in
+`prepare-models-and-package`, pinned to the model revision uploaded to Hugging Face there, and the `vscode-extension`,
 `jetbrains-plugin` and `visualstudio-extension` jobs upload
 `ide-redacto-*` artifacts, which `github-release` attaches to the
 GitHub pre-release (a failed IDE job only leaves its installer out). The Visual Studio job needs a Windows runner with the "Visual Studio

@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+const { modelSource: hfModelSource } = require('./scripts/hf-model/model-source');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -45,20 +46,25 @@ module.exports = (_env = {}) => {
   );
   console.log(`[build] manifest version ${manifestVersion}`);
   // One code base for every browser; for Firefox (BROWSER=firefox or --env
-  // browser=firefox) only the manifest, the output folder and where the Local
-  // AI model comes from differ: addons.mozilla.org caps packages at 200 MB,
-  // so Firefox downloads the model from Hugging Face on first use instead of
-  // packaging it (src/shared/local-ai-model-download.ts).
+  // browser=firefox) only the manifest and the output folder differ.
   const browser = _env.browser || process.env.BROWSER || 'chrome';
   if (!['chrome', 'firefox'].includes(browser)) {
     throw new Error(`Unknown BROWSER "${browser}"; expected chrome or firefox.`);
   }
   console.log(`[build] browser ${browser}`);
-  const modelSource = browser === 'firefox' ? 'huggingface' : 'bundled';
-  const modelHfRepo = process.env.MODEL_HF_REPO || '';
-  const modelRevision = process.env.MODEL_REVISION || '';
-  if (modelSource === 'huggingface') {
-    console.log(`[build] Local AI model from Hugging Face ${modelHfRepo || '(default repo)'} @ ${modelRevision || 'main'}`);
+  // The Local AI model is not packaged: every browser downloads it from
+  // Hugging Face on first use (src/shared/local-ai-model-download.ts), which
+  // keeps the package ~70 MB instead of ~230 MB. MODEL_SOURCE=bundled packages
+  // the prepared model instead, for local testing without a network.
+  const modelSource = _env.modelSource || process.env.MODEL_SOURCE || 'huggingface';
+  if (!['huggingface', 'bundled', 'host'].includes(modelSource)) {
+    throw new Error(`Unknown MODEL_SOURCE "${modelSource}"; expected huggingface, bundled or host.`);
+  }
+  const { repo: modelHfRepo, revision: modelRevision } = hfModelSource();
+  if (modelSource === 'bundled') {
+    console.log('[build] Local AI model packaged with the build');
+  } else {
+    console.log(`[build] Local AI model downloaded from Hugging Face ${modelHfRepo} @ ${modelRevision}`);
   }
 
   return {

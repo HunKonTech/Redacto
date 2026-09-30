@@ -30,13 +30,40 @@ export interface IdeTheme {
   editorFont?: { family: string; size?: number };
 }
 
+/**
+ * The Local AI model download the host runs (docs/developer/model-download.md):
+ * the host downloads the files listed in the Hugging Face repository's
+ * `redacto-model.json` (repository and revision: `model-source.json` next to
+ * the panel) into its data folder, verifies each SHA-256, and serves the
+ * complete version at `baseUrl`. Same fields as the extension's
+ * `ModelDownloadState` (src/shared/local-ai-model-download.ts).
+ */
+export interface HostModelState {
+  phase: 'idle' | 'checking' | 'downloading' | 'verifying' | 'failed';
+  /** Model version that is complete on disk and served at `baseUrl`. */
+  readyVersion?: string;
+  /** Where the ready version's files are served, ending in `/`. */
+  baseUrl?: string;
+  /** Version being downloaded (an update keeps `readyVersion` usable meanwhile). */
+  targetVersion?: string;
+  receivedBytes: number;
+  totalBytes: number;
+  error?: string;
+}
+
 /** Webview → host. */
 export type WebviewToHost =
   /** The page loaded; answer with `init`, then deliver queued selections. */
   | { type: 'ready' }
   | { type: 'storage.set'; area: StorageAreaName; items: StorageSnapshot }
   | { type: 'storage.remove'; area: StorageAreaName; keys: string[] }
-  | { type: 'copy'; text: string };
+  | { type: 'copy'; text: string }
+  /**
+   * Local AI is on: make sure the model is there. The host downloads it when
+   * missing, checks for a newer one once per plugin version, and retries
+   * after a failure; it answers with `model` messages.
+   */
+  | { type: 'model.download' };
 
 /** Host → webview. */
 export type HostToWebview =
@@ -47,7 +74,11 @@ export type HostToWebview =
       /** What the host kept of each area; `session` lasts as long as the IDE runs. */
       storage: Partial<Record<StorageAreaName, StorageSnapshot>>;
       theme?: IdeTheme;
+      /** The model on disk, if any (no download starts before `model.download`). */
+      model?: HostModelState;
     }
+  /** Local AI model download progress, and the result. */
+  | { type: 'model'; state: HostModelState }
   /** The IDE theme changed. */
   | { type: 'theme'; theme: IdeTheme }
   | { type: 'anonymize'; text: string; source: SelectionSource };

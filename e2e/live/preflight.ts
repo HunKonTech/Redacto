@@ -69,7 +69,9 @@ export function createPreflightDependencies(rootDir = process.cwd()): PreflightD
     runBuild: async () => {
       await execFile('npm', ['run', 'build'], {
         cwd: rootDir,
-        env: { ...process.env, NER_MODEL_ASSETS_REQUIRED: '1' },
+        // The model packaged, not downloaded on first use: the run tests the
+        // prepared assets and needs no network for them.
+        env: { ...process.env, NER_MODEL_ASSETS_REQUIRED: '1', MODEL_SOURCE: 'bundled' },
         maxBuffer: 20 * 1024 * 1024,
       });
     },

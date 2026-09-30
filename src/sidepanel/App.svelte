@@ -11,6 +11,7 @@
 	import { emptyVaultData, loadIdentityVault, type IdentityVaultData } from '../shared/identity-vault';
 	import type { Settings } from '../shared/message-types';
 	import { loadSettings } from '../shared/storage';
+	import ModelDownloadStatus from '../popup/components/ModelDownloadStatus.svelte';
 	import PGLogo from '../popup/components/PGLogo.svelte';
 	import AnonymizeTab from './components/AnonymizeTab.svelte';
 	import HistoryTab from './components/HistoryTab.svelte';
@@ -129,6 +130,8 @@
 			{/each}
 		</nav>
 	</header>
+
+	<ModelDownloadStatus />
 
 	<!-- The tabs stay mounted so switching keeps what was typed in each. -->
 	<section class="panel-body" hidden={activeTab !== 'history'}>

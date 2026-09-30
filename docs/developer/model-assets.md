@@ -1,6 +1,6 @@
 # Model Assets
 
-Redacto runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses model assets packaged with the extension. The public beta source is published at `git@github.com:HunKonTech/Redacto.git`.
+Redacto runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses these model assets, which the builds download from Hugging Face on first use (see [model-download.md](model-download.md)). The public beta source is published at `git@github.com:HunKonTech/Redacto.git`.
 
 ## Release Model
 
@@ -126,10 +126,10 @@ If the source directory only has PyTorch or safetensors weights, export ONNX fir
 
 ## Build With Assets Required
 
-Use strict model enforcement for release validation:
+Use strict model enforcement for release validation, with the model packaged:
 
 ```bash
-NER_MODEL_ASSETS_REQUIRED=1 npm run build
+MODEL_SOURCE=bundled NER_MODEL_ASSETS_REQUIRED=1 npm run build
 ```
 
 This fails when required BardsAI files are missing. A normal `npm run build` allows the extension to build without the transformer model so developers can run model-free checks.

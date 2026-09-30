@@ -102,7 +102,8 @@ function assertPreparedReleaseAssets(rootDir) {
     );
   }
 
-  const missingModelAssets = missingPreparedModelAssets(rootDir);
+  // The Local AI model is downloaded at runtime unless the build packages it.
+  const missingModelAssets = process.env.MODEL_SOURCE === 'bundled' ? missingPreparedModelAssets(rootDir) : [];
   if (missingModelAssets.length > 0) {
     throw new Error(modelAssetStatusMessage(missingModelAssets));
   }
@@ -204,7 +205,7 @@ function createReleasePackage(options = {}) {
 
   if (!skipBuild) {
     runStep('WASM release build', npmCommand(), ['run', 'build:wasm'], { cwd: rootDir });
-    runStep('Extension build with required BardsAI assets', npmCommand(), ['run', 'build:ext'], {
+    runStep('Extension build', npmCommand(), ['run', 'build:ext'], {
       cwd: rootDir,
       env: { NER_MODEL_ASSETS_REQUIRED: '1', PG_RELEASE_BUILD: '1' },
     });

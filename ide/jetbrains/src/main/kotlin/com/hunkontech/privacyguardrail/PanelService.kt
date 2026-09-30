@@ -32,7 +32,8 @@ import javax.swing.SwingConstants
  * One Redacto panel per project: the shared side panel in a JCEF
  * browser, plus the bridge it talks to (protocol: src/ide/protocol.ts in the
  * repository root). Selections go to the panel, which shows the original next
- * to the anonymized text; nothing is written back to the editor.
+ * to the anonymized text; nothing is written back to the editor. The Local AI
+ * model is downloaded on the panel's first request (ModelDownload).
  */
 @Service(Service.Level.PROJECT)
 class PanelService(private val project: Project) : Disposable {
@@ -77,6 +78,14 @@ class PanelService(private val project: Project) : Disposable {
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(LafManagerListener.TOPIC, LafManagerListener { sendTheme() })
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener { sendTheme() })
+        // Download progress for the panel's header.
+        val stopListening = service<ModelDownload>().addListener {
+            if (ready) send(JsonObject().apply {
+                addProperty("type", "model")
+                add("state", service<ModelDownload>().toJson())
+            })
+        }
+        Disposer.register(this) { stopListening() }
         browser = created
         query = jsQuery
         return created.component
@@ -132,10 +141,12 @@ class PanelService(private val project: Project) : Disposable {
                     addProperty("hostName", ApplicationNamesInfo.getInstance().fullProductName)
                     add("storage", storage.snapshot())
                     add("theme", PanelTheme.snapshot())
+                    add("model", service<ModelDownload>().toJson())
                 })
                 ready = true
                 flush()
             }
+            "model.download" -> service<ModelDownload>().ensure()
             "storage.set" -> storage.set(message.get("area").asString, message.getAsJsonObject("items"))
             "storage.remove" -> storage.remove(message.get("area").asString, message.getAsJsonArray("keys"))
             "copy" -> CopyPasteManager.getInstance().setContents(StringSelection(message.get("text").asString))

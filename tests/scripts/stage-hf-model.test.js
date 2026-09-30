@@ -3,7 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { buildModelManifest } = require('../../scripts/firefox/stage-hf-model');
+const { buildModelManifest } = require('../../scripts/hf-model/stage-hf-model');
 
 describe('buildModelManifest', () => {
   let dir;

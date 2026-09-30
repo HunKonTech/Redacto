@@ -18,7 +18,11 @@ class FakeCaches {
     if (!this.stores.has(name)) this.stores.set(name, new Map());
     const store = this.stores.get(name)!;
     return {
-      put: async (url: string, response: Response) => { store.set(url, response); },
+      put: async (url: string, response: Response) => {
+        // Like Chrome's Cache API, which rejects chrome-extension:// keys.
+        if (!/^https?:/.test(url)) throw new TypeError(`Request scheme '${url.split(':')[0]}' is unsupported`);
+        store.set(url, response);
+      },
       match: async (url: string) => store.get(url)?.clone(),
     } as unknown as Cache;
   }
@@ -123,6 +127,19 @@ describe('Local AI model downloader', () => {
     expect(state).toEqual(expect.objectContaining({ phase: 'failed', readyVersion: 'v1' }));
     expect(shared.modelDownloadMessage(state)).toMatch(/current model stays in use/);
     await expect(downloader.isLocalAiModelReady(deps(offline))).resolves.toBe(true);
+  });
+
+  test('serves the ready model without chrome.storage and ignores an unfinished newer version', async () => {
+    const v1 = { 'config.json': 'one' };
+    await downloader.ensureLocalAiModel('install', deps(fakeFetch(v1, manifestFor(v1, 'v1'))));
+    // A newer version still downloading: its files are there, its completion marker is not.
+    await (await caches.open(shared.modelCacheName('v2'))).put(shared.modelCacheKey('config.json'), new Response('two'));
+    // Chrome's offscreen document, where the model loads, has no chrome.storage.
+    (chrome.storage.local.get as jest.Mock).mockImplementation(async () => {
+      throw new Error('chrome.storage is not available here');
+    });
+
+    await expect((await shared.modelAwareFetch(shared.extensionModelUrl('config.json'))).text()).resolves.toBe('one');
   });
 
   test('rejects manifests with unsafe paths', () => {
