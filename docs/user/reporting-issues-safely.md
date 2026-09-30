@@ -20,7 +20,7 @@ For reproducible reports, include:
 
 - Chrome version
 - operating system
-- Privacy Guardrail version
+- Redacto version
 - supported site: `chatgpt.com`, `chat.openai.com`, `claude.ai`, or `gemini.google.com`
 - whether Local AI was ready, unavailable, off, loading, or failed
 - whether the issue happened during paste review, placeholder insertion, or restoration
@@ -32,4 +32,4 @@ Report security or privacy issues privately using `SECURITY.md`. This includes a
 
 ## Public Beta Expectations
 
-Privacy Guardrail is assistive local review software. Issue reports should not assume perfect detection, prevention of disclosure, regulatory compliance, or support for sites outside the public beta scope.
+Redacto is assistive local review software. Issue reports should not assume perfect detection, prevention of disclosure, regulatory compliance, or support for sites outside the public beta scope.

@@ -1,6 +1,6 @@
 # Model Assets
 
-Privacy Guardrail runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses model assets packaged with the extension. The public beta source is published at `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+Redacto runs detection locally in the browser. Deterministic recognizers are built from Rust to WebAssembly, and optional transformer NER uses model assets packaged with the extension. The public beta source is published at `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 
 ## Release Model
 
@@ -143,6 +143,44 @@ The repository still contains preparation scripts for deprecated or comparison m
 - `npm run convert:model:fp16`
 
 These are not the standard public beta runtime model. AI4Privacy assets are treated as local research/prototype assets and are not included in the official beta package.
+
+## Code Identifier Classifier
+
+Optional. When code anonymization is set to `full`, this classifier decides whether each undeclared identifier in pasted code is the user's own (renamed) or a library/framework name (kept). Without it, the extension falls back to the hardcoded `LIBRARY_NAMES` list in `src/shared/code-rename.ts`. The build only warns when it is missing.
+
+It is trained locally by `tools/identifier-classifier` (see its README) and published in the public Hugging Face model repo `koncsik/code-identifier-classifier`, so other machines and CI can fetch it without retraining.
+
+Upload after a training run (on the training machine, once logged in with `hf auth login` and a write token):
+
+```bash
+hf upload koncsik/code-identifier-classifier \
+  tools/identifier-classifier/work/export/code-identifier-classifier . \
+  --repo-type model \
+  --exclude "onnx/model.onnx"
+```
+
+Only the int8 `onnx/model_quantized.onnx` is used at runtime; the 330 MB float export is left out.
+
+On another machine or in CI, just run:
+
+```bash
+npm run prepare:model:identifier-classifier
+```
+
+With no `--source-dir`, the script downloads `koncsik/code-identifier-classifier` from Hugging
+Face automatically over HTTPS — no `hf` CLI or login needed; `HF_TOKEN` is sent when set, and
+the `hf` CLI is tried if the HTTPS download fails — (into `.model-sources/code-identifier-classifier`) and stages it into
+`generated/models/identifier-classifier`. If that output already exists it does nothing; pass
+`--force` to re-download and refresh it. To use a local export instead of Hugging Face, pass
+`--source-dir` explicitly, same as before:
+
+```bash
+npm run prepare:model:identifier-classifier -- \
+  --source-dir .model-sources/code-identifier-classifier \
+  --force
+```
+
+The decision threshold (`DEFAULT_LIB_THRESHOLD` in `src/shared/identifier-classifier-constants.ts`) is calibrated to one training run. Update it from the new run's `test_lib_threshold_own98` metric whenever you upload a retrained model.
 
 ## Licensing Caveats
 

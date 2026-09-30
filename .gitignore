@@ -4,15 +4,19 @@ node_modules/
 
 # Build output
 dist/
+# Local dev build counter (scripts/build-number.js)
+.build-number
 coverage/
 generated/
 .model-sources/
+.venv/
 # One-shot scratch dirs (e.g. optimum-cli ONNX exports staged for the prep script)
 tmp/
 # Packaged extension archives produced for manual install
-privacy-guardrail-*.zip
+redacto-*.zip
 release/*.zip
 release/*.sha256
+release/edge/
 
 # Rust and WebAssembly artifacts
 crate/target/
@@ -67,4 +71,6 @@ docs/release/public-initial-commit.md
 # Chrome Web Store screenshot staging — reviewed PNGs stay out of Git by default
 screenshots/
 CONTEXT.md
-tools/identifier-classifier
+dist-ide/
+release/ide/
+dist-web/

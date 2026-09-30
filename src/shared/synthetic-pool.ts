@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Synthetic Value Pool
+ * Redacto — Synthetic Value Pool
  *
  * Generates realistic-but-clearly-fake replacements for detected PII so that
  * downstream LLMs receive natural-looking text rather than awkward
@@ -16,10 +16,13 @@
  *   BANK_ACCOUNT): use officially reserved test values from the relevant
  *   standards (RFC 5737 TEST-NET-1, IRS test SSN range, etc.) so that any
  *   accidental leakage downstream cannot collide with real-world values.
- * - **Sensitive types** (PASSWORD, URL, DATE): synthetic mode falls back
- *   to the typed placeholder. Generating fake passwords/URLs is high-risk
- *   (could look credential-like to scanners) and date arithmetic depends
- *   on context the vault doesn't currently track.
+ * - **Links and paths** (URL, FILE_PATH): rebuilt from the original so the
+ *   stand-in keeps its shape (scheme, depth, extension, query keys) while
+ *   hosts, accounts and identifiers are replaced — see `synthetic-link.ts`.
+ * - **Sensitive types** (PASSWORD, DATE): synthetic mode falls back to the
+ *   typed placeholder. Generating fake passwords is high-risk (could look
+ *   credential-like to scanners) and date arithmetic depends on context the
+ *   vault doesn't currently track.
  *
  * The pool is finite. The vault is responsible for cycling: when the pool
  * is exhausted for a given type, the generator appends a numeric suffix
@@ -27,6 +30,7 @@
  */
 
 import type { EntityType } from './message-types';
+import { syntheticLink, syntheticPath } from './synthetic-link';
 
 /** Names chosen for being recognisable as Western-style but not associated
  *  with prominent public figures. Mix of single and multi-cultural roots. */
@@ -232,13 +236,15 @@ function buildEmail(personName: string, index: number): string {
  * @param context — optional contextual hints. `personSeed` lets EMAIL
  *   generation reuse a person's synthetic name as the email local part so
  *   `Jordan Park <jordan.park@example.com>` stays internally consistent.
+ *   `original` is the detected text; URL and FILE_PATH need it to keep the
+ *   stand-in's shape and return `null` without it.
  * @returns the synthetic value, or `null` if the type opts out (the caller
  *   should fall back to the typed placeholder).
  */
 export function generateSyntheticValue(
   entityType: EntityType,
   index: number,
-  context?: { personSeed?: string },
+  context?: { personSeed?: string; original?: string },
 ): string | null {
   switch (entityType) {
     case 'PERSON':
@@ -271,8 +277,20 @@ export function generateSyntheticValue(
       return pickFromPool(IP_POOL, index);
     case 'BANK_ACCOUNT':
       return pickFromPool(BANK_ACCOUNT_POOL, index);
-    case 'PASSWORD':
     case 'URL':
+    case 'FILE_PATH': {
+      if (!context?.original) return null;
+      const standIns = {
+        index,
+        // Cycle suffixes are space-separated; links and paths need one token.
+        username: pickFromPool(USERNAME_POOL, index).replace(/\s+/g, ''),
+        ip: pickFromPool(IP_POOL, index),
+      };
+      return entityType === 'URL'
+        ? syntheticLink(context.original, standIns)
+        : syntheticPath(context.original, standIns);
+    }
+    case 'PASSWORD':
     case 'DATE':
       // No safe synthetic — caller falls back to the typed placeholder.
       return null;
@@ -299,6 +317,8 @@ export const SYNTHETIC_CAPABLE_TYPES: ReadonlySet<EntityType> = new Set<EntityTy
   'IBAN',
   'IP_ADDRESS',
   'BANK_ACCOUNT',
+  'URL',
+  'FILE_PATH',
 ]);
 
 /** True when the synthetic generator can produce a value for this type. */

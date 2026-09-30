@@ -2,7 +2,7 @@
 name = "privacy-guardrail-wasm"
 version = "0.1.0"
 edition = "2021"
-description = "WASM-based PII detection engine for the Privacy Guardrail browser extension"
+description = "WASM-based PII detection engine for the Redacto browser extension"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

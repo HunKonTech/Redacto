@@ -41,9 +41,24 @@ describe('privacy boundary check', () => {
 
     expect(result.allowedRuntimeFindings).toEqual([
       expect.objectContaining({
+        file: 'src/offscreen/identifier-classifier-provider.ts',
+        id: 'fetch',
+        reason: expect.stringContaining('packaged model/runtime files'),
+      }),
+      expect.objectContaining({
         file: 'src/offscreen/ner-provider.ts',
         id: 'fetch',
         reason: expect.stringContaining('packaged model/runtime files'),
+      }),
+      expect.objectContaining({
+        file: 'src/web/sw.js',
+        id: 'fetch',
+        reason: expect.stringContaining('same-origin site assets only'),
+      }),
+      expect.objectContaining({
+        file: 'src/web/sw.js',
+        id: 'fetch',
+        reason: expect.stringContaining("site's own packaged model files"),
       }),
     ]);
   });

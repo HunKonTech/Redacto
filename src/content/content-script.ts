@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Content Script
+ * Redacto — Content Script
  *
  * Injected into curated LLM chat pages. Orchestrates:
  * 1. Paste interception → WASM detection → review overlay → anonymized insert
@@ -33,7 +33,22 @@ import { PageStatusChip } from '../ui/page-status-chip/page-status-chip';
 import { chipReasonMessageForStatus, deriveChipReason } from '../shared/page-status-chip-reason';
 import { SYSTEM_CHECK_STORAGE_KEY } from '../shared/system-check-storage';
 import { attachDeAnonBanner, type AttachedBanner } from '../ui/banner/de-anon-banner';
-import { anonymize, anonymizeWithVault } from '../shared/anonymizer';
+import { anonymize, anonymizeWithVault, previewIdentifierRenames } from '../shared/anonymizer';
+import {
+  HISTORY_STORAGE_KEY,
+  createHistoryEntry,
+  findEntryForAnonymizedText,
+  loadAnonymizationHistory,
+  saveHistoryEntry,
+  usedMappings,
+  type HistoryEntry,
+} from '../shared/anonymization-history';
+import { dropKnownReplacements, knownReplacementTokens } from '../shared/already-anonymized';
+import { extractCodeRegionTexts } from '../shared/code-rename';
+import { findCodeLikeRegions } from '../shared/code-identifiers';
+import { findErrorRegions } from '../shared/error-trace';
+import type { IdentifierVerdict } from '../shared/identifier-classifier-constants';
+import type { ClassifyIdentifiersResponse } from '../shared/message-types';
 import { EntityMap } from '../shared/entity-map';
 import {
   buildConversationScope,
@@ -76,6 +91,7 @@ import { prepareReviewSpans } from './review-spans';
 import { resolveThreshold } from '../shared/sensitivity-resolver';
 import { CONVERSATION_URL_POLL_MS, LOCAL_AI_ACTIVITY_HEARTBEAT_MS, NO_PII_INDICATOR_MS, RESPONSE_DEBOUNCE_MS, CHIP_FADE_MS } from '../shared/constants';
 import type { PiiSpan, FeedbackEntry, Settings, AllowlistEntry, CancelDetectionBehavior, NerStatus, NerStatusResponse, SystemCompatibilityStatus, SystemCompatibilityStatusResponse } from '../shared/message-types';
+import { debugError, debugLog, debugTrace, debugWarn } from '../shared/debug-log';
 
 // --- Adapter selection ---
 
@@ -139,6 +155,13 @@ let scope: ConversationScope = emptyScope();
  * `loose` marks banners placed by the fallback, not on a matched turn.
  */
 const attachedBanners: Array<{ banner: AttachedBanner; loose: boolean }> = [];
+
+/**
+ * The anonymization history, kept current from storage. Its tokens are never
+ * anonymized again, and a paste that is exactly one of its anonymized texts
+ * goes in unchanged.
+ */
+let historyEntries: HistoryEntry[] = [];
 
 /** Tokens already reported as present but unresolvable; reported once each. */
 const unresolvableReported = new Set<string>();
@@ -228,7 +251,7 @@ async function maybeShowCriticalLocalAiModal(): Promise<void> {
     modal.show();
   } catch (err) {
     if (settings?.debug) {
-      console.warn('[PG:content] Failed to show Local AI resource modal', err);
+      debugWarn('[PG:content] Failed to show Local AI resource modal', err);
     }
   }
 }
@@ -261,10 +284,10 @@ function refreshPageStatusChip(): void {
  */
 function reportComposerLookup(match: ComposerMatch): void {
   if (match === 'none') {
-    // Unconditional, NOT behind `settings.debug`: reaching here means text
-    // reached the page without review, or reviewed text never landed. The
-    // page's own UI shows nothing either way.
-    console.warn(
+    // Reaching here means text reached the page without review, or reviewed
+    // text never landed. The chip / indicator below tells the user; the
+    // console line is for Debug mode only.
+    debugWarn(
       '[PG:content] No message box found on this page — neither the one this '
         + 'site adapter knows nor the target of the paste. Text here is not '
         + 'reviewed, and reviewed text has nowhere to be inserted.',
@@ -277,7 +300,7 @@ function reportComposerLookup(match: ComposerMatch): void {
     // that failed before building one.
     if (!pageStatusChip) {
       showIndicator(
-        '⚠ Privacy Guardrail could not find this page’s message box',
+        '⚠ Redacto could not find this page’s message box',
         INIT_FAILURE_INDICATOR_MS,
       );
     }
@@ -393,7 +416,7 @@ async function adoptConversation(next: string): Promise<void> {
     sessionPlaceholders.clear();
     filer.reset();
     if (settings?.debug) {
-      console.log(`[PG:content] ${next} is a conversation on record; tab ledger cleared`);
+      debugLog(`[PG:content] ${next} is a conversation on record; tab ledger cleared`);
     }
   }
   await loadConversationScope();
@@ -462,7 +485,7 @@ const filer = new ConversationFiler({
   move: (from, to, tokens) => moveConversationTokens(from, to, tokens),
   onMoved: (from, to, tokens) => {
     if (settings?.debug) {
-      console.log(
+      debugLog(
         `[PG:content] ${tokens.length} token(s) seen at ${to}; moved there from ${from}`,
       );
     }
@@ -522,7 +545,7 @@ function sameTokens(a: readonly string[], b: readonly string[]): boolean {
 /**
  * Note a token the user can see that this extension will not resolve.
  *
- * Deliberately a `console.debug` and nothing else. It is the one signal that
+ * Deliberately a Debug-mode console line and nothing else. It is the one signal that
  * a conversation has drifted out of scope, and it belongs to whoever is
  * debugging that — telling the user about a token nothing can be done with
  * would be noise where the extension is already doing its best.
@@ -531,7 +554,7 @@ function reportUnresolvableTokens(seen: readonly string[]): void {
   for (const token of seen) {
     if (scope.has(token) || unresolvableReported.has(token)) continue;
     unresolvableReported.add(token);
-    console.debug(
+    debugTrace(
       `[PG:content] ${token} is on this page but no original is known for it.`,
     );
   }
@@ -734,7 +757,7 @@ function makePreviewResolverFactory(
       const idx = baseCounter + offset + 1;
       const ph = makePlaceholder(span.entity_type, idx);
       const synth = supportsSynthetic(span.entity_type)
-        ? generateSyntheticValue(span.entity_type, baseCounter + offset)
+        ? generateSyntheticValue(span.entity_type, baseCounter + offset, { original: span.text })
         : null;
       const rendered = defaultMode === 'synthetic' && synth ? synth : ph;
       seen.set(key, rendered);
@@ -743,15 +766,210 @@ function makePreviewResolverFactory(
   };
 }
 
-function showReviewOverlay(
+/** Replacement tokens from the history, for the anonymizer to leave alone. */
+function historyTokens(): string[] {
+  return historyEntries.flatMap((entry) => Object.keys(entry.mappings));
+}
+
+async function refreshHistoryEntries(): Promise<void> {
+  historyEntries = await loadAnonymizationHistory();
+}
+
+/**
+ * Take a paste that is exactly the anonymized text of a history entry — the
+ * side panel's output, or a message copied from another chat — and insert it
+ * unchanged. Scanning it again would replace its replacements.
+ *
+ * Its pairs join this page's ledger as if the paste had been anonymized
+ * here, so the reply to it is restored on the page like any other.
+ */
+async function claimAlreadyAnonymizedPaste(text: string): Promise<boolean> {
+  await refreshHistoryEntries();
+  const entry = findEntryForAnonymizedText(text, historyEntries);
+  if (!entry) return false;
+
+  interceptor.pasteOriginal(text);
+  for (const [token, original] of Object.entries(entry.mappings)) {
+    if (entityMap.getOriginal(token) === undefined) entityMap.addExternal(token, original);
+    sessionPlaceholders.add(token);
+  }
+  rebuildScope();
+  void recordEmittedTokens();
+  showIndicator('\u{1F512} Already anonymized \u00b7 pasted as is', NO_PII_INDICATOR_MS);
+  return true;
+}
+
+/** Whether pasted code should have its declared identifiers renamed. */
+function renameIdentifiersEnabled(): boolean {
+  return settings?.codeAnonymization === 'full';
+}
+
+let classifyRequestCounter = 0;
+
+/**
+ * Asks the offscreen identifier-classifier model whether `originalText`'s
+ * undeclared code identifiers are OWN or LIB names. Best-effort: any
+ * failure (model unavailable, background unreachable, no code regions)
+ * resolves to `undefined`, and the caller falls back to the hardcoded
+ * library-name list via `code-rename.ts`'s own default.
+ */
+async function classifyCodeIdentifiers(
+  originalText: string,
+): Promise<ReadonlyMap<string, IdentifierVerdict> | undefined> {
+  const texts = extractCodeRegionTexts(originalText);
+  if (texts.length === 0) return undefined;
+
+  try {
+    const requestId = `identifiers-${Date.now()}-${classifyRequestCounter++}`;
+    const response = (await chrome.runtime.sendMessage({
+      type: 'CLASSIFY_IDENTIFIERS',
+      payload: { requestId, texts },
+    })) as ClassifyIdentifiersResponse | undefined;
+
+    if (!response || response.type !== 'IDENTIFIER_CLASSIFICATION_RESULT' || !response.payload.available) {
+      return undefined;
+    }
+    return new Map(response.payload.classifications.map((c) => [c.name, c.label]));
+  } catch (err) {
+    if (settings?.debug) {
+      debugWarn('[PG:content] Identifier classification unavailable, using library-name list', err);
+    }
+    return undefined;
+  }
+}
+
+/**
+ * Replace the approved spans (and, when switched on, rename the code's own
+ * identifiers), paste the result, and record what went into the page.
+ * Returns false when nothing changed, so the caller can paste the original.
+ */
+async function pasteAnonymized(
+  originalText: string,
+  approvedSpans: PiiSpan[],
+  timings?: { totalMs: number },
+): Promise<boolean> {
+  const renameIdentifiers = renameIdentifiersEnabled();
+  const identifierClassifications = renameIdentifiers
+    ? await classifyCodeIdentifiers(originalText)
+    : undefined;
+  const options = { renameIdentifiers, identifierClassifications, knownReplacements: historyTokens() };
+  let anonymizedText: string;
+  let renamedIdentifiers: number;
+
+  if (settings.identityVaultEnabled) {
+    // Vault path — looks up existing identities, creates new
+    // records for first-time PII, writes back to storage so
+    // subsequent pastes (in any provider, any session) see the
+    // same canonical replacements.
+    const result = anonymizeWithVault(
+      originalText,
+      approvedSpans,
+      identityVault,
+      settings.defaultReplacementMode,
+      entityMap,
+      options,
+    );
+    entityMap = result.entityMap;
+    anonymizedText = result.text;
+    renamedIdentifiers = result.renamedIdentifiers;
+    identityVault = result.vaultData;
+    // Persist vault asynchronously — paste should not block on it.
+    saveIdentityVault(identityVault).catch((err) =>
+      debugError('[PG:content] vault save failed', err),
+    );
+  } else {
+    // Legacy path: per-conversation EntityMap only.
+    const result = anonymize(originalText, approvedSpans, entityMap, options);
+    entityMap = result.entityMap;
+    anonymizedText = result.text;
+    renamedIdentifiers = result.renamedIdentifiers;
+  }
+
+  if (anonymizedText === originalText) return false;
+
+  interceptor.pasteAnonymized(anonymizedText);
+
+  // Keep the pairs this paste used, so the side panel can list it and
+  // restore a reply to it even after the conversation is gone.
+  saveHistoryEntry(
+    createHistoryEntry({
+      source: 'paste',
+      site: window.location.hostname,
+      originalText,
+      anonymizedText,
+      mappings: usedMappings(anonymizedText, entityMap),
+      replacedCount: approvedSpans.length,
+      renamedIdentifiers,
+    }),
+    settings.identityVaultEnabled,
+  ).catch((err) => debugError('[PG:content] history save failed', err));
+
+  // Record what this session put into the page. The map may also hold
+  // entries restored from storage — on the shared "new chat" key those
+  // can belong to another tab's draft — and those are not ours to
+  // persist or file.
+  for (const [replacement] of entityMap.entries()) {
+    if (anonymizedText.includes(replacement)) {
+      sessionPlaceholders.add(replacement);
+    }
+  }
+
+  // The ledger just grew, so what may be resolved on this page grew
+  // with it — before anything has been written anywhere.
+  rebuildScope();
+  void recordEmittedTokens();
+
+  const parts = [];
+  if (approvedSpans.length > 0) parts.push(`${approvedSpans.length} item(s) replaced`);
+  if (renamedIdentifiers > 0) parts.push(`${renamedIdentifiers} identifier(s) renamed`);
+  showIndicator(`\u{1F512} ${parts.join(', ')}`, CHIP_FADE_MS);
+
+  if (settings.debug && timings) {
+    debugLog(
+      `[PG:content] Detection: ${timings.totalMs}ms, anonymized ${approvedSpans.length} spans, renamed ${renamedIdentifiers} identifiers`,
+    );
+  }
+  return true;
+}
+
+/**
+ * The "nothing found" chip. Pasted code (or error output naming it) whose
+ * identifiers stay as they are because renaming is switched off says so,
+ * rather than reading as a miss.
+ */
+function noPiiIndicatorText(text: string): string {
+  if (!renameIdentifiersEnabled() && (findCodeLikeRegions(text).length > 0 || findErrorRegions(text).length > 0)) {
+    return '\u2713 No personal data found \u00b7 code kept as is (turn on "Rename code identifiers" in Options \u2192 Code blocks)';
+  }
+  return '\u2713 No personal data found';
+}
+
+/** Paste with only the code's identifiers renamed; false when there is nothing to rename. */
+async function pasteWithRenamedIdentifiers(originalText: string): Promise<boolean> {
+  return renameIdentifiersEnabled() && (await pasteAnonymized(originalText, []));
+}
+
+async function showReviewOverlay(
   originalText: string,
   rawSpans: PiiSpan[],
   timings?: { totalMs: number },
-): void {
-  const spans = prepareReviewSpans(originalText, rawSpans, settings, adaptiveThresholds);
+): Promise<void> {
+  // A replacement token in the paste — part of an earlier anonymized text —
+  // is not personal data and is not offered for replacing again.
+  const known = knownReplacementTokens({
+    vault: settings.identityVaultEnabled ? identityVault : null,
+    entityMap,
+    mappings: historyEntries.map((entry) => entry.mappings),
+  });
+  const spans = dropKnownReplacements(
+    prepareReviewSpans(originalText, rawSpans, settings, adaptiveThresholds),
+    known,
+  );
 
   if (spans.length === 0) {
-    // After filtering, nothing left — paste original
+    // After filtering, nothing left — paste original, or the code with its
+    // identifiers renamed when that is switched on.
+    if (await pasteWithRenamedIdentifiers(originalText)) return;
     showIndicator('\u2713 No actionable personal data found', NO_PII_INDICATOR_MS);
     interceptor.pasteOriginal(originalText);
     return;
@@ -761,64 +979,14 @@ function showReviewOverlay(
     originalText,
     spans,
     {
-      onConfirm: (approvedSpans: PiiSpan[]) => {
+      onConfirm: async (approvedSpans: PiiSpan[]) => {
         if (approvedSpans.length === 0) {
+          if (await pasteWithRenamedIdentifiers(originalText)) return;
           interceptor.pasteOriginal(originalText);
           return;
         }
-
-        let anonymizedText: string;
-
-        if (settings.identityVaultEnabled) {
-          // Vault path — looks up existing identities, creates new
-          // records for first-time PII, writes back to storage so
-          // subsequent pastes (in any provider, any session) see the
-          // same canonical replacements.
-          const result = anonymizeWithVault(
-            originalText,
-            approvedSpans,
-            identityVault,
-            settings.defaultReplacementMode,
-            entityMap,
-          );
-          entityMap = result.entityMap;
-          anonymizedText = result.text;
-          identityVault = result.vaultData;
-          // Persist vault asynchronously — paste should not block on it.
-          saveIdentityVault(identityVault).catch((err) =>
-            console.error('[PG:content] vault save failed', err),
-          );
-        } else {
-          // Legacy path: per-conversation EntityMap only.
-          const result = anonymize(originalText, approvedSpans, entityMap);
-          entityMap = result.entityMap;
-          anonymizedText = result.text;
-        }
-
-        interceptor.pasteAnonymized(anonymizedText);
-
-        // Record what this session put into the page. The map may also hold
-        // entries restored from storage — on the shared "new chat" key those
-        // can belong to another tab's draft — and those are not ours to
-        // persist or file.
-        for (const [replacement] of entityMap.entries()) {
-          if (anonymizedText.includes(replacement)) {
-            sessionPlaceholders.add(replacement);
-          }
-        }
-
-        // The ledger just grew, so what may be resolved on this page grew
-        // with it — before anything has been written anywhere.
-        rebuildScope();
-        void recordEmittedTokens();
-
-        showIndicator(
-          `\u{1F512} ${approvedSpans.length} item(s) replaced`,
-          CHIP_FADE_MS,
-        );
-
-        if (settings.debug && timings) {
-          console.log(`[PG:content] Detection: ${timings.totalMs}ms, anonymized ${approvedSpans.length} spans`);
+        if (!(await pasteAnonymized(originalText, approvedSpans, timings))) {
+          interceptor.pasteOriginal(originalText);
         }
       },
 
@@ -832,7 +1000,7 @@ function showReviewOverlay(
             interceptor.pasteOriginal(originalText);
           }
           if (settings.debug) {
-            console.log(`[PG:content] Overlay cancelled, ${decision === 'paste-original' ? 'original pasted' : 'nothing pasted'}`);
+            debugLog(`[PG:content] Overlay cancelled, ${decision === 'paste-original' ? 'original pasted' : 'nothing pasted'}`);
           }
         });
       },
@@ -845,7 +1013,7 @@ function showReviewOverlay(
         });
 
         if (settings.debug) {
-          console.log('[PG:content] Feedback logged:', entry.correctedType, entry.text);
+          debugLog('[PG:content] Feedback logged:', entry.correctedType, entry.text);
         }
       },
 
@@ -880,6 +1048,14 @@ function showReviewOverlay(
     settings.theme,
     settings.identityVaultEnabled
       ? makePreviewResolverFactory(identityVault, settings.defaultReplacementMode)
+      : undefined,
+    renameIdentifiersEnabled()
+      ? (approved) =>
+          previewIdentifierRenames(originalText, approved, {
+            entityMap,
+            vaultData: settings.identityVaultEnabled ? identityVault : undefined,
+            knownReplacements: historyTokens(),
+          })
       : undefined,
   );
 
@@ -931,20 +1107,23 @@ const interceptor = new PasteInterceptor(adapter, {
   onNoPii: (text) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showIndicator('\u2713 No personal data found', NO_PII_INDICATOR_MS);
-    interceptor.pasteOriginal(text);
+    void (async () => {
+      if (await pasteWithRenamedIdentifiers(text)) return;
+      showIndicator(noPiiIndicatorText(text), NO_PII_INDICATOR_MS);
+      interceptor.pasteOriginal(text);
+    })();
   },
 
   onPiiDetected: (text, spans, timings) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showReviewOverlay(text, spans, timings);
+    void showReviewOverlay(text, spans, timings);
   },
 
   onError: (error) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    showIndicator(`\u26A0 Privacy Guardrail error: ${error}`, 3000);
+    showIndicator(`\u26A0 Redacto error: ${error}`, 3000);
   },
 
   onCanceled: (explicitUserCancel) => {
@@ -958,6 +1137,8 @@ const interceptor = new PasteInterceptor(adapter, {
   onExplicitCancelDecision: async () => chooseAfterExplicitScanCancel(),
 
   onComposerLookup: reportComposerLookup,
+
+  claimPaste: claimAlreadyAnonymizedPaste,
 }, {
   waitForReady: () => pasteInterceptorReady,
 });
@@ -974,7 +1155,7 @@ const responseObserver = new ResponseObserver(adapter, {
     // the banner holds the resolver and asks again, so there is nothing to
     // wait for here and nothing to go stale.
     if (attachBanner(element, true) && settings.debug) {
-      console.log('[PG:content] De-anonymization banner attached to response');
+      debugLog('[PG:content] De-anonymization banner attached to response');
     }
   },
   hasKnownSynthetic: (text) => {
@@ -1024,7 +1205,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse): undefined
     }
 
     if (settings.debug) {
-      console.log('[PG:content] Settings updated:', settings);
+      debugLog('[PG:content] Settings updated:', settings);
     }
   }
   return undefined;
@@ -1041,7 +1222,7 @@ async function init(): Promise<void> {
     releasePasteInterceptor?.();
     releasePasteInterceptor = null;
     if (settings.debug) {
-      console.log('[PG:content] Extension disabled, not activating');
+      debugLog('[PG:content] Extension disabled, not activating');
     }
     return;
   }
@@ -1061,6 +1242,7 @@ async function init(): Promise<void> {
   }
 
   await loadConversationScope();
+  await refreshHistoryEntries();
 
   releasePasteInterceptor?.();
   releasePasteInterceptor = null;
@@ -1071,6 +1253,8 @@ async function init(): Promise<void> {
   // pastes in this tab until reload.
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
+      // Kept in local or session storage depending on cross-session memory.
+      if (changes[HISTORY_STORAGE_KEY]) void refreshHistoryEntries();
       if (areaName !== 'local') return;
       if (changes['pg_identity_vault']) {
         const next = changes['pg_identity_vault'].newValue;
@@ -1078,7 +1262,7 @@ async function init(): Promise<void> {
           identityVault = next;
           rebuildScope();
           if (settings.debug) {
-            console.log('[PG:content] Vault reloaded from storage event');
+            debugLog('[PG:content] Vault reloaded from storage event');
           }
         }
       }
@@ -1100,7 +1284,7 @@ async function init(): Promise<void> {
             reportVisibility();
           }
           if (settings.debug) {
-            console.log('[PG:content] Settings reloaded from storage event');
+            debugLog('[PG:content] Settings reloaded from storage event');
           }
         }
       }
@@ -1125,10 +1309,10 @@ async function init(): Promise<void> {
   clipboardInterceptor.start();
 
   if (settings.debug) {
-    console.log(`[PG:content] Privacy Guardrail active on ${adapter.name} (${window.location.hostname})`);
-    console.log(`[PG:content] Adaptive thresholds:`, adaptiveThresholds);
-    console.log(`[PG:content] Conversation scope size: ${scope.size}`);
-    console.log(`[PG:content] Vault size: ${identityVault.records.length}`);
+    debugLog(`[PG:content] Redacto active on ${adapter.name} (${window.location.hostname})`);
+    debugLog(`[PG:content] Adaptive thresholds:`, adaptiveThresholds);
+    debugLog(`[PG:content] Conversation scope size: ${scope.size}`);
+    debugLog(`[PG:content] Vault size: ${identityVault.records.length}`);
   }
 }
 
@@ -1140,14 +1324,14 @@ void init().catch((error) => {
   releasePasteInterceptor?.();
   releasePasteInterceptor = null;
 
-  // Report unconditionally — NOT behind `settings.debug`. Reaching here means
-  // paste review is off for the rest of this page's lifetime: there is no
+  // Reaching here means paste review is off for the rest of this page's lifetime: there is no
   // retry, and neither recovery listener can help (`chrome.storage.onChanged`
   // is registered further down `init` and so was never reached, and a
   // `SETTINGS_UPDATED` message cannot arrive if the runtime context is what
   // failed). A privacy tool that has stopped reviewing pastes must say so
-  // rather than let the user keep pasting while believing they are covered.
-  console.error(
+  // rather than let the user keep pasting while believing they are covered —
+  // the indicator below does that; the console line is Debug mode only.
+  debugError(
     '[PG:content] Initialization failed — paste review is OFF for this page. '
       + 'Reload the page to retry.',
     error,
@@ -1155,7 +1339,7 @@ void init().catch((error) => {
 
   void waitForDocumentBody().then(() => {
     showIndicator(
-      '\u26A0 Privacy Guardrail is off for this page \u2014 reload to retry',
+      '\u26A0 Redacto is off for this page \u2014 reload to retry',
       INIT_FAILURE_INDICATOR_MS,
     );
   });

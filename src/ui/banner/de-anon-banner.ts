@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — De-anonymization Banner (Shadow DOM)
+ * Redacto — De-anonymization Banner (Shadow DOM)
  *
  * Attaches to a region of a reply that contains resolvable replacement
  * tokens. Provides a toggle to reveal the original values as a

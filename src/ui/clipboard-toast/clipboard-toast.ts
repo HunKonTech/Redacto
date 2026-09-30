@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Clipboard Toast (Shadow DOM)
+ * Redacto — Clipboard Toast (Shadow DOM)
  *
  * Non-blocking notification surfaced after the user copies text that
  * contains resolvable placeholders or synthetic-mode echoes. Offers a

@@ -55,6 +55,15 @@ export class EntityMap {
     return ph;
   }
 
+  /**
+   * Keep placeholders this map hands out clear of `[TYPE_index]`, a token
+   * already in use somewhere this map does not know about.
+   */
+  reserve(type: string, index: number): void {
+    const current = this.counters.get(type) || 0;
+    if (index >= current) this.counters.set(type, index + 1);
+  }
+
   /** Get the original value for a placeholder. */
   getOriginal(ph: string): string | undefined {
     return this.toOriginal.get(ph);

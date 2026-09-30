@@ -46,9 +46,9 @@ git check-ignore \
   .venv/pyvenv.cfg \
   coverage/lcov.info \
   node_modules/.package-lock.json \
-  privacy-guardrail-0.2.0.zip \
-  release/privacy-guardrail-0.2.0.zip \
-  release/privacy-guardrail-0.2.0.sha256 \
+  redacto-0.2.0.zip \
+  release/redacto-0.2.0.zip \
+  release/redacto-0.2.0.sha256 \
   benchmarks/cache/openpii/manifest.json \
   benchmarks/corpora/openpii-generated.jsonl \
   benchmarks/results.bardsai.json \
@@ -74,7 +74,7 @@ git ls-files \
   benchmarks/corpora \
   'benchmarks/results*.json' \
   'benchmarks/comparison*.md' \
-  'privacy-guardrail-*.zip' \
+  'redacto-*.zip' \
   'release/*.zip' \
   'release/*.sha256'
 ```

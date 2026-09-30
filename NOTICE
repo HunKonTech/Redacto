@@ -13,3 +13,12 @@ The DFKI name, DFKI logo, Privacy Guardrail name, and project logos are not
 licensed under the Apache License, Version 2.0, except as required for
 reasonable and customary use in describing the origin of the work and
 reproducing this NOTICE file.
+
+---
+
+Redacto
+Modifications Copyright 2026 Benedek Koncsik.
+
+Redacto is a modified version of Privacy Guardrail, distributed under the
+Apache License, Version 2.0. It is not affiliated with or endorsed by DFKI.
+See FORK.md for the upstream base and a description of the modifications.

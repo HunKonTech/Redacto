@@ -1,5 +1,5 @@
 name: False negative
-description: Report synthetic or sanitized PII that Privacy Guardrail missed.
+description: Report synthetic or sanitized PII that Redacto missed.
 title: "[False negative]: "
 body:
   - type: markdown

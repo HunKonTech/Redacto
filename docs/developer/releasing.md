@@ -1,6 +1,6 @@
 # Releasing
 
-This guide describes the intended public beta release workflow for `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
+This guide describes the intended public beta release workflow for `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
 
 ## Release Invariants
 
@@ -24,7 +24,7 @@ The official package builder creates the reviewed Chrome Web Store upload artifa
    git ls-files docs/issues
    ```
 
-2. Confirm the public repo target is `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+2. Confirm the public repo target is `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 3. Confirm all public docs use beta wording and avoid guarantees of perfect detection, prevention, or regulatory compliance.
 
 See `docs/release/public-source-boundary.md` and `docs/release/public-initial-commit.md`.
@@ -95,9 +95,9 @@ Before publishing a release, confirm the Apache-2.0 redistribution duties:
 - `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md` are present in the repository and in the package dry-run output.
 - Webpack-generated `*.LICENSE.txt` sidecar files for bundled third-party code remain in `dist/` and are not excluded from the release ZIP.
 - Existing copyright, patent, trademark, and attribution notices in third-party source or assets remain intact.
-- If a third-party source file is modified and redistributed, that file carries a prominent change notice naming Privacy Guardrail/DFKI as the modifier and describing that the file was changed.
+- If a third-party source file is modified and redistributed, that file carries a prominent change notice naming Redacto as the modifier and describing that the file was changed.
 - Any upstream third-party `NOTICE` file for redistributed code or model assets is carried forward readably, either as a `NOTICE` file, source/documentation notice, or customary generated display.
-- The supplementary Terms of Use still match the intended release train and the distribution remains unentgeltlich; paid or project-specific distribution needs a fresh legal review.
+- The Terms of Use still match the intended release train and the distribution remains free and non-commercial.
 
 ## Package
 
@@ -116,8 +116,8 @@ The command:
 - zips only runtime files from `dist/`
 - requires the legal files `LICENSE`, `NOTICE`, `TERMS.md`, and `THIRD_PARTY_NOTICES.md`
 - excludes source maps and private/source-only/generated-local paths
-- writes `release/privacy-guardrail-<version>.zip`
-- writes `release/privacy-guardrail-<version>.sha256` for the exact zip
+- writes `release/redacto-<version>.zip`
+- writes `release/redacto-<version>.sha256` for the exact zip
 
 For local package-content checks against an existing `dist/` tree without the clean-worktree guard or build step, run:
 
@@ -132,12 +132,51 @@ The dry run is not a release artifact. It exists to verify include/exclude behav
 For the public beta:
 
 1. Create the fresh public initial commit from the curated tree.
-2. Push to `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+2. Push to `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 3. Tag the release version, for example `v0.3.1`.
 4. Create a GitHub Release marked as a pre-release.
 5. Attach the exact Chrome extension zip and checksum.
 6. Link the release notes to `CHANGELOG.md`, `PRIVACY.md`, `SECURITY.md`, and support docs.
 
+## Build Versions Of This Fork
+
+Every run of `.github/workflows/build-and-release.yml` (manual or otherwise)
+gets its own version and publishes a GitHub release (not a pre-release); no tag has to be
+pushed first.
+
+- Version: `<BASE_VERSION>.<run number>`, e.g. `0.5.0.9`. `BASE_VERSION` is a
+  repository variable (Settings → Secrets and variables → Actions →
+  Variables) holding the upstream version this fork is based on; it stays
+  fixed while the run number grows by one per run. Without the variable,
+  `package.json`'s version is the base.
+- The workflow passes both as `PG_BASE_VERSION` / `PG_BUILD_NUMBER`;
+  `scripts/build-number.js` (`ciBuildVersion`) turns them into the version of
+  the extension manifests, the Chrome / Edge package names, the web page
+  footer and the release (tag `v0.5.0.9` on the built commit).
+- `package.json`, `manifest.json` and `CHANGELOG.md` keep the upstream x.y.z;
+  `npm run version:check` still checks those.
+
 ## Chrome Web Store Handoff
 
 Chrome Web Store upload is manual for the first public beta. Upload the same reviewed zip that was attached to the GitHub pre-release. Use the listing copy and permission justifications prepared in the Chrome Web Store launch docs, and link to the GitHub-hosted privacy policy and support material.
+
+## Microsoft Edge Add-ons Publishing
+
+The `edge-publish` job of `.github/workflows/build-and-release.yml` uploads the
+Edge package to Microsoft Edge Add-ons through the Add-ons API (v1.1) and
+submits it for certification. It runs on every push to `main` (the release
+job tags the commit `v<build version>` itself, no tag has to be pushed), on
+`v*` tag pushes and on manual runs with the `publish_edge` input; it is
+skipped without its secrets.
+
+One-time setup:
+
+1. Submit the first version by hand in Partner Center (Edge → Overview →
+   Create new extension); the API only updates an existing product.
+2. Partner Center → Edge → Publish API → *Create API credentials*. Copy the
+   **Client ID** and **API key** (the key expires after 72 days; renew it).
+3. The **Product ID** is the extension's ID in its Partner Center URL.
+4. Add them as repository secrets: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`,
+   `EDGE_API_KEY` (Settings → Secrets and variables → Actions).
+
+Edge rejects a submission while the previous one is still in review.

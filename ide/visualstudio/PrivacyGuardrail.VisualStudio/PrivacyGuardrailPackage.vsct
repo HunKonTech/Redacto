@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidPackage">
+    <Groups>
+      <Group guid="guidCommandSet" id="grpCodeWindow" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+      </Group>
+      <Group guid="guidCommandSet" id="grpOutputWindow" priority="0x0600">
+        <Parent guid="guidOutputWindowCommandSet" id="OutputWindowContextMenu" />
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidCommandSet" id="cmdAnonymizeSelection" priority="0x0100" type="Button">
+        <Parent guid="guidCommandSet" id="grpCodeWindow" />
+        <Icon guid="guidImages" id="bmpLogo" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Anonymize with Redacto</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidCommandSet" id="cmdOpenPanel" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Icon guid="guidImages" id="bmpLogo" />
+        <Strings>
+          <ButtonText>Redacto</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+
+    <Bitmaps>
+      <!-- The Redacto mark, rendered by scripts/render-logo.mjs. -->
+      <Bitmap guid="guidImages" href="Resources\Redacto.png" usedList="bmpLogo" />
+    </Bitmaps>
+  </Commands>
+
+  <CommandPlacements>
+    <CommandPlacement guid="guidCommandSet" id="cmdAnonymizeSelection" priority="0x0100">
+      <Parent guid="guidCommandSet" id="grpOutputWindow" />
+    </CommandPlacement>
+  </CommandPlacements>
+
+  <Symbols>
+    <GuidSymbol name="guidPackage" value="{882984f8-e76d-469c-930c-cf547dc5e836}" />
+    <GuidSymbol name="guidCommandSet" value="{0ec4a041-9151-4737-9c2f-24dceca7d1a9}">
+      <IDSymbol name="grpCodeWindow" value="0x1020" />
+      <IDSymbol name="grpOutputWindow" value="0x1021" />
+      <IDSymbol name="cmdAnonymizeSelection" value="0x0100" />
+      <IDSymbol name="cmdOpenPanel" value="0x0101" />
+    </GuidSymbol>
+    <GuidSymbol name="guidImages" value="{24e50b74-fbc4-4f57-9b60-3338c7ce42c4}">
+      <IDSymbol name="bmpLogo" value="1" />
+    </GuidSymbol>
+    <!-- vsshlids.h has no Output window context menu symbol; these are the
+         values Command Explorer reports for it. -->
+    <GuidSymbol name="guidOutputWindowCommandSet" value="{C9DD4A59-47FB-11D2-83E7-00C04F9902C1}">
+      <IDSymbol name="OutputWindowContextMenu" value="0x0155" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

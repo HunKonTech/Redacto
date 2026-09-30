@@ -1,6 +1,6 @@
 # Live-Browser-E2E-Suite
 
-Diese Suite prüft den aktuell gebauten Stand von Privacy Guardrail manuell gegen die abgemeldeten Oberflächen von ChatGPT, Claude und Gemini. Sie ist bewusst kein CI- oder Pull-Request-Check.
+Diese Suite prüft den aktuell gebauten Stand von Redacto manuell gegen die abgemeldeten Oberflächen von ChatGPT, Claude und Gemini. Sie ist bewusst kein CI- oder Pull-Request-Check.
 
 ## Vorbereitung
 

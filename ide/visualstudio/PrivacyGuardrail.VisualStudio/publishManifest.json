@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json.schemastore.org/vsix-publish",
+  "categories": ["coding"],
+  "identity": {
+    "internalName": "Redacto",
+    "icon": "icon.png"
+  },
+  "overview": "overview.md",
+  "priceCategory": "free",
+  "publisher": "benkoncsik",
+  "private": false,
+  "qna": true,
+  "repo": "https://github.com/HunKonTech/pii-guardrail-browser-extension"
+}

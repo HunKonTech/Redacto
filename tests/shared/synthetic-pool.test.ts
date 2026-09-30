@@ -27,15 +27,19 @@ describe('synthetic-pool', () => {
 
     test('returns false for opt-out types', () => {
       expect(supportsSynthetic('PASSWORD')).toBe(false);
-      expect(supportsSynthetic('URL')).toBe(false);
       expect(supportsSynthetic('DATE')).toBe(false);
+    });
+
+    test('returns true for links and paths', () => {
+      expect(supportsSynthetic('URL')).toBe(true);
+      expect(supportsSynthetic('FILE_PATH')).toBe(true);
     });
 
     test('SYNTHETIC_CAPABLE_TYPES matches supportsSynthetic', () => {
       const types: EntityType[] = [
         'PERSON', 'EMAIL', 'PHONE', 'CREDIT_CARD', 'SSN', 'IBAN',
         'IP_ADDRESS', 'LOCATION', 'ORGANIZATION', 'ADDRESS', 'URL',
-        'USERNAME', 'PASSWORD', 'BANK_ACCOUNT', 'DATE', 'MISC',
+        'USERNAME', 'PASSWORD', 'BANK_ACCOUNT', 'DATE', 'MISC', 'FILE_PATH',
       ];
       for (const t of types) {
         expect(SYNTHETIC_CAPABLE_TYPES.has(t)).toBe(supportsSynthetic(t));
@@ -131,6 +135,13 @@ describe('synthetic-pool', () => {
       expect(poolSize('PERSON')).toBeGreaterThan(0);
       expect(poolSize('LOCATION')).toBeGreaterThan(0);
       expect(poolSize('ORGANIZATION')).toBeGreaterThan(0);
+    });
+
+    test('URL and FILE_PATH need the original text', () => {
+      expect(generateSyntheticValue('URL', 0)).toBeNull();
+      expect(generateSyntheticValue('FILE_PATH', 0)).toBeNull();
+      expect(generateSyntheticValue('URL', 0, { original: 'https://wiki.acme.corp/HR' }))
+        .toMatch(/^https:\/\/wiki\.example\.corp\/[A-Z]+$/);
     });
 
     test('returns 0 for unsupported types', () => {

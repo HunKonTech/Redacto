@@ -12,6 +12,7 @@ import {
   NerProviderUnavailableError,
   nerThresholdForEntityType,
   passesNerThreshold,
+  pointRemoteLookupAtLocalAssets,
   resetNerProviderCachesForTests,
   transformerOutputToSpans,
 } from '../../src/offscreen/ner-provider';
@@ -956,5 +957,39 @@ describe('production transformer NER provider', () => {
       expect.objectContaining({ text: 'Ada Lovelace', entity_type: 'PERSON' }),
       expect.objectContaining({ text: 'Berlin', entity_type: 'LOCATION', score: 0.9 }),
     ]);
+  });
+});
+
+describe('pointRemoteLookupAtLocalAssets', () => {
+  const baseEnv = () => ({
+    allowRemoteModels: false,
+    allowLocalModels: true,
+    useBrowserCache: false,
+    useFSCache: false,
+    useWasmCache: false,
+    backends: { onnx: {} },
+  });
+
+  it('points the file lookup at the model folder when it is an http(s) URL (web page, IDE)', () => {
+    const env = { ...baseEnv(), localModelPath: 'https://owner.github.io/repo/models/' };
+
+    pointRemoteLookupAtLocalAssets(env);
+
+    expect(env).toMatchObject({
+      allowRemoteModels: true,
+      remoteHost: 'https://owner.github.io/repo/models/',
+      remotePathTemplate: '{model}/',
+    });
+  });
+
+  it('leaves extension and file paths alone', () => {
+    for (const localModelPath of ['chrome-extension://abc/models/', '/repo/dist/models/']) {
+      const env = { ...baseEnv(), localModelPath };
+
+      pointRemoteLookupAtLocalAssets(env);
+
+      expect(env.allowRemoteModels).toBe(false);
+      expect(env).not.toHaveProperty('remoteHost');
+    }
   });
 });

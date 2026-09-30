@@ -1,0 +1,102 @@
+{
+  "name": "redacto-vscode",
+  "displayName": "Redacto",
+  "description": "Anonymize selected code or console output on this device and restore the originals in AI replies.",
+  "version": "0.5.0",
+  "private": true,
+  "publisher": "benkoncsik",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HunKonTech/pii-guardrail-browser-extension.git"
+  },
+  "keywords": [
+    "privacy",
+    "anonymize",
+    "pii",
+    "secrets",
+    "ai"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "privacyGuardrail",
+          "title": "Redacto",
+          "icon": "media/redacto.svg"
+        }
+      ]
+    },
+    "views": {
+      "privacyGuardrail": [
+        {
+          "type": "webview",
+          "id": "privacyGuardrail.panel",
+          "name": "Anonymize & history"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "privacyGuardrail.anonymizeSelection",
+        "title": "Redacto: Anonymize selection"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeTerminalSelection",
+        "title": "Redacto: Anonymize terminal selection"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeClipboard",
+        "title": "Redacto: Anonymize clipboard (e.g. copied from the Debug Console)"
+      },
+      {
+        "command": "privacyGuardrail.openPanel",
+        "title": "Redacto: Open panel"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "privacyGuardrail.anonymizeSelection",
+          "when": "editorHasSelection",
+          "group": "9_cutcopypaste@9"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "privacyGuardrail.anonymizeTerminalSelection",
+          "when": "terminalTextSelected",
+          "group": "1_edit@9"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "privacyGuardrail.anonymizeSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeTerminalSelection",
+          "when": "terminalTextSelected"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "~1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.6.3"
+  },
+  "icon": "icon.png"
+}

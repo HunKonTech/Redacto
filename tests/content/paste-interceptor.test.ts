@@ -3,8 +3,12 @@
 import { PasteInterceptor, type PasteInterceptorCallbacks } from '../../src/content/paste-interceptor';
 import type { SiteAdapter } from '../../src/content/site-adapters/adapter-interface';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { setDebugEnabled } from '../../src/shared/debug-log';
 
 describe('PasteInterceptor', () => {
+  beforeEach(() => setDebugEnabled(true));
+  afterEach(() => setDebugEnabled(false));
+
   const adapter: SiteAdapter = {
     name: 'test',
     getInputElement: () => null,
@@ -193,6 +197,45 @@ describe('PasteInterceptor', () => {
 
     warnSpy.mockRestore();
     errorSpy.mockRestore();
+  });
+
+  describe('claimed pastes', () => {
+    it('does not scan a paste the content script claims as already anonymized', async () => {
+      const claimPaste = jest.fn().mockResolvedValue(true);
+      const callbacks = { ...makeCallbacks(), claimPaste };
+      const interceptor = new PasteInterceptor(adapter, callbacks) as any;
+
+      await interceptor.processPaste('Hi [PERSON_1], see [EMAIL_1].');
+
+      expect(claimPaste).toHaveBeenCalledWith('Hi [PERSON_1], see [EMAIL_1].');
+      expect(callbacks.onAnalyzing).not.toHaveBeenCalled();
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('scans a paste nobody claims', async () => {
+      const claimPaste = jest.fn().mockResolvedValue(false);
+      const callbacks = { ...makeCallbacks(), claimPaste };
+      const interceptor = new PasteInterceptor(adapter, callbacks) as any;
+      interceptor.analyze = jest.fn();
+
+      await interceptor.processPaste('Some fresh text with Anna in it.');
+
+      expect(callbacks.onAnalyzing).toHaveBeenCalledTimes(1);
+      expect(interceptor.analyze).toHaveBeenCalledWith('Some fresh text with Anna in it.');
+    });
+
+    it('scans rather than drops a paste when the claim check fails', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const claimPaste = jest.fn().mockRejectedValue(new Error('storage unavailable'));
+      const callbacks = { ...makeCallbacks(), claimPaste };
+      const interceptor = new PasteInterceptor(adapter, callbacks) as any;
+      interceptor.analyze = jest.fn();
+
+      await interceptor.processPaste('Some fresh text with Anna in it.');
+
+      expect(interceptor.analyze).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
+    });
   });
 
   it('still pastes the original text for other detection errors', async () => {

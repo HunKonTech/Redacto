@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Conversation scope (shared)
+ * Redacto — Conversation scope (shared)
  *
  * The set of replacement tokens that may be resolved back to originals on the
  * page in front of the user, and the resolver that applies it.

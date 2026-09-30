@@ -1,6 +1,6 @@
 # Public Beta Smoke Test Checklist
 
-Run this checklist before tagging a public beta release for `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`. Use only synthetic data. Do not paste real personal data, secrets, private prompts, private responses, or private documents.
+Run this checklist before tagging a public beta release for `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`. Use only synthetic data. Do not paste real personal data, secrets, private prompts, private responses, or private documents.
 
 ## Environment
 

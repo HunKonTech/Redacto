@@ -1,4 +1,5 @@
 mod checksum;
+mod code;
 mod context;
 mod merger;
 mod ner;
@@ -6,6 +7,7 @@ mod pipeline;
 mod regex_recognizers;
 mod tokenizer;
 pub mod types;
+mod url_path;
 
 use types::PipelineConfig;
 use wasm_bindgen::prelude::*;

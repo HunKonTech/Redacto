@@ -3,8 +3,8 @@ const MarkdownIt = require('markdown-it');
 const path = require('path');
 
 const DEFAULT_OPTIONS = {
-  title: 'Privacy Guardrail Terms of Use',
-  logoPath: 'legal/logo-privacy-guardrail-black.png',
+  title: 'Redacto Terms of Use',
+  logoPath: 'legal/redacto-logo-black.png',
 };
 
 function escapeHtml(value) {
@@ -95,7 +95,7 @@ function renderTermsHtml(markdown, options = {}) {
   const { body } = markdownToHtml(markdown);
 
   return `<!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -311,12 +311,12 @@ function renderTermsHtml(markdown, options = {}) {
   <div class="page">
     <main class="document">
     <div class="brand">
-        <img src="${escapeHtml(config.logoPath)}" alt="Privacy Guardrail">
+        <img src="${escapeHtml(config.logoPath)}" alt="Redacto">
       </div>
       ${body}
     </main>
 
-    <footer class="footer">Privacy Guardrail terms are bundled locally with this extension package.</footer>
+    <footer class="footer">Redacto terms are bundled locally with this extension package.</footer>
   </div>
 </body>
 </html>

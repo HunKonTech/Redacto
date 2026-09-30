@@ -1,6 +1,6 @@
 # Code Of Conduct
 
-Privacy Guardrail contributors and maintainers are expected to keep project spaces focused, respectful, and safe for technical collaboration.
+Redacto contributors and maintainers are expected to keep project spaces focused, respectful, and safe for technical collaboration.
 
 ## Expected Behavior
 

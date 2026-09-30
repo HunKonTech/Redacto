@@ -1,0 +1,529 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_model_refresh:
+        description: 'Force re-download/re-quantize cached models'
+        type: boolean
+        default: false
+      publish_edge:
+        description: 'Submit the Edge package to Microsoft Edge Add-ons'
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: redacto-build-release
+  cancel-in-progress: false
+
+env:
+  WASM_BINDGEN_VERSION: '0.2.118'
+  # Build version of this fork: the upstream version it is based on (the
+  # `BASE_VERSION` repository variable, e.g. 0.5.0; package.json's when unset)
+  # plus this repository's own counter, the run number: 0.5.0.<run>. It names
+  # the packages, the manifests, the web page and the release of each run.
+  PG_BASE_VERSION: ${{ vars.BASE_VERSION }}
+  PG_BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.os_label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os_label: linux
+            runs_on: [self-hosted, linux]
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Ensure pinned wasm-bindgen-cli
+        shell: bash
+        run: |
+          if ! command -v wasm-bindgen >/dev/null 2>&1 || \
+             ! wasm-bindgen --version | grep -q "${WASM_BINDGEN_VERSION}"; then
+            cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
+          fi
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run model-free CI validation
+        run: npm run validate:ci
+
+  prepare-models-and-package:
+    name: Prepare models and package
+    needs: [validate]
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Ensure pinned wasm-bindgen-cli
+        run: |
+          if ! command -v wasm-bindgen >/dev/null 2>&1 || \
+             ! wasm-bindgen --version | grep -q "${WASM_BINDGEN_VERSION}"; then
+            cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
+          fi
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # The runner's system Python may be too new for the conversion wheels
+      # or lack the venv module, so use a standalone Python managed by uv.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python for model conversion
+        id: python
+        run: |
+          uv python install 3.12
+          echo "path=$(uv python find 3.12)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare BardsAI NER model
+        env:
+          MODEL_PYTHON: ${{ steps.python.outputs.path }}
+        run: |
+          if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
+            scripts/edge/prepare-model.sh --python "$MODEL_PYTHON" --force
+          else
+            scripts/edge/prepare-model.sh --python "$MODEL_PYTHON"
+          fi
+
+      - name: Prepare identifier-classifier model (optional)
+        id: prepare_identifier_classifier
+        continue-on-error: true
+        run: |
+          if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
+            npm run prepare:model:identifier-classifier -- --force
+          else
+            npm run prepare:model:identifier-classifier
+          fi
+
+      # Runs the real ONNX session against the model just prepared above (no
+      # mocked pipeline) — proves the packaged model actually classifies
+      # identifiers, not only that the asset files exist. Skipped when the
+      # optional prepare step above didn't produce a model.
+      - name: Test identifier-classifier against the real ONNX model
+        if: steps.prepare_identifier_classifier.outcome == 'success'
+        run: npm run test:identifier-classifier:model
+
+      - name: Run model-free CI validation
+        run: npm run validate:ci
+
+      - name: Verify release version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm run version:check -- --require-tag
+
+      - name: Package Chrome release
+        run: npm run package:release
+
+      - name: Package Edge release
+        run: npm run package:edge -- --require-model
+
+      - name: Build IDE panel (shared by the IDE plugins)
+        env:
+          NER_MODEL_ASSETS_REQUIRED: '1'
+        run: npm run build:ide-webview
+
+      - name: Build web page (GitHub Pages)
+        env:
+          NER_MODEL_ASSETS_REQUIRED: '1'
+        run: npm run build:web
+
+      - name: Upload web page for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-web
+
+      - name: Read build version
+        id: version
+        run: echo "version=$(node scripts/build-number.js ci-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Chrome package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redacto-chrome-${{ steps.version.outputs.version }}
+          path: |
+            release/redacto-*.zip
+            release/redacto-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Edge package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redacto-edge-${{ steps.version.outputs.version }}
+          path: |
+            release/edge/redacto-edge-*.zip
+            release/edge/redacto-edge-*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      # Input for the IDE plugin jobs below, not a deliverable.
+      - name: Upload IDE panel
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-webview-${{ steps.version.outputs.version }}
+          path: dist-ide/webview
+          if-no-files-found: error
+          retention-days: 7
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  # IDE plugin installers (VS Code, JetBrains, Visual Studio): attached to the
+  # GitHub release (the `ide-redacto-*` artifacts) next to the browser
+  # packages, and published to each IDE's marketplace. A publish step is
+  # skipped without its secret and never fails the job, so the installer
+  # still reaches the release (see docs/developer/ide-plugins.md).
+  vscode-extension:
+    name: IDE installer (VS Code)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    env:
+      VSCE_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Package VS Code extension
+        run: node scripts/ide/build-vscode.js
+
+      - name: Upload VS Code installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-redacto-vscode-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/redacto-vscode-*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish to the VS Code Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        continue-on-error: true
+        working-directory: ide/vscode
+        run: npx vsce publish --packagePath ../../release/ide/redacto-vscode-*.vsix --pat "$VSCE_PAT"
+
+  jetbrains-plugin:
+    name: IDE installer (JetBrains)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    env:
+      PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Build JetBrains plugin
+        run: node scripts/ide/build-jetbrains.js
+
+      - name: Upload JetBrains installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-redacto-jetbrains-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/redacto-jetbrains-*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      # The Marketplace only takes updates: the first version of the plugin
+      # has to be uploaded by hand (docs/developer/ide-plugins.md).
+      - name: Publish to the JetBrains Marketplace
+        if: ${{ env.PUBLISH_TOKEN != '' }}
+        continue-on-error: true
+        working-directory: ide/jetbrains
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          version=$(node -p "require('../../scripts/ide/common').version()")
+          if ! ./gradlew --no-daemon publishPlugin -PpluginVersion="$version" 2>&1 | tee "$RUNNER_TEMP/jetbrains-publish.log"; then
+            if grep -q 'Cannot find plugin' "$RUNNER_TEMP/jetbrains-publish.log"; then
+              echo "::warning::The plugin is not on the JetBrains Marketplace yet: upload the first redacto-jetbrains-*.zip by hand at https://plugins.jetbrains.com/plugin/add; later runs publish updates."
+            fi
+            exit 1
+          fi
+
+  visualstudio-extension:
+    name: IDE installer (Visual Studio)
+    needs: [prepare-models-and-package]
+    # Needs Visual Studio 2022 / Build Tools with the "Visual Studio extension
+    # development" workload on the runner.
+    runs-on: [self-hosted, windows]
+    env:
+      VS_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Download IDE panel
+        uses: actions/download-artifact@v4
+        with:
+          name: ide-webview-${{ needs.prepare-models-and-package.outputs.version }}
+          path: dist-ide/webview
+
+      - name: Build Visual Studio extension
+        run: node scripts/ide/build-visualstudio.js
+
+      - name: Upload Visual Studio installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ide-redacto-visualstudio-${{ needs.prepare-models-and-package.outputs.version }}
+          path: release/ide/redacto-visualstudio-*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+      # VsixPublisher.exe ships with the "Visual Studio extension development"
+      # workload and in the Microsoft.VSSDK.BuildTools package the build restored.
+      - name: Publish to the Visual Studio Marketplace
+        if: ${{ env.VS_PAT != '' }}
+        continue-on-error: true
+        shell: powershell
+        run: |
+          $version = node -p "require('./scripts/ide/common').version()"
+          $vsix = (Resolve-Path "release/ide/redacto-visualstudio-$version.vsix").Path
+          $manifest = (Resolve-Path 'ide/visualstudio/PrivacyGuardrail.VisualStudio/publishManifest.json').Path
+
+          $candidates = @()
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) {
+            foreach ($vs in (& $vswhere -all -prerelease -property installationPath)) {
+              $candidates += Join-Path $vs 'VSSDK\VisualStudioIntegration\Tools\Bin\VsixPublisher.exe'
+            }
+          }
+          $packages = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
+          $buildTools = Join-Path $packages 'microsoft.vssdk.buildtools'
+          if (Test-Path $buildTools) {
+            $candidates += Get-ChildItem $buildTools -Recurse -Filter VsixPublisher.exe | ForEach-Object { $_.FullName }
+          }
+          $publisher = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $publisher) { throw 'VsixPublisher.exe not found (Visual Studio extension development workload or Microsoft.VSSDK.BuildTools).' }
+
+          Write-Host "VsixPublisher: $publisher"
+          & $publisher publish -payload $vsix -publishManifest $manifest -personalAccessToken $env:VS_PAT -ignoreWarnings 'VSIXValidatorWarning01,VSIXValidatorWarning02'
+          if ($LASTEXITCODE -ne 0) { throw "VsixPublisher.exe exited with code $LASTEXITCODE" }
+
+  # The side panel as a static page on GitHub Pages (Settings → Pages →
+  # Source: GitHub Actions). Everything runs in the visitor's browser.
+  github-pages:
+    name: Deploy web page (GitHub Pages)
+    needs: [prepare-models-and-package]
+    runs-on: [self-hosted, linux]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  github-release:
+    name: Publish GitHub release
+    needs:
+      - prepare-models-and-package
+      - vscode-extension
+      - jetbrains-plugin
+      - visualstudio-extension
+    # Every run publishes one, tagged v<build version> on the built commit;
+    # no tag has to be pushed first. A failed IDE installer job only leaves
+    # its installer out of the release.
+    if: ${{ !cancelled() && needs.prepare-models-and-package.result == 'success' }}
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: redacto-*-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Download IDE installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ide-redacto-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare-models-and-package.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Redacto v${{ needs.prepare-models-and-package.outputs.version }}
+          prerelease: false
+          make_latest: true
+          body: |
+            Build ${{ github.run_number }} of this fork, based on upstream version ${{ vars.BASE_VERSION || 'from package.json' }}, commit ${{ github.sha }}.
+
+            See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
+
+            Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
+          files: |
+            release-artifacts/*.zip
+            release-artifacts/*.sha256
+            release-artifacts/*.vsix
+
+  # Submits the Edge package to Microsoft Edge Add-ons through the Add-ons API
+  # (v1.1). Runs on every push (main or `v*` tag) and on manual runs with
+  # `publish_edge`, and is skipped without the three EDGE_* secrets. The first version of the
+  # extension has to be submitted by hand in Partner Center (see
+  # docs/developer/releasing.md); this job uploads updates to that product.
+  edge-publish:
+    name: Publish to Microsoft Edge Add-ons
+    needs: [prepare-models-and-package]
+    if: ${{ github.event_name == 'push' || inputs.publish_edge }}
+    runs-on: [self-hosted, linux]
+    env:
+      EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+      EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+      EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+      VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
+    steps:
+      - name: Download Edge package
+        if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: redacto-edge-${{ needs.prepare-models-and-package.outputs.version }}
+          path: edge-package
+
+      - name: Upload and submit to Edge Add-ons
+        if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.addons.microsoftedge.microsoft.com/v1.1/products/${EDGE_PRODUCT_ID}/submissions"
+          auth=(-H "Authorization: ApiKey ${EDGE_API_KEY}" -H "X-ClientID: ${EDGE_CLIENT_ID}")
+          zip=$(ls edge-package/redacto-edge-*.zip | head -n 1)
+
+          # Polls an operation URL until it leaves InProgress; fails unless Succeeded.
+          wait_for() {
+            local url="$1" body status
+            for _ in $(seq 1 60); do
+              body=$(curl -fsS "${auth[@]}" "$url")
+              status=$(echo "$body" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).status")
+              [ "$status" != "InProgress" ] && break
+              sleep 10
+            done
+            echo "$body"
+            [ "$status" = "Succeeded" ]
+          }
+
+          # Location header of a 202 response is the operation ID.
+          operation_id() { grep -i '^location:' "$1" | tr -d '\r' | awk '{print $2}' | xargs basename; }
+
+          echo "Uploading $zip"
+          curl -fsS -D "$RUNNER_TEMP/upload.headers" -o /dev/null -X POST "${auth[@]}" \
+            -H "Content-Type: application/zip" -T "$zip" "$api/draft/package"
+          wait_for "$api/draft/package/operations/$(operation_id "$RUNNER_TEMP/upload.headers")"
+
+          echo "Publishing submission"
+          curl -fsS -D "$RUNNER_TEMP/publish.headers" -o /dev/null -X POST "${auth[@]}" \
+            -H "Content-Type: application/json" \
+            -d "{\"notes\": \"Automated release v${VERSION} (${GITHUB_SHA})\"}" "$api"
+          wait_for "$api/operations/$(operation_id "$RUNNER_TEMP/publish.headers")"
+
+      - name: Skipped (Edge secrets not configured)
+        if: ${{ env.EDGE_PRODUCT_ID == '' || env.EDGE_CLIENT_ID == '' || env.EDGE_API_KEY == '' }}
+        run: echo "::notice::EDGE_PRODUCT_ID, EDGE_CLIENT_ID and EDGE_API_KEY are not all set; nothing was submitted to Edge Add-ons."
+
+  # Release announcement on X through Buffer. Runs last, and only when the
+  # GitHub release was published; without BUFFER_API_KEY the script skips
+  # the post, and a failed post never fails the workflow.
+  post-to-x:
+    name: Announce release on X
+    needs:
+      - prepare-models-and-package
+      - github-release
+    if: ${{ needs.github-release.result == 'success' && github.event_name == 'push' }}
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post release announcement via Buffer
+        continue-on-error: true
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_ORGANIZATION_ID: ${{ secrets.BUFFER_ORGANIZATION_ID }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          BUFFER_CHANNEL_NAME: ${{ secrets.BUFFER_CHANNEL_NAME }}
+          BUFFER_CHANNEL_SERVICE: ${{ secrets.BUFFER_CHANNEL_SERVICE }}
+          BUFFER_POST_MODE: ${{ secrets.BUFFER_POST_MODE }}
+          BUFFER_POST_TEMPLATE: ${{ secrets.BUFFER_POST_TEMPLATE }}
+          NEW_VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
+        run: |
+          python3 scripts/post_buffer_release.py \
+            --app-name "Redacto" \
+            --tag "v${NEW_VERSION}" \
+            --release-url "https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${NEW_VERSION}"

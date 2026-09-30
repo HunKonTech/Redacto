@@ -1,6 +1,6 @@
 # Install From Chrome Web Store
 
-Privacy Guardrail is distributed through the Chrome Web Store. Use the Web Store listing as the primary install and update path.
+Redacto is distributed through the Chrome Web Store. Use the Web Store listing as the primary install and update path.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ See [Local AI explained](local-ai-explained.md#system-requirements) for the full
 
 ## Install
 
-1. Open the Privacy Guardrail Chrome Web Store listing.
+1. Open the Redacto Chrome Web Store listing.
 2. Select **Add to Chrome**.
 3. Confirm the Chrome permission prompt.
 4. Open or refresh a supported chat tab after installation.
@@ -43,6 +43,6 @@ Chrome normally updates installed extensions automatically. To check manually:
 
 ## Beta Notes
 
-Privacy Guardrail provides assistive local review before paste. It does not guarantee complete detection, prevention of disclosure, or regulatory compliance.
+Redacto provides assistive local review before paste. It does not guarantee complete detection, prevention of disclosure, or regulatory compliance.
 
 For developer builds from source, see the repository `README.md`. End-user beta installs should use the Chrome Web Store package.

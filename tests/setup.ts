@@ -1,3 +1,8 @@
+// The CI build version (scripts/build-number.js) comes from the environment;
+// keep a CI run's values out of tests that expect plain local builds.
+delete process.env.PG_BUILD_NUMBER;
+delete process.env.PG_BASE_VERSION;
+
 // Mock Chrome extension APIs for testing
 (globalThis as any).chrome = {
   storage: {

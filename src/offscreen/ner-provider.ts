@@ -23,7 +23,7 @@ import {
   sliceTextByByteOffsets,
   stringIndexToByteOffset,
 } from '../shared/text-offsets';
-import { debugLog } from './debug';
+import { debugError, debugLog, debugWarn } from '../shared/debug-log';
 import {
   alignTokensToText,
   alignmentCoverage,
@@ -94,6 +94,8 @@ type TransformersModule = {
     allowRemoteModels: boolean;
     allowLocalModels: boolean;
     localModelPath: string;
+    remoteHost?: string;
+    remotePathTemplate?: string;
     useBrowserCache: boolean;
     useFSCache: boolean;
     useWasmCache: boolean;
@@ -211,6 +213,11 @@ export const NER_THRESHOLD_BY_ENTITY_TYPE: Readonly<Record<EntityType, number>> 
   IBAN: 0.80,
   IP_ADDRESS: 0.80,
   DATE: 0.80,
+  // Regex-only code recognizers; NER labels never map here.
+  SECRET: 0.80,
+  HOSTNAME: 0.80,
+  FILE_PATH: 0.80,
+  IDENTIFIER: 0.80,
   // MISC catches AI4Privacy labels we don't have a dedicated bucket for —
   // keep conservative to avoid distracting users with weak guesses.
   MISC: 0.90,
@@ -232,6 +239,11 @@ const BARDSAI_NER_THRESHOLD_BY_ENTITY_TYPE: Readonly<Record<EntityType, number>>
   IBAN: 0.80,
   IP_ADDRESS: 0.80,
   DATE: 0.80,
+  // Regex-only code recognizers; NER labels never map here.
+  SECRET: 0.80,
+  HOSTNAME: 0.80,
+  FILE_PATH: 0.80,
+  IDENTIFIER: 0.80,
   // BardsAI has explicit sensitive-data labels that the app currently
   // collapses to MISC. Keep recall higher for those categories.
   MISC: 0.70,
@@ -826,6 +838,23 @@ async function assertRequiredAssetsAvailable(
   }
 }
 
+/**
+ * Transformers.js 4.2 checks which files a model has (get_file_metadata)
+ * before loading it — e.g. whether there is a tokenizer — and that check
+ * skips local files when `env.localModelPath` is an http(s) URL, as on the
+ * web page and in the IDE webviews. The pipeline was then built without a
+ * tokenizer ("this.tokenizer is not a function"). Pointing the "remote" host
+ * at the same asset folder lets the check find the files there; nothing is
+ * requested from anywhere else, and the loads themselves stay
+ * `local_files_only`.
+ */
+export function pointRemoteLookupAtLocalAssets(env: TransformersModule['env']): void {
+  if (!/^https?:/i.test(env.localModelPath)) return;
+  env.allowRemoteModels = true;
+  env.remoteHost = env.localModelPath;
+  env.remotePathTemplate = '{model}/';
+}
+
 function configureTransformersEnvironment(
   transformers: TransformersModule,
   getExtensionUrl: (path: string) => string,
@@ -834,6 +863,7 @@ function configureTransformersEnvironment(
   transformers.env.allowRemoteModels = false;
   transformers.env.allowLocalModels = true;
   transformers.env.localModelPath = getExtensionUrl(MODEL_ASSET_ROOT);
+  pointRemoteLookupAtLocalAssets(transformers.env);
   transformers.env.useBrowserCache = false;
   transformers.env.useFSCache = false;
   // Skip Transformers.js's blob-URL wasm caching — extension CSP forbids
@@ -1404,20 +1434,20 @@ export function createTransformersNerProvider(
           try {
             const warmupStartedAt = performance.now();
             await classifier('warmup', { aggregation_strategy: 'simple' });
-            console.log('[PG:ner] webgpu warmup complete', {
+            debugLog('[PG:ner] webgpu warmup complete', {
               warmupMs: Math.round(performance.now() - warmupStartedAt),
             });
           } catch (err) {
-            console.warn('[PG:ner] webgpu warmup failed', err);
+            debugWarn('[PG:ner] webgpu warmup failed', err);
           }
         }
 
         lastLoadMs = Math.round(performance.now() - startedAt);
         pipelineReady = true;
-        console.log('[PG:ner] pipeline ready', { model: model.key, device, loadMs: lastLoadMs });
+        debugLog('[PG:ner] pipeline ready', { model: model.key, device, loadMs: lastLoadMs });
         return classifier;
       } catch (err) {
-        console.error('[PG:ner] pipeline init failed', err);
+        debugError('[PG:ner] pipeline init failed', err);
         throw err;
       }
     })();
@@ -1495,7 +1525,7 @@ export function createTransformersNerProvider(
       });
 
       if (!useOffsets) {
-        console.warn('[PG:ner] detect: offset alignment unavailable, span positions are approximate', {
+        debugWarn('[PG:ner] detect: offset alignment unavailable, span positions are approximate', {
           chunkIndex: i,
           hasTokenizer: Boolean(tokenizer),
           alignmentCoverage: Number(coverage.toFixed(3)),
@@ -1541,9 +1571,7 @@ export function createTransformersNerProvider(
       };
 
       const filtered = applyNerThresholdPolicy(spans, model.key);
-      // Unconditional diagnostic — first-run users may not have flipped
-      // the debug toggle yet. Keep until model behaviour is stable.
-      console.log('[PG:ner] detect: complete', {
+      debugLog('[PG:ner] detect: complete', {
         model: model.key,
         totalMs,
         inferenceMs,

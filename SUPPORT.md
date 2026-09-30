@@ -1,6 +1,6 @@
 # Support
 
-Privacy Guardrail is a public beta. Support is focused on Chrome desktop stable and the supported beta sites listed below.
+Redacto is a public beta. Support is focused on Chrome desktop stable and the supported beta sites listed below.
 
 ## Public Support
 
@@ -17,7 +17,7 @@ Use synthetic or sanitized examples only. Do not paste real personal data, secre
 
 ## Sensitive Reports
 
-Send sensitive security or privacy reports to `pii@dfki.de`.
+Send sensitive security or privacy reports to `koncsik.benedek.andras@gmail.com`.
 
 ## Public Beta Support Scope
 
@@ -44,4 +44,4 @@ Check whether:
 - Local AI status is visible and matches what you expected
 - pattern-based detection still runs when Local AI is unavailable or off
 
-Privacy Guardrail provides assistive local review. It does not guarantee perfect detection, prevention, or regulatory compliance.
+Redacto provides assistive local review. It does not guarantee perfect detection, prevention, or regulatory compliance.

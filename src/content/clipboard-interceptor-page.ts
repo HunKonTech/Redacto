@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Clipboard Interceptor (page / main world)
+ * Redacto — Clipboard Interceptor (page / main world)
  *
  * Runs in the page's main world at document_start. Monkey-patches
  * `navigator.clipboard.writeText` and (defensively) `Clipboard.prototype`
@@ -153,12 +153,4 @@ interface ReplaceMessage {
       /* user has already left the toast; nothing actionable */
     });
   });
-
-  // Boot marker so the user can confirm in DevTools that the main-world
-  // script actually loaded. Cheap and one-shot.
-  try {
-    console.debug('[PG:clipboard-page] writeText patch installed');
-  } catch {
-    /* ignore */
-  }
 })();

@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Banner anchors (content script)
+ * Redacto — Banner anchors (content script)
  *
  * Decides where a reveal banner may attach when the site adapter's reply
  * selectors do not cover a token that is on screen.

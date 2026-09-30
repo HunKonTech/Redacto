@@ -1,7 +1,7 @@
 # GitHub Repo Settings Checklist
 
 Use this checklist when preparing the public GitHub repository at
-`https://github.com/dfki-dsa/pii-guardrail-browser-extension`.
+`https://github.com/HunKonTech/pii-guardrail-browser-extension`.
 
 This project keeps repository settings as a manual release task for the first
 public beta. Do not run account automation or scripts to create labels, change

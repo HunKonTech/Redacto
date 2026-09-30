@@ -1,5 +1,5 @@
 name: False positive
-description: Report synthetic or sanitized text that Privacy Guardrail flagged incorrectly.
+description: Report synthetic or sanitized text that Redacto flagged incorrectly.
 title: "[False positive]: "
 body:
   - type: markdown

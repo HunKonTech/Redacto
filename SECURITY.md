@@ -1,10 +1,10 @@
 # Security Policy
 
-Privacy Guardrail is a public beta. Please report suspected security or privacy issues privately before opening a public issue.
+Redacto is a public beta. Please report suspected security or privacy issues privately before opening a public issue.
 
 ## Private Reporting
 
-Send sensitive reports to `pii@dfki.de`.
+Send sensitive reports to `koncsik.benedek.andras@gmail.com`.
 
 Include:
 
@@ -24,7 +24,7 @@ non-sensitive bugs, compatibility reports, documentation issues, and feature req
 **Do not post** real personal data, confidential documents, real prompts or responses,
 screenshots containing real data, secrets, or other sensitive content. Keep all examples
 **synthetic or sanitized**. For sensitive security or privacy reports, use the private channel
-above (`pii@dfki.de`). See `PRIVACY.md` for the full data-protection policy.
+above (`koncsik.benedek.andras@gmail.com`). See `PRIVACY.md` for the full data-protection policy.
 
 ## Supported Versions
 
@@ -35,6 +35,6 @@ above (`pii@dfki.de`). See `PRIVACY.md` for the full data-protection policy.
 
 ## Security Expectations
 
-Privacy Guardrail is intended to process supported-site paste content locally in the browser. The project does not include telemetry, analytics, automatic remote feedback collection, or upload of clipboard content, prompts, responses, detected entities, identity maps, vault data, feedback logs, or model input.
+Redacto is intended to process supported-site paste content locally in the browser. The project does not include telemetry, analytics, automatic remote feedback collection, or upload of clipboard content, prompts, responses, detected entities, identity maps, vault data, feedback logs, or model input.
 
 The beta is not a compliance product and does not guarantee complete detection or prevention of sensitive-data disclosure.

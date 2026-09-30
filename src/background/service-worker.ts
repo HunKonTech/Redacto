@@ -1,5 +1,7 @@
 import type {
   CancelDetectionRequest,
+  ClassifyIdentifiersRequest,
+  ClassifyIdentifiersResponse,
   DetectPiiRequest,
   DetectionCanceledResponse,
   GetNerStatusRequest,
@@ -14,6 +16,7 @@ import { loadSettings, saveSettings, logFeedback } from "../shared/storage";
 import { detectionOptionsFromSettings, fallbackNerStatus } from "../shared/detection-config";
 import { DEFAULT_SETTINGS, LOCAL_AI_ACTIVITY_WINDOW_MS } from "../shared/constants";
 import { shouldAutoWarmLocalAi } from "../shared/local-ai-warmup-gate";
+import { SEARCH_CONTENT_SCRIPT_ID, SEARCH_ENGINE_ORIGINS } from "../shared/search-engines";
 import {
   buildSystemCheckResult,
   loadSystemCheckResult,
@@ -28,6 +31,7 @@ import {
   saveSystemCheckResult,
   type SystemCheckResult,
 } from "../shared/system-check-storage";
+import { debugError } from '../shared/debug-log';
 
 const OFFSCREEN_URL = "offscreen/offscreen.html";
 const SYSTEM_CHECK_OFFSCREEN_URL = "system-check/system-check-offscreen.html";
@@ -415,7 +419,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
   };
 
   handleMessage(message, sender, safeSendResponse).catch((err) => {
-    console.error('[PG:background] Message handling failed:', err);
+    debugError('[PG:background] Message handling failed:', err);
     if (!responded) {
       safeSendResponse({
         error: err instanceof Error ? err.message : String(err),
@@ -429,6 +433,7 @@ function isBackgroundRequest(message: Message): boolean {
   return message.type === "DETECT_PII"
     || message.type === "CANCEL_DETECTION"
     || message.type === "GET_NER_STATUS"
+    || message.type === "CLASSIFY_IDENTIFIERS"
     || message.type === "LOG_FEEDBACK"
     || message.type === "OPEN_OPTIONS_PAGE"
     || message.type === "GET_SYSTEM_COMPATIBILITY_STATUS"
@@ -513,6 +518,23 @@ async function handleMessage(
             err instanceof Error ? err.message : String(err),
           ),
         } satisfies NerStatusResponse);
+      }
+      break;
+    }
+
+    case "CLASSIFY_IDENTIFIERS": {
+      const request: ClassifyIdentifiersRequest = message;
+      try {
+        const response: ClassifyIdentifiersResponse = await withOffscreenOperation(() => chrome.runtime.sendMessage(request));
+        sendResponse(response);
+      } catch (err) {
+        // Best-effort feature — a failed round trip just means the caller
+        // falls back to the hardcoded library-name list, not an error state.
+        sendResponse({
+          type: "IDENTIFIER_CLASSIFICATION_RESULT",
+          payload: { requestId: message.payload.requestId, classifications: [], available: false },
+          error: err instanceof Error ? err.message : String(err),
+        } satisfies ClassifyIdentifiersResponse);
       }
       break;
     }
@@ -686,11 +708,61 @@ function allowContentScriptSessionStorage(): void {
 
 allowContentScriptSessionStorage();
 
+/**
+ * Keep the web search content script registered exactly while "Protect web
+ * searches" is on and the user has granted the search engines. Registration
+ * persists across browser sessions, so this only has to react to changes.
+ */
+async function syncSearchContentScript(): Promise<void> {
+  if (!chrome.scripting?.registerContentScripts) return;
+  const settings = await loadSettings();
+  const granted = await chrome.permissions.contains({ origins: [...SEARCH_ENGINE_ORIGINS] });
+  const wanted = settings.searchProtectionEnabled && granted;
+  const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [SEARCH_CONTENT_SCRIPT_ID] });
+
+  if (wanted && registered.length === 0) {
+    await chrome.scripting.registerContentScripts([
+      {
+        id: SEARCH_CONTENT_SCRIPT_ID,
+        matches: [...SEARCH_ENGINE_ORIGINS],
+        js: ["content/search-script.js"],
+        runAt: "document_start",
+        persistAcrossSessions: true,
+      },
+    ]);
+  } else if (!wanted && registered.length > 0) {
+    await chrome.scripting.unregisterContentScripts({ ids: [SEARCH_CONTENT_SCRIPT_ID] });
+  }
+}
+
+function syncSearchContentScriptBestEffort(): void {
+  syncSearchContentScript().catch((err) => {
+    debugError("[PG:background] search content script sync failed", err);
+  });
+}
+
+syncSearchContentScriptBestEffort();
+chrome.permissions?.onAdded?.addListener(syncSearchContentScriptBestEffort);
+chrome.permissions?.onRemoved?.addListener(syncSearchContentScriptBestEffort);
+
+/**
+ * Keyboard shortcut for the side panel. `sidePanel.open` only works in
+ * response to a user action, so it is called straight from the listener with
+ * nothing awaited before it.
+ */
+chrome.commands?.onCommand?.addListener((command, tab) => {
+  if (command !== "open-side-panel" || typeof tab?.windowId !== "number") return;
+  chrome.sidePanel?.open({ windowId: tab.windowId }).catch((err) => {
+    debugError("[PG:background] side panel open failed", err);
+  });
+});
+
 /** Initialize default settings on install. */
 chrome.runtime.onInstalled.addListener(async () => {
   const settings = await loadSettings();
   await saveSettings(settings);
   await ensureSystemCheckResult();
+  syncSearchContentScriptBestEffort();
 
   await updateActiveTabIcon();
 });
@@ -728,6 +800,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "local" && changes[SETTINGS_KEY]) {
     const previousSettings = changes[SETTINGS_KEY].oldValue;
     const nextSettings = changes[SETTINGS_KEY].newValue;
+    if (previousSettings?.searchProtectionEnabled !== nextSettings?.searchProtectionEnabled) {
+      syncSearchContentScriptBestEffort();
+    }
     // Normalize against the default so the one-time migration that stamps the
     // dtype onto previously-stored settings does not tear down the runtime.
     const previousWebGpuDtype = previousSettings?.nerWebGpuDtype ?? DEFAULT_SETTINGS.nerWebGpuDtype;

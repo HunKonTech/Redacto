@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Placeholder Resolver (shared)
+ * Redacto — Placeholder Resolver (shared)
  *
  * Pure module mapping `(text, entityMap)` to a unified set of resolvable
  * matches plus a fully de-anonymised string. Single source of truth for

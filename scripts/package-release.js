@@ -12,6 +12,7 @@ const {
   modelAssetStatusMessage,
 } = require('./extension-packaging');
 const { checkVersion } = require('./version');
+const { ciBuildVersion } = require('./build-number');
 
 const DEFAULT_VERSION = null;
 const RELEASE_DIR = 'release';
@@ -205,14 +206,16 @@ function createReleasePackage(options = {}) {
     runStep('WASM release build', npmCommand(), ['run', 'build:wasm'], { cwd: rootDir });
     runStep('Extension build with required BardsAI assets', npmCommand(), ['run', 'build:ext'], {
       cwd: rootDir,
-      env: { NER_MODEL_ASSETS_REQUIRED: '1' },
+      env: { NER_MODEL_ASSETS_REQUIRED: '1', PG_RELEASE_BUILD: '1' },
     });
   }
 
+  // A CI build is named after its build version (0.5.0.9), as its manifest is.
+  const packageVersion = ciBuildVersion(version, options.env ?? process.env) ?? version;
   const { entries, excluded } = listPackageEntries(distDir);
-  const fileName = `privacy-guardrail-${version}.zip`;
+  const fileName = `redacto-${packageVersion}.zip`;
   const zipPath = path.join(releaseDir, fileName);
-  const checksumPath = path.join(releaseDir, `privacy-guardrail-${version}.sha256`);
+  const checksumPath = path.join(releaseDir, `redacto-${packageVersion}.sha256`);
 
   if (dryRun) {
     return {

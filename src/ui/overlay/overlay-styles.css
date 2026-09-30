@@ -1,5 +1,5 @@
 /*
- * Privacy Guardrail — Review Overlay styles
+ * Redacto — Review Overlay styles
  *
  * Loaded as a raw string by the wrapper class and injected into the
  * overlay's closed Shadow Root. All visual rules for the overlay live
@@ -422,6 +422,12 @@
 }
 .pg-highlight-url, .pg-highlight-date, .pg-highlight-misc,
 .pg-pill-url, .pg-pill-date, .pg-pill-misc {
+  background-color: var(--color-group-low-signal-bg);
+  color: var(--color-group-low-signal-fg);
+  border-bottom-color: var(--color-group-low-signal-fg);
+}
+
+.pg-highlight-identifier {
   background-color: var(--color-group-low-signal-bg);
   color: var(--color-group-low-signal-fg);
   border-bottom-color: var(--color-group-low-signal-fg);

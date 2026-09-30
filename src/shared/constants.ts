@@ -258,6 +258,7 @@ export const DEFAULT_SETTINGS: Settings = {
   curatedUrls: DEFAULT_CURATED_URLS,
   allowlist: [],
   blocklist: [],
+  publicDomains: [],
   nerProvider: 'transformers',
   nerModel: DEFAULT_NER_MODEL,
   // q4f16 external data keeps the offscreen document around 1 GB while loaded.
@@ -277,6 +278,10 @@ export const DEFAULT_SETTINGS: Settings = {
   // users can opt out from the popup if the copy toast feels intrusive.
   clipboardInterceptEnabled: true,
   skipCodeBlocks: false,
+  // Credential shapes in code are distinctive enough to scan by default.
+  codeAnonymization: 'secrets',
+  // Opt-in: switching it on asks the browser for access to the search engines.
+  searchProtectionEnabled: false,
   // Privacy-safe default: an explicit cancel asks what to do with the pending paste.
   cancelDetectionBehavior: 'ask',
   localAiUnloadTimeoutMs: OFFSCREEN_IDLE_MS,

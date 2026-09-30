@@ -12,6 +12,7 @@ import { MIN_PASTE_LENGTH } from '../shared/constants';
 import { detectionOptionsFromSettings } from '../shared/detection-config';
 import { loadSettings } from '../shared/storage';
 import { sendRuntimeMessageBestEffort } from './runtime-messaging';
+import { debugError, debugWarn } from '../shared/debug-log';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -59,6 +60,13 @@ export interface PasteInterceptorCallbacks {
    * something that could have accepted it.
    */
   onComposerLookup?: (match: ComposerMatch) => void;
+  /**
+   * Offered every paste before it is scanned. Returning true means the
+   * caller has handled it — typically by inserting it unchanged through
+   * `pasteOriginal` because it is already anonymized — and it is not scanned.
+   * A rejection is treated as false.
+   */
+  claimPaste?: (text: string) => Promise<boolean>;
 }
 
 export interface PasteInterceptorOptions {
@@ -222,6 +230,16 @@ export class PasteInterceptor {
       return;
     }
 
+    if (this.callbacks.claimPaste) {
+      let claimed = false;
+      try {
+        claimed = await this.callbacks.claimPaste(text);
+      } catch (error) {
+        debugWarn('[PG:content] Paste claim check failed; scanning instead:', error);
+      }
+      if (claimed) return;
+    }
+
     this.callbacks.onAnalyzing();
     await this.analyze(text);
   }
@@ -281,13 +299,13 @@ export class PasteInterceptor {
       const errorMessage = getErrorMessage(err);
 
       if (isExtensionReloadError(errorMessage)) {
-        console.warn('[PG:content] Extension reloaded; refresh this page to reattach Privacy Guardrail.');
+        debugWarn('[PG:content] Extension reloaded; refresh this page to reattach Redacto.');
         this.savedSelection = null;
         this.callbacks.onError('Extension reloaded. Refresh this page and paste again.');
         return;
       }
 
-      console.error('[PG:content] Detection error:', err);
+      debugError('[PG:content] Detection error:', err);
       this.callbacks.onError(errorMessage);
       this.pasteOriginal(text);
     } finally {
@@ -308,7 +326,7 @@ export class PasteInterceptor {
         }
       }
     } catch (error) {
-      console.error('[PG:content] Cancel decision failed:', error);
+      debugError('[PG:content] Cancel decision failed:', error);
     } finally {
       this.activePasteText = null;
       this.savedSelection = null;

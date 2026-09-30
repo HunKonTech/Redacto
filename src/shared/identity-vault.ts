@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Identity Vault
+ * Redacto — Identity Vault
  *
  * Global, cross-session, cross-provider mapping between detected PII and
  * the values used to anonymise it. The vault gives three properties that a
@@ -30,6 +30,7 @@
 import type { EntityType, PiiSpan } from './message-types';
 import { placeholder } from './constants';
 import { generateSyntheticValue, supportsSynthetic } from './synthetic-pool';
+import { debugWarn } from './debug-log';
 
 /** Active replacement strategy for an individual vault record. */
 export type ReplacementMode = 'placeholder' | 'synthetic';
@@ -204,6 +205,7 @@ export function activeReplacement(
 function provisionPlaceholderAndSynthetic(
   data: IdentityVaultData,
   entityType: EntityType,
+  originalText: string,
 ): { placeholderText: string; syntheticValue: string } {
   const current = data.counters[entityType] ?? 0;
   const idx = current + 1;
@@ -211,7 +213,9 @@ function provisionPlaceholderAndSynthetic(
 
   const placeholderText = placeholder(entityType, idx);
   const synthetic = supportsSynthetic(entityType)
-    ? generateSyntheticValue(entityType, current /* zero-based pool index */)
+    ? generateSyntheticValue(entityType, current /* zero-based pool index */, {
+        original: originalText,
+      })
     : null;
   return { placeholderText, syntheticValue: synthetic ?? '' };
 }
@@ -257,6 +261,7 @@ export function upsertEntity(
   const { placeholderText, syntheticValue } = provisionPlaceholderAndSynthetic(
     data,
     span.entity_type,
+    span.text,
   );
 
   // Honor the global default unless this type has no synthetic to offer,
@@ -281,6 +286,64 @@ export function upsertEntity(
   };
   data.records.push(record);
   return { record, created: true };
+}
+
+/**
+ * Look up or create the vault record for a renamed code identifier.
+ *
+ * Identifiers are case-sensitive (`Alma` and `alma` are different names), so
+ * they are matched on the exact original rather than `normalizedKey`. The
+ * alias is stored as the record's synthetic value in `synthetic` mode, which
+ * is what lets the existing restore paths reverse it like any synthetic
+ * stand-in. Returns undefined when no usable alias exists — the name is then
+ * left as it is.
+ *
+ * @param makeAlias — alias for a given vault-wide index.
+ * @param isTaken — true when an alias would collide with a name in the text.
+ */
+export function upsertIdentifierAlias(
+  data: IdentityVaultData,
+  name: string,
+  makeAlias: (index: number) => string,
+  isTaken: (alias: string) => boolean,
+  now: number = Date.now(),
+): IdentityRecord | undefined {
+  const existing = data.records.find(
+    (r) => r.entityType === 'IDENTIFIER' && r.originalText === name,
+  );
+  if (existing) {
+    if (!existing.syntheticValue || isTaken(existing.syntheticValue)) return undefined;
+    existing.lastSeenAt = now;
+    existing.usageCount += 1;
+    return existing;
+  }
+
+  const inVault = (alias: string) =>
+    data.records.some((r) => r.syntheticValue === alias || r.originalText === alias);
+  let index = (data.counters.IDENTIFIER ?? 0) + 1;
+  let alias = makeAlias(index);
+  while (isTaken(alias) || inVault(alias)) {
+    index += 1;
+    alias = makeAlias(index);
+  }
+  data.counters.IDENTIFIER = index;
+
+  const record: IdentityRecord = {
+    id: makeId(),
+    originalText: name,
+    normalizedKey: name,
+    entityType: 'IDENTIFIER',
+    placeholder: placeholder('IDENTIFIER', index),
+    syntheticValue: alias,
+    replacementMode: 'synthetic',
+    pinned: false,
+    createdAt: now,
+    updatedAt: now,
+    lastSeenAt: now,
+    usageCount: 1,
+  };
+  data.records.push(record);
+  return record;
 }
 
 /** Update fields on a record by id. Returns the updated record, or
@@ -353,8 +416,7 @@ export function buildReverseIndex(
       // The vault counter is supposed to prevent this; we log it for
       // defensive tracing.
       if (map.has(record.syntheticValue)) {
-        // eslint-disable-next-line no-console
-        console.warn(
+        debugWarn(
           '[PG:vault] synthetic value collision',
           record.syntheticValue,
         );

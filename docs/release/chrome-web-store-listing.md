@@ -1,11 +1,11 @@
 # Chrome Web Store Listing Copy
 
-Upload-ready copy and permission justifications for Privacy Guardrail `0.5.0`. This document mirrors the live Chrome Web Store listing. The Chrome Web Store upload itself remains manual — this document only prepares the text and asset references the operator pastes into the Developer Dashboard.
+Upload-ready copy and permission justifications for Redacto `0.5.0`. This document mirrors the live Chrome Web Store listing. The Chrome Web Store upload itself remains manual — this document only prepares the text and asset references the operator pastes into the Developer Dashboard.
 
 ## Item Name
 
 ```
-Privacy Guardrail
+Redacto
 ```
 
 ## Short Description (≤132 characters)
@@ -23,11 +23,11 @@ Productivity
 ## Detailed Description
 
 ```
-Privacy Guardrail — catch personal data before it reaches the AI
+Redacto — catch personal data before it reaches the AI
 
-Privacy Guardrail helps you spot personal or sensitive data in text before you paste it into a supported AI chat assistant. All detection runs locally in your browser. Nothing you type, paste, review, or correct is uploaded to any server by this extension, and there is no telemetry or analytics.
+Redacto helps you spot personal or sensitive data in text before you paste it into a supported AI chat assistant. All detection runs locally in your browser. Nothing you type, paste, review, or correct is uploaded to any server by this extension, and there is no telemetry or analytics.
 
-Developed at the German Research Center for Artificial Intelligence (DFKI), in the Data Science and its Applications research department.
+Redacto is an independent, non-commercial fork of Privacy Guardrail, which was developed at the German Research Center for Artificial Intelligence (DFKI). Redacto is not affiliated with or endorsed by DFKI.
 
 This is a public beta.
 
@@ -37,8 +37,8 @@ Detection is assistive: it helps you catch things, but it will not catch everyth
 WHAT’S NEW IN 0.5.0
 
 • Fixed a bug introduced by ChatGPT's newer desktop layout
-• Better resilience against HTML changes of the supported chat assistants. Pastes are now reviewed even when Privacy Guardrail no longer recognizes a site's message box, by using the box you pasted into. The popup tells you when it is working this way, and the on-page warning is now reserved for pastes that were not reviewed at all.
-• Privacy Guardrail now recognizes a chat by what is on the page instead of by its web address
+• Better resilience against HTML changes of the supported chat assistants. Pastes are now reviewed even when Redacto no longer recognizes a site's message box, by using the box you pasted into. The popup tells you when it is working this way, and the on-page warning is now reserved for pastes that were not reviewed at all.
+• Redacto now recognizes a chat by what is on the page instead of by its web address
 • Your original values are no longer stored against a conversation; they live only in the identity vault. With cross-session memory switched off, nothing is written to durable storage at all.
 • Fixed a bug that sometimes marked the wrong texts as sensitive
 • Conversations recorded by earlier versions keep working. Nothing is migrated, rewritten, or deleted
@@ -52,7 +52,7 @@ WHAT IT DOES
 • Keeps a local identity vault so the same value gets the same placeholder across a conversation, and supports restoration where the chat surface allows it. Restored values are highlighted in the AI response, and restoration never writes into the message box or any other field you can type in.
 • Combines fast pattern recognizers with an optional local AI model that runs entirely in your browser through ONNX Runtime Web, using WebGPU when available and CPU/WASM otherwise.
 • Falls back to a clearly degraded pattern-only mode when local AI is unavailable, instead of silently pasting unchecked text.
-• Keeps reviewing pastes when a chat site changes enough that Privacy Guardrail no longer recognizes its message box, and warns you on the page when a paste was not reviewed.
+• Keeps reviewing pastes when a chat site changes enough that Redacto no longer recognizes its message box, and warns you on the page when a paste was not reviewed.
 
 
 SUPPORTED CHAT APPS
@@ -73,12 +73,12 @@ PRIVACY POSTURE
 • With cross-session memory switched off, no original values are written to durable storage at all; restoration lasts only as long as the browser session.
 • The local AI model and runtime are packaged with the extension; there is no remote model fetch.
 • Settings, identity vault, allow/block lists, and local feedback logs are stored only in Chrome extension storage on your device.
-• Full details in the project's Privacy Policy: https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/PRIVACY.md
+• Full details in the project's Privacy Policy: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md
 
 
 SYSTEM REQUIREMENTS
 
-Privacy Guardrail runs a transformer NER model directly in your browser, which is demanding. Please review these requirements before installing:
+Redacto runs a transformer NER model directly in your browser, which is demanding. Please review these requirements before installing:
 
 • Browser: Google Chrome desktop, latest stable version. Other Chromium browsers and mobile Chrome are not supported in this release.
 • Recommended for Local AI: at least 16 GB of system RAM and a WebGPU-capable GPU for smooth, responsive detection.
@@ -92,7 +92,7 @@ These requirements exist because the AI model runs locally on your device instea
 
 KNOWN LIMITATIONS — PLEASE READ
 
-Privacy Guardrail is an assistive tool, not a compliance or data loss prevention (DLP) product. It is currently in public beta (version 0.5.0).
+Redacto is an assistive tool, not a compliance or data loss prevention (DLP) product. It is currently in public beta (version 0.5.0).
 
 • Detection can miss sensitive content (false negatives) and can flag harmless text (false positives). Always review the suggestions before sending.
 • Short names, ambiguous words, code blocks, tables, and unusual formatting reduce detection quality.
@@ -106,22 +106,22 @@ If accidentally sharing personal data with an AI service would have serious lega
 
 OPEN SOURCE AND TRANSPARENT
 
-Privacy Guardrail is open source. You can inspect the code, build it yourself, and verify the SHA-256 checksum of each release against the ZIP attached to the corresponding GitHub Release. Contributions, bug reports, and feedback are welcome through the project's GitHub repository.
+Redacto is open source. You can inspect the code, build it yourself, and verify the SHA-256 checksum of each release against the ZIP attached to the corresponding GitHub Release. Contributions, bug reports, and feedback are welcome through the project's GitHub repository.
 
 
 ABOUT THE PROJECT
 
-Privacy Guardrail is developed in the Data Science and its Applications research department at DFKI (German Research Center for Artificial Intelligence) as part of ongoing research into privacy-preserving interaction with large language models.
+Redacto is maintained by Benedek Koncsik as a free, non-commercial open-source project. It builds on Privacy Guardrail by DFKI (Apache-2.0) and adds side-panel anonymization, source-code secret detection, identifier renaming, web search protection and IDE plugins.
 
 
 PROVIDER & LEGAL NOTICE
 
-Published by Deutsches Forschungszentrum für Künstliche Intelligenz GmbH (DFKI).
+Published by Benedek Koncsik (private individual, non-commercial).
 
-• Impressum / Legal Notice (§ 5 DDG): https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/IMPRESSUM.md
-• Privacy Policy: https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/PRIVACY.md
-• Terms of Use: https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/TERMS.md
-• Source code & releases: https://github.com/dfki-dsa/pii-guardrail-browser-extension
+• Impressum / Legal Notice (§ 5 DDG): https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/IMPRESSUM.md
+• Privacy Policy: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md
+• Terms of Use: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/TERMS.md
+• Source code & releases: https://github.com/HunKonTech/pii-guardrail-browser-extension
 ```
 
 ## Single Purpose Statement
@@ -188,11 +188,11 @@ Certify all three required statements:
 
 | Field | URL |
 |---|---|
-| Homepage URL | `https://github.com/dfki-dsa/pii-guardrail-browser-extension` |
-| Support URL | `https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/SUPPORT.md` |
-| Privacy policy URL | `https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/PRIVACY.md` |
-| Security reporting | `https://github.com/dfki-dsa/pii-guardrail-browser-extension/blob/main/SECURITY.md` |
-| Sensitive contact | `pii@dfki.de` |
+| Homepage URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension` |
+| Support URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/SUPPORT.md` |
+| Privacy policy URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md` |
+| Security reporting | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/SECURITY.md` |
+| Sensitive contact | `koncsik.benedek.andras@gmail.com` |
 
 ## Screenshots And Promo Tiles
 
@@ -205,20 +205,13 @@ Required visuals before submission:
 
 ### Logo asset-to-slot mapping
 
-Brand asset sources live under `docs/assets/`. The Developer Dashboard does not theme uploaded images, so all store assets use the **dark-on-light** variants (`*-black.png`). The product logo and the DFKI logo must read as **separate marks**, never visually merged.
+Brand asset sources live under `docs/assets/` and are rendered by `node scripts/render-logo.mjs` from the mark in `docs/assets/redacto-logo.svg`. Do not use the Privacy Guardrail or DFKI logos: they are not licensed under Apache-2.0 (see `NOTICE`).
 
 | Store slot | Asset(s) | Notes |
 |---|---|---|
-| 128×128 store icon | `dist/icons/icon-128.png` (shield only) | wordmark would be unreadable at this size; do not use the combined logo here. |
-| Small promo tile (440×280) | `docs/assets/logo-privacy-guardrail-by-dfki-black.png` on a light background | the "by DFKI" variant exists precisely for this slot — there is no room to place two separate marks. |
-| Large promo tile (920×680) and marquee (1400×560) | `docs/assets/logo-privacy-guardrail-black.png` aligned left; `docs/assets/dfki_Logo_digital_black.png` aligned right | match the README hero treatment: separate marks, no connecting glyph or shared frame. |
-| Screenshots (1280×800) | DSA badge (`docs/assets/dsa-logo.png`) + DFKI mark in a small footer strip, **only on the "credits/about" screenshot** | do not stamp affiliation logos on every screenshot — reviewers and users read it as noise. |
-
-Variant selection rules:
-
-- Use `logo-privacy-guardrail-by-dfki-*.png` **only** where the DFKI logo cannot also appear independently (e.g. the small promo tile, favicons, anywhere ≤ ~500 px wide).
-- Use `logo-privacy-guardrail-*.png` (without "by DFKI") whenever the DFKI logo is shown separately on the same surface.
-- DSA logo is dark-only and is treated as a badge; keep it small (≤ 40 px tall) and only in attribution contexts.
+| 128×128 store icon | `src/assets/icons/icon128.png` (mark only) | the wordmark would be unreadable at this size. |
+| Small promo tile (440×280) and marquee (1400×560) | `docs/assets/redacto-logo-black.png` on a light background, or `docs/assets/redacto-opengraph.png` cropped | |
+| Screenshots (1280×800) | synthetic set only | |
 
 ## Pre-Submission Checklist
 
@@ -230,4 +223,4 @@ Variant selection rules:
 - [ ] Permission justifications match the audited manifest in `docs/release/chrome-permissions.md`.
 - [ ] Privacy policy and Support URLs resolve on the public GitHub repo.
 - [ ] Screenshots are from the synthetic set only (slice 14).
-- [ ] Sensitive-report email is `pii@dfki.de`.
+- [ ] Sensitive-report email is `koncsik.benedek.andras@gmail.com`.

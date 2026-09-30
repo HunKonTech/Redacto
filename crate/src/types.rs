@@ -20,6 +20,13 @@ pub enum EntityType {
     BankAccount,
     Date,
     Misc,
+    Secret,
+    Hostname,
+    /// A filesystem path that names an account, a share or an identifier.
+    FilePath,
+    /// A source-code identifier renamed by the extension. Never produced by
+    /// the pipeline; exists so the TypeScript contract stays in sync.
+    Identifier,
 }
 
 impl EntityType {
@@ -41,6 +48,10 @@ impl EntityType {
             EntityType::BankAccount => "BANK_ACCOUNT",
             EntityType::Date => "DATE",
             EntityType::Misc => "MISC",
+            EntityType::Secret => "SECRET",
+            EntityType::Hostname => "HOSTNAME",
+            EntityType::FilePath => "FILE_PATH",
+            EntityType::Identifier => "IDENTIFIER",
         }
     }
 }
@@ -107,6 +118,25 @@ pub struct PipelineConfig {
     pub context_window: usize,
     /// Whether NER is enabled (requires model to be loaded).
     pub ner_enabled: bool,
+    /// Which source-code recognizers run (secrets, internal hosts, home-directory usernames).
+    pub code_mode: CodeMode,
+    /// Extra domains whose links stay as they are, on top of the built-in public list.
+    #[serde(default)]
+    pub public_domains: Vec<String>,
+}
+
+/// How much of the source-code stage runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CodeMode {
+    /// No source-code recognizers.
+    #[default]
+    Off,
+    /// Credentials, internal hostnames and usernames in home-directory paths.
+    Secrets,
+    /// As `Secrets`; the extension additionally renames code identifiers
+    /// after review, which needs nothing from the pipeline.
+    Full,
 }
 
 impl Default for PipelineConfig {
@@ -116,6 +146,8 @@ impl Default for PipelineConfig {
             context_boost: 0.15,
             context_window: 5,
             ner_enabled: false,
+            code_mode: CodeMode::Off,
+            public_domains: Vec::new(),
         }
     }
 }
@@ -126,6 +158,8 @@ pub struct PipelineConfigOverrides {
     pub context_boost: Option<f64>,
     pub context_window: Option<usize>,
     pub ner_enabled: Option<bool>,
+    pub code_mode: Option<CodeMode>,
+    pub public_domains: Option<Vec<String>>,
 }
 
 impl PipelineConfig {
@@ -152,6 +186,12 @@ impl PipelineConfig {
         if let Some(ner_enabled) = overrides.ner_enabled {
             config.ner_enabled = ner_enabled;
         }
+        if let Some(code_mode) = overrides.code_mode {
+            config.code_mode = code_mode;
+        }
+        if let Some(public_domains) = overrides.public_domains {
+            config.public_domains = public_domains;
+        }
         config
     }
 }
@@ -177,6 +217,10 @@ mod tests {
         EntityType::BankAccount,
         EntityType::Date,
         EntityType::Misc,
+        EntityType::Secret,
+        EntityType::Hostname,
+        EntityType::FilePath,
+        EntityType::Identifier,
     ];
 
     #[test]
@@ -195,6 +239,10 @@ mod tests {
             ("\"USERNAME\"", EntityType::Username),
             ("\"PASSWORD\"", EntityType::Password),
             ("\"BANK_ACCOUNT\"", EntityType::BankAccount),
+            ("\"SECRET\"", EntityType::Secret),
+            ("\"HOSTNAME\"", EntityType::Hostname),
+            ("\"FILE_PATH\"", EntityType::FilePath),
+            ("\"IDENTIFIER\"", EntityType::Identifier),
         ];
 
         for (json, expected) in cases {
@@ -220,5 +268,23 @@ mod tests {
             config.context_window,
             PipelineConfig::default().context_window
         );
+        assert_eq!(config.code_mode, CodeMode::Off);
+    }
+
+    #[test]
+    fn pipeline_config_accepts_code_mode_override() {
+        let config = PipelineConfig::from_json_or_default(r#"{"code_mode":"secrets"}"#);
+
+        assert_eq!(config.code_mode, CodeMode::Secrets);
+        let full = PipelineConfig::from_json_or_default(r#"{"code_mode":"full"}"#);
+        assert_eq!(full.code_mode, CodeMode::Full);
+    }
+
+    #[test]
+    fn pipeline_config_accepts_public_domains() {
+        let config = PipelineConfig::from_json_or_default(r#"{"public_domains":["acme.hu"]}"#);
+
+        assert_eq!(config.public_domains, vec!["acme.hu".to_string()]);
+        assert!(PipelineConfig::default().public_domains.is_empty());
     }
 }

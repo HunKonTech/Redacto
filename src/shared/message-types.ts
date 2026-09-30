@@ -25,7 +25,11 @@ export type EntityType =
   | 'PASSWORD'
   | 'BANK_ACCOUNT'
   | 'DATE'
-  | 'MISC';
+  | 'MISC'
+  | 'SECRET'
+  | 'HOSTNAME'
+  | 'FILE_PATH'
+  | 'IDENTIFIER';
 
 export const ENTITY_TYPES: readonly EntityType[] = [
   'PERSON',
@@ -44,6 +48,10 @@ export const ENTITY_TYPES: readonly EntityType[] = [
   'BANK_ACCOUNT',
   'DATE',
   'MISC',
+  'SECRET',
+  'HOSTNAME',
+  'FILE_PATH',
+  'IDENTIFIER',
 ];
 
 /** Detection source — which pipeline stage produced this span. */
@@ -69,7 +77,17 @@ export interface PipelineConfig {
   context_boost: number;
   context_window: number;
   ner_enabled: boolean;
+  /** Source-code recognizers: credentials, internal hostnames, home-directory usernames. */
+  code_mode: CodeAnonymizationMode;
+  /** Domains whose links stay as they are, on top of the built-in public list. */
+  public_domains?: string[];
 }
+
+/**
+ * Which source-code handling runs. Mirrors the Rust `CodeMode` enum.
+ * `full` also renames the identifiers a pasted snippet declares.
+ */
+export type CodeAnonymizationMode = 'off' | 'secrets' | 'full';
 
 export type NerProviderMode = 'off' | 'fixture' | 'transformers';
 export type NerModelKey = 'ai4privacy' | 'bardsai' | 'hikmaai';
@@ -343,6 +361,8 @@ export interface Settings {
   curatedUrls: string[];
   allowlist: AllowlistEntry[];
   blocklist: BlocklistEntry[];
+  /** Sites whose links are left as they are; every other link is replaced. */
+  publicDomains: string[];
   nerProvider: NerProviderMode;
   nerModel: NerModelKey;
   /** ONNX artifact used when Local AI runs on WebGPU. The wasm fallback
@@ -362,6 +382,13 @@ export interface Settings {
   clipboardInterceptEnabled: boolean;
   /** When true, skip PII detection inside fenced code blocks / preformatted regions. */
   skipCodeBlocks: boolean;
+  /** Source-code recognizers applied to pasted text (API keys, credentials, internal hosts). */
+  codeAnonymization: CodeAnonymizationMode;
+  /**
+   * Review pastes and held searches on the web search engines in
+   * `SEARCH_ENGINE_ORIGINS`. Needs the optional host permission for them.
+   */
+  searchProtectionEnabled: boolean;
   /** What to do after the user explicitly cancels a running paste scan. */
   cancelDetectionBehavior: CancelDetectionBehavior;
   /** How long the Local AI runtime may remain loaded after relevant activity. Null keeps it for the browser session. */
@@ -378,6 +405,38 @@ export interface Settings {
  */
 export interface GetPageProtectionStateRequest {
   type: 'GET_PAGE_PROTECTION_STATE';
+}
+
+/**
+ * Ask the offscreen document's identifier-classifier model whether each of
+ * `texts` (code regions from a paste) contains OWN or LIB identifiers.
+ * Best-effort: the caller falls back to the hardcoded library-name list for
+ * any name the response doesn't cover, so a missing/unavailable model is not
+ * an error condition for this request.
+ */
+export interface ClassifyIdentifiersRequest {
+  type: 'CLASSIFY_IDENTIFIERS';
+  payload: {
+    requestId: string;
+    /** Code region texts to classify, in context (not isolated names). */
+    texts: string[];
+  };
+}
+
+export interface IdentifierClassification {
+  name: string;
+  label: 'OWN' | 'LIB';
+}
+
+export interface ClassifyIdentifiersResponse {
+  type: 'IDENTIFIER_CLASSIFICATION_RESULT';
+  payload: {
+    requestId: string;
+    classifications: IdentifierClassification[];
+    /** False when the model could not be loaded; the list is then always empty. */
+    available: boolean;
+  };
+  error?: string;
 }
 
 /**
@@ -421,4 +480,6 @@ export type Message =
   | ReRunSystemCheckRequest
   | ApplyCriticalRecommendationRequest
   | GetPageProtectionStateRequest
-  | PageProtectionStateResponse;
+  | PageProtectionStateResponse
+  | ClassifyIdentifiersRequest
+  | ClassifyIdentifiersResponse;

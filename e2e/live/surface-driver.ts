@@ -82,7 +82,7 @@ export class LiveSurfaceDriver {
     return handleKnownBlockers(this.page, this.provider);
   }
 
-  // Privacy Guardrail's own surfaces live in closed shadow roots, so any dialog
+  // Redacto's own surfaces live in closed shadow roots, so any dialog
   // found here belongs to the provider. Only a dialog that blocks the page counts:
   // one that is modal or sits over the middle of the viewport, not a side panel.
   async providerBlockerVisible(): Promise<boolean> {

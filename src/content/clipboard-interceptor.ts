@@ -1,5 +1,5 @@
 /**
- * Privacy Guardrail — Clipboard Interceptor (isolated coordinator)
+ * Redacto — Clipboard Interceptor (isolated coordinator)
  *
  * Drives a singleton "Replace with originals" toast. Two trigger sources:
  *

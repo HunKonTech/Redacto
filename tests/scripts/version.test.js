@@ -79,15 +79,15 @@ describe('release version tooling', () => {
 
   test('checks release archive and checksum names when present', () => {
     fs.mkdirSync(path.join(tempRoot, 'release'));
-    fs.writeFileSync(path.join(tempRoot, 'release', 'privacy-guardrail-0.1.0.zip'), 'zip');
+    fs.writeFileSync(path.join(tempRoot, 'release', 'redacto-0.1.0.zip'), 'zip');
     fs.writeFileSync(path.join(tempRoot, 'release', 'privacy-guardrail-latest.sha256'), 'checksum');
 
     const result = checkVersion({ rootDir: tempRoot, expectedVersion: '0.2.0' });
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        'release/privacy-guardrail-0.1.0.zip carries version 0.1.0; expected 0.2.0.',
-        'release/privacy-guardrail-latest.sha256 must be named privacy-guardrail-0.2.0.zip or .sha256.',
+        'release/redacto-0.1.0.zip carries version 0.1.0; expected 0.2.0.',
+        'release/privacy-guardrail-latest.sha256 must be named redacto-0.2.0.zip or .sha256.',
       ])
     );
   });

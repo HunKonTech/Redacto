@@ -1,0 +1,55 @@
+/* The side panel is laid out for a narrow browser panel; centre it on a page. */
+body {
+  margin: 0;
+  background: var(--color-surface);
+}
+
+/* Beats the panel's own `#app { margin: 0 }`. */
+body #app {
+  max-width: 960px;
+  height: auto;
+  min-height: calc(100vh - 60px);
+  margin: 0 auto;
+}
+
+.pg-web-note {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 10px 16px 16px;
+  box-sizing: border-box;
+  font: 12px/1.5 var(--font-sans);
+  color: var(--color-muted);
+}
+
+.pg-web-note a {
+  color: var(--color-accent);
+}
+
+.pg-web-offline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 0;
+}
+
+.pg-web-offline button {
+  font: inherit;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.pg-web-version {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--color-subtle);
+}
+
+.pg-web-offline button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

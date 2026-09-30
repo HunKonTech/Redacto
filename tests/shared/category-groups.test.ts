@@ -30,7 +30,8 @@ const ENTITY_TO_EXPECTED_GROUP: [EntityType, string][] = [
   ['LOCATION', 'Location'],
   ['PASSWORD', 'Password'],
   ['ORGANIZATION', 'Organization'],
-  ['URL', 'Low-signal'],
+  ['URL', 'Network'],
+  ['FILE_PATH', 'Network'],
   ['DATE', 'Low-signal'],
   ['MISC', 'Low-signal'],
 ];
@@ -68,8 +69,8 @@ describe('entitiesForGroup', () => {
     expect(members).toHaveLength(4);
   });
 
-  test('Network contains IP_ADDRESS only', () => {
-    expect(entitiesForGroup('Network')).toEqual(['IP_ADDRESS']);
+  test('Network contains addresses, hosts, links and paths', () => {
+    expect(entitiesForGroup('Network')).toEqual(['IP_ADDRESS', 'HOSTNAME', 'URL', 'FILE_PATH']);
   });
 
   test('Location contains LOCATION only', () => {
@@ -77,17 +78,17 @@ describe('entitiesForGroup', () => {
   });
 
   test('Password contains PASSWORD only', () => {
-    expect(entitiesForGroup('Password')).toEqual(['PASSWORD']);
+    expect(entitiesForGroup('Password')).toEqual(['PASSWORD', 'SECRET']);
   });
 
   test('Organization contains ORGANIZATION only', () => {
     expect(entitiesForGroup('Organization')).toEqual(['ORGANIZATION']);
   });
 
-  test('Low-signal contains URL, DATE, and MISC', () => {
+  test('Low-signal contains DATE and MISC', () => {
     const members = entitiesForGroup('Low-signal');
-    expect(members).toEqual(expect.arrayContaining(['URL', 'DATE', 'MISC']));
-    expect(members).toHaveLength(3);
+    expect(members).toEqual(expect.arrayContaining(['DATE', 'MISC']));
+    expect(members).toHaveLength(2);
   });
 });
 
@@ -146,11 +147,11 @@ describe('filterByGroup', () => {
     expect(result.map((s) => s.entity_type)).toEqual(['PERSON', 'EMAIL']);
   });
 
-  test('Low-signal off by default drops URL and DATE', () => {
+  test('Low-signal off by default drops DATE but keeps private links', () => {
     const spans = [makeSpan('PERSON'), makeSpan('URL'), makeSpan('DATE'), makeSpan('EMAIL')];
     const groupsEnabled = defaultGroupsEnabled(); // Low-signal is false
     const result = filterByGroup(spans, groupsEnabled);
-    expect(result.map((s) => s.entity_type)).toEqual(['PERSON', 'EMAIL']);
+    expect(result.map((s) => s.entity_type)).toEqual(['PERSON', 'URL', 'EMAIL']);
   });
 
   test('MISC is filtered when Low-signal is disabled', () => {

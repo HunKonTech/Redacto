@@ -53,6 +53,10 @@ const URL_KEYWORDS: &[&str] = &[
     "url", "link", "website", "web", "site", "homepage", "profile",
 ];
 
+const FILE_PATH_KEYWORDS: &[&str] = &[
+    "path", "file", "folder", "directory", "dir", "saved", "mappa", "fájl", "könyvtár",
+];
+
 const USERNAME_KEYWORDS: &[&str] = &["username", "user", "handle", "login", "account", "profile"];
 
 const PASSWORD_KEYWORDS: &[&str] = &["password", "passcode", "secret", "credential", "token"];
@@ -99,6 +103,10 @@ fn keywords_for(entity_type: EntityType) -> &'static [&'static str] {
         EntityType::IpAddress => &[],
         EntityType::Organization => &[],
         EntityType::Misc => &[],
+        EntityType::Secret => &[],
+        EntityType::Hostname => &[],
+        EntityType::FilePath => FILE_PATH_KEYWORDS,
+        EntityType::Identifier => &[],
     }
 }
 

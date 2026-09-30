@@ -1,6 +1,6 @@
-# Building Privacy Guardrail
+# Building Redacto
 
-This guide covers local development builds for Privacy Guardrail, the public beta Chrome extension source published at `git@github.com:dfki-dsa/pii-guardrail-browser-extension.git`.
+This guide covers local development builds for Redacto, the public beta Chrome extension source published at `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
 
 ## Prerequisites
 
@@ -118,6 +118,16 @@ npm run test:ner:model
 
 Those local model fixtures are not part of the public initial commit.
 
+The identifier classifier has its own opt-in real-model test in the committed
+`tests-model/` directory (CI runs it after preparing the model) — it compiles the
+provider straight from TypeScript and runs the real ONNX session (in a child
+`node` process, not mocked), so it needs the model built first:
+
+```bash
+npm run prepare:model:identifier-classifier
+npm run test:identifier-classifier:model
+```
+
 ## Load In Chrome
 
 1. Build the extension.
@@ -132,6 +142,12 @@ Those local model fixtures are not part of the public initial commit.
    - `gemini.google.com`
 
 The Chrome Web Store is the primary install path for beta users. Loading unpacked builds is for development and manual release validation.
+
+## IDE Plugins
+
+VS Code, JetBrains and Visual Studio plugins with the side panel: see [ide-plugins.md](ide-plugins.md).
+
+The side panel as a static web page on GitHub Pages: see [web-page.md](web-page.md).
 
 ## Common Build Problems
 

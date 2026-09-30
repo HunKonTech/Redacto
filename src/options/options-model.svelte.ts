@@ -3,6 +3,7 @@ import type {
   AllowlistEntry,
   BlocklistEntry,
   CancelDetectionBehavior,
+  CodeAnonymizationMode,
   EntityType,
   GroupName,
   LocalAiUnloadTimeoutMs,
@@ -14,8 +15,10 @@ import type {
   SystemCompatibilityStatus,
   SystemCompatibilityStatusResponse,
 } from '../shared/message-types';
+import { SEARCH_ENGINE_ORIGINS } from '../shared/search-engines';
 import { GROUP_NAMES } from '../shared/category-groups';
 import { findConflictingPattern } from '../shared/list-conflicts';
+import { normalizeDomain } from '../shared/public-domains';
 import {
   type IdentityRecord,
   type IdentityVaultData,
@@ -44,6 +47,7 @@ export type OptionsModel = {
   vaultRecords: Writable<IdentityRecord[]>;
   allowlistError: Writable<ListError>;
   blocklistError: Writable<ListError>;
+  publicDomainError: Writable<ListError>;
   systemCompatibility: Writable<SystemCompatibilityStatus | null>;
   localAiWarmupState: Writable<'idle' | 'loading' | 'ready' | 'failed'>;
   groupNames: readonly GroupName[];
@@ -63,6 +67,10 @@ export type OptionsModel = {
   removeAllowlistEntry: (index: number) => Promise<void>;
   clearAllowlistError: () => void;
 
+  addPublicDomain: (raw: string) => Promise<boolean>;
+  removePublicDomain: (domain: string) => Promise<void>;
+  clearPublicDomainError: () => void;
+
   addBlocklistEntry: (pattern: string, scope: EntityType) => Promise<boolean>;
   removeBlocklistEntry: (index: number) => Promise<void>;
   updateBlocklistCategory: (index: number, scope: EntityType) => Promise<void>;
@@ -78,6 +86,9 @@ export type OptionsModel = {
 
   setCancelDetectionBehavior: (value: CancelDetectionBehavior) => Promise<void>;
   setSkipCodeBlocks: (value: boolean) => Promise<void>;
+  setCodeAnonymization: (value: CodeAnonymizationMode) => Promise<void>;
+  /** Resolves false when the user declines the browser's permission prompt. */
+  setSearchProtectionEnabled: (value: boolean) => Promise<boolean>;
 
   setDebug: (value: boolean) => Promise<void>;
   applyDebugSystemCheckScenario: (scenario: DebugSystemCheckScenario) => Promise<void>;
@@ -109,6 +120,7 @@ export function createOptionsModel(): OptionsModel {
   const vaultRecords = writable<IdentityRecord[]>([]);
   const allowlistError = writable<ListError>(null);
   const blocklistError = writable<ListError>(null);
+  const publicDomainError = writable<ListError>(null);
   const systemCompatibility = writable<SystemCompatibilityStatus | null>(null);
   const localAiWarmupState = writable<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
@@ -255,6 +267,7 @@ export function createOptionsModel(): OptionsModel {
     vaultRecords,
     allowlistError,
     blocklistError,
+    publicDomainError,
     systemCompatibility,
     localAiWarmupState,
     groupNames: GROUP_NAMES,
@@ -301,6 +314,27 @@ export function createOptionsModel(): OptionsModel {
     },
     clearAllowlistError: () => allowlistError.set(null),
 
+    addPublicDomain: async (raw) => {
+      if (!currentSettings) return false;
+      const domain = normalizeDomain(raw);
+      if (!domain) {
+        publicDomainError.set('Enter a domain such as acme.com.');
+        return false;
+      }
+      if (currentSettings.publicDomains.includes(domain)) {
+        publicDomainError.set(`${domain} is already on the list.`);
+        return false;
+      }
+      await saveAndBroadcast({ publicDomains: [...currentSettings.publicDomains, domain] });
+      publicDomainError.set(null);
+      return true;
+    },
+    removePublicDomain: async (domain) => {
+      if (!currentSettings) return;
+      await saveAndBroadcast({ publicDomains: currentSettings.publicDomains.filter((d) => d !== domain) });
+    },
+    clearPublicDomainError: () => publicDomainError.set(null),
+
     addBlocklistEntry: async (raw, scope) => {
       const pattern = raw.trim();
       if (!pattern || !currentSettings) return false;
@@ -343,7 +377,7 @@ export function createOptionsModel(): OptionsModel {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `privacy-guardrail-vault-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `redacto-vault-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     },
@@ -388,6 +422,18 @@ export function createOptionsModel(): OptionsModel {
 
     setCancelDetectionBehavior: (value) => saveAndBroadcast({ cancelDetectionBehavior: value }),
     setSkipCodeBlocks: (value) => saveAndBroadcast({ skipCodeBlocks: value }),
+    setCodeAnonymization: (value) => saveAndBroadcast({ codeAnonymization: value }),
+    setSearchProtectionEnabled: async (value) => {
+      const origins = [...SEARCH_ENGINE_ORIGINS];
+      if (value) {
+        // Must be the first await: the prompt is only allowed inside the click.
+        const granted = await chrome.permissions.request({ origins });
+        if (!granted) return false;
+      }
+      await saveAndBroadcast({ searchProtectionEnabled: value });
+      if (!value) await chrome.permissions.remove({ origins }).catch(() => false);
+      return true;
+    },
 
     setDebug: (value) => saveAndBroadcast({ debug: value }),
     applyDebugSystemCheckScenario: async (scenario) => {
