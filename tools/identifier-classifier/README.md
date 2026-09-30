@@ -49,7 +49,8 @@ cd tools\identifier-classifier
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# PyTorch first. CPU only:
+# PyTorch FIRST, on its own line, before requirements.txt and run_all.ps1.
+# CPU only:
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 # (with an NVIDIA GPU instead: --index-url https://download.pytorch.org/whl/cu124)
 pip install -r requirements.txt

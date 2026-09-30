@@ -11,7 +11,8 @@
   .\run_all.ps1 -From train              # resume an interrupted training run
 
   -Upload publishes the exported model to -HfRepo after the export, with a
-  model card. Log in once first: `pip install -U huggingface_hub` then `hf auth login`.
+  model card. Log in once first with `hf auth login` (the hf CLI comes with
+  huggingface_hub, installed by requirements.txt).
 
   Training checkpoints about once an hour. If the PC restarts or the window
   is closed, run `.\run_all.ps1 -From train` again and it continues.
@@ -121,7 +122,7 @@ to rename a pasted snippet's own identifiers and keep library names readable.
   if (Test-Path $metrics) { Copy-Item $metrics (Join-Path $export 'metrics.json') -Force }
 
   $hf = Get-Command hf -ErrorAction SilentlyContinue
-  if (-not $hf) { throw 'The hf CLI is missing: pip install -U huggingface_hub, then hf auth login.' }
+  if (-not $hf) { throw 'The hf CLI is missing: pip install "huggingface_hub>=0.34,<1.0", then hf auth login.' }
   Invoke-Checked { hf upload $HfRepo $export . --repo-type model --commit-message "Retrain on $BaseModel" }
   Write-Host "Uploaded: https://huggingface.co/$HfRepo" -ForegroundColor Green
 }
