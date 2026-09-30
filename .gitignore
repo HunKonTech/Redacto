@@ -19,6 +19,7 @@ release/*.zip
 release/*.sha256
 release/edge/
 release/firefox/
+release/hf-model/
 
 # Rust and WebAssembly artifacts
 crate/target/

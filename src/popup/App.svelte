@@ -3,6 +3,7 @@
   import { canOpenSidePanel, openSidePanel as openBrowserSidePanel } from '../shared/side-panel';
   import { createAppModels, tabs } from "./popup-model.svelte";
   import DetectTab from "./components/DetectTab.svelte";
+  import ModelDownloadStatus from "./components/ModelDownloadStatus.svelte";
   import PGLogo from "./components/PGLogo.svelte";
   import ProtectTab from "./components/ProtectTab.svelte";
   import SettingsTab from "./components/SettingsTab.svelte";
@@ -55,6 +56,8 @@
         {/each}
       </nav>
     </header>
+
+    <ModelDownloadStatus />
 
     <section class="shell-body" aria-live="polite">
       {#if $activeTab === "protect"}

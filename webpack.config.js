@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -43,13 +44,22 @@ module.exports = (_env = {}) => {
     __dirname,
   );
   console.log(`[build] manifest version ${manifestVersion}`);
-  // One code base for every browser; only the manifest and output folder
-  // differ for Firefox (BROWSER=firefox or --env browser=firefox).
+  // One code base for every browser; for Firefox (BROWSER=firefox or --env
+  // browser=firefox) only the manifest, the output folder and where the Local
+  // AI model comes from differ: addons.mozilla.org caps packages at 200 MB,
+  // so Firefox downloads the model from Hugging Face on first use instead of
+  // packaging it (src/shared/local-ai-model-download.ts).
   const browser = _env.browser || process.env.BROWSER || 'chrome';
   if (!['chrome', 'firefox'].includes(browser)) {
     throw new Error(`Unknown BROWSER "${browser}"; expected chrome or firefox.`);
   }
   console.log(`[build] browser ${browser}`);
+  const modelSource = browser === 'firefox' ? 'huggingface' : 'bundled';
+  const modelHfRepo = process.env.MODEL_HF_REPO || '';
+  const modelRevision = process.env.MODEL_REVISION || '';
+  if (modelSource === 'huggingface') {
+    console.log(`[build] Local AI model from Hugging Face ${modelHfRepo || '(default repo)'} @ ${modelRevision || 'main'}`);
+  }
 
   return {
     entry: {
@@ -140,7 +150,14 @@ module.exports = (_env = {}) => {
 
       new LocalNerAssetsPlugin({
         rootDir: __dirname,
-        requirePreparedModel,
+        // A downloaded model is not needed at build time.
+        requirePreparedModel: requirePreparedModel && modelSource === 'bundled',
+      }),
+
+      new webpack.DefinePlugin({
+        __REDACTO_MODEL_SOURCE__: JSON.stringify(modelSource),
+        __REDACTO_MODEL_HF_REPO__: JSON.stringify(modelHfRepo),
+        __REDACTO_MODEL_REVISION__: JSON.stringify(modelRevision),
       }),
 
       new TermsHtmlPlugin({ rootDir: __dirname }),
@@ -173,7 +190,7 @@ module.exports = (_env = {}) => {
             to: 'wasm/[name][ext]',
             noErrorOnMissing: true,
           },
-          ...getNerAssetCopyPatterns(__dirname),
+          ...getNerAssetCopyPatterns(__dirname, { includeNerModel: modelSource === 'bundled' }),
         ],
       }),
 

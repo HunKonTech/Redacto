@@ -4,6 +4,7 @@ import type {
   ClassifyIdentifiersResponse,
   DetectPiiRequest,
   DetectionCanceledResponse,
+  DetectionOptions,
   GetNerStatusRequest,
   Message,
   NerStatusResponse,
@@ -33,6 +34,15 @@ import {
 } from "../shared/system-check-storage";
 import { debugError } from '../shared/debug-log';
 import { openSidePanel } from '../shared/side-panel';
+import {
+  isModelDownloadActive,
+  loadModelDownloadState,
+  MODEL_DOWNLOAD_STATE_KEY,
+  modelDownloadMessage,
+  modelDownloadPercent,
+  modelDownloadsEnabled,
+} from '../shared/local-ai-model-download';
+import { ensureLocalAiModel, isLocalAiModelReady } from './local-ai-model-downloader';
 import {
   closeOffscreenDocument,
   createOffscreenDocument,
@@ -181,6 +191,37 @@ async function persistWarmupOutcome(status: NerStatusResponse["payload"]): Promi
   await recordRuntimeState(status.state);
 }
 
+/**
+ * Firefox downloads the Local AI model on first use (no-op where it is
+ * packaged). Until it is there, detection runs pattern-only and the status
+ * reports the download instead of a load failure, so Local AI is not switched
+ * off while the model is on its way.
+ */
+const MODEL_DOWNLOAD_RETRY_MS = 5 * 60_000;
+
+async function localAiModelPending(config: DetectionOptions): Promise<boolean> {
+  if (!modelDownloadsEnabled() || config.ner_provider === "off") return false;
+  if (await isLocalAiModelReady()) return false;
+  // After a failure, retry at most every few minutes rather than on every
+  // paste; the popup's "Try again" retries at once.
+  const download = await loadModelDownloadState();
+  if (download.phase !== "failed" || Date.now() - download.updatedAt > MODEL_DOWNLOAD_RETRY_MS) {
+    void ensureLocalAiModel("local-ai-requested");
+  }
+  return true;
+}
+
+async function modelDownloadNerStatus(config: DetectionOptions): Promise<NerStatusResponse> {
+  return {
+    type: "NER_STATUS",
+    payload: {
+      mode: config.ner_provider ?? "transformers",
+      state: "loading",
+      message: modelDownloadMessage(await loadModelDownloadState()),
+    },
+  };
+}
+
 async function applyCriticalLocalAiRecommendation(result: SystemCheckResult): Promise<SystemCheckResult> {
   if (result.recommendation !== "auto-disable-local-ai" || result.lowMemoryOverride) {
     return result;
@@ -299,6 +340,8 @@ async function warmUpLocalAiFromActivity(settings: Awaited<ReturnType<typeof loa
 
   const systemStatus = (await ensureSystemCheckResult()).payload;
   if (!shouldAutoWarmLocalAi(settings, systemStatus, null)) return;
+
+  if (await localAiModelPending(detectionOptionsFromSettings(settings))) return;
 
   activityWarmupInFlight = (async () => {
     const config = detectionOptionsFromSettings(settings);
@@ -445,6 +488,7 @@ function isBackgroundRequest(message: Message): boolean {
     || message.type === "GET_SYSTEM_COMPATIBILITY_STATUS"
     || message.type === "SET_LOCAL_AI_DETECTION"
     || message.type === "WARM_UP_LOCAL_AI"
+    || message.type === "DOWNLOAD_LOCAL_AI_MODEL"
     || message.type === "SUPPORTED_PAGE_ACTIVITY"
     || message.type === "DISMISS_CRITICAL_LOCAL_AI_MODAL"
     || message.type === "RE_RUN_SYSTEM_CHECK"
@@ -460,6 +504,7 @@ async function handleMessage(
     case "DETECT_PII": {
       const settings = await loadSettings();
       const config = detectionOptionsFromSettings(settings, message.payload.config);
+      if (await localAiModelPending(config)) config.ner_provider = "off";
       const request: DetectPiiRequest = {
         ...message,
         payload: { ...message.payload, config },
@@ -506,6 +551,11 @@ async function handleMessage(
           type: "NER_STATUS",
           payload: fallbackNerStatus("off", "Local AI detection is turned off."),
         } satisfies NerStatusResponse);
+        break;
+      }
+
+      if (await localAiModelPending(config)) {
+        sendResponse(await modelDownloadNerStatus(config));
         break;
       }
 
@@ -582,6 +632,11 @@ async function handleMessage(
         break;
       }
 
+      if (await localAiModelPending(config)) {
+        sendResponse(await modelDownloadNerStatus(config));
+        break;
+      }
+
       try {
         const status: NerStatusResponse = await withOffscreenOperation(async () => {
           await chrome.runtime.sendMessage({
@@ -604,6 +659,12 @@ async function handleMessage(
         await persistWarmupOutcome(fallback);
         sendResponse({ type: "NER_STATUS", payload: fallback } satisfies NerStatusResponse);
       }
+      break;
+    }
+
+    case "DOWNLOAD_LOCAL_AI_MODEL": {
+      void ensureLocalAiModel("user-retry");
+      sendResponse({ ok: true });
       break;
     }
 
@@ -771,10 +832,16 @@ chrome.runtime.onInstalled.addListener(async () => {
   syncSearchContentScriptBestEffort();
 
   await updateActiveTabIcon();
+  // First install downloads the model; every update checks for a newer one.
+  if ((await loadSettings()).nerProvider !== "off") void ensureLocalAiModel("installed-or-updated");
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void updateActiveTabIcon();
+  void loadSettings().then((settings) => {
+    // Resumes a download the browser interrupted.
+    if (settings.nerProvider !== "off") void ensureLocalAiModel("startup");
+  });
 });
 
 /** Update icon based on active tab URL. */
@@ -803,7 +870,17 @@ chrome.tabs.onUpdated.addListener(async (_tabId, _changeInfo, tab) => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes[MODEL_DOWNLOAD_STATE_KEY]) {
+    const previous = changes[MODEL_DOWNLOAD_STATE_KEY].oldValue;
+    const next = changes[MODEL_DOWNLOAD_STATE_KEY].newValue;
+    if (!next || previous?.phase !== next.phase || modelDownloadPercent(previous ?? next) !== modelDownloadPercent(next)) {
+      void updateActiveTabIcon();
+    }
+  }
   if (areaName === "local" && changes[SETTINGS_KEY]) {
+    if (changes[SETTINGS_KEY].oldValue?.nerProvider === "off" && changes[SETTINGS_KEY].newValue?.nerProvider !== "off") {
+      void ensureLocalAiModel("local-ai-switched-on");
+    }
     const previousSettings = changes[SETTINGS_KEY].oldValue;
     const nextSettings = changes[SETTINGS_KEY].newValue;
     if (previousSettings?.searchProtectionEnabled !== nextSettings?.searchProtectionEnabled) {
@@ -849,5 +926,13 @@ async function updateIcon(tab: chrome.tabs.Tab): Promise<void> {
   const iconPath = settings.enabled && isMonitored ? ACTIVE_ICON_PATHS : INACTIVE_ICON_PATHS;
 
   await chrome.action.setIcon({ path: iconPath, tabId: tab.id });
-  await chrome.action.setBadgeText({ text: "", tabId: tab.id });
+  await chrome.action.setBadgeText({ text: await modelDownloadBadgeText(), tabId: tab.id });
+}
+
+/** Download progress on the toolbar icon while the Local AI model downloads. */
+async function modelDownloadBadgeText(): Promise<string> {
+  if (!modelDownloadsEnabled()) return "";
+  const state = await loadModelDownloadState();
+  if (!isModelDownloadActive(state)) return state.phase === "failed" && !state.readyVersion ? "!" : "";
+  return state.phase === "downloading" ? `${modelDownloadPercent(state)}%` : "…";
 }

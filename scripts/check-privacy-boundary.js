@@ -15,16 +15,34 @@ const FORBIDDEN_RUNTIME_PATTERNS = [
 
 const ALLOWED_RUNTIME_FINDINGS = [
   {
-    file: 'src/offscreen/ner-provider.ts',
+    file: 'src/offscreen/identifier-classifier-provider.ts',
     id: 'fetch',
     snippet: "fetch(url, { method: 'HEAD' })",
     reason: 'local extension asset existence check for packaged model/runtime files',
   },
   {
-    file: 'src/offscreen/identifier-classifier-provider.ts',
+    file: 'src/background/local-ai-model-downloader.ts',
     id: 'fetch',
-    snippet: "fetch(url, { method: 'HEAD' })",
-    reason: 'local extension asset existence check for packaged model/runtime files',
+    snippet: 'fetch: (input, init) => fetch(input, init)',
+    reason: 'Firefox build: downloads the Local AI model files (no user data) from its Hugging Face repository',
+  },
+  {
+    file: 'src/background/local-ai-model-downloader.ts',
+    id: 'fetch',
+    snippet: 'await deps.fetch(huggingFaceFileUrl(file.path)',
+    reason: 'Firefox build: model file download from the pinned Hugging Face repository, SHA-256 verified',
+  },
+  {
+    file: 'src/background/local-ai-model-downloader.ts',
+    id: 'fetch',
+    snippet: 'await deps.fetch(huggingFaceFileUrl(MODEL_MANIFEST_FILE)',
+    reason: 'Firefox build: model manifest (file list and hashes) from the Hugging Face repository',
+  },
+  {
+    file: 'src/shared/local-ai-model-download.ts',
+    id: 'fetch',
+    snippet: 'return fetch(input, init);',
+    reason: 'model loader fetch (NER asset checks and loads): packaged model/runtime files, or the downloaded model from the extension cache',
   },
   {
     file: 'src/web/sw.js',

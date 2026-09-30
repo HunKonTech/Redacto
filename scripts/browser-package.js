@@ -101,6 +101,7 @@ function stage(target, version) {
  * @param {string} target.label     browser name for log output
  * @param {string} target.distDir   webpack output folder of this build
  * @param {object} [target.buildEnv] extra env for `npm run build:ext`
+ * @param {boolean} [target.downloadsModel] Local AI model is downloaded at runtime, not packaged
  * @param {string} target.usage     command line shown on bad arguments
  * @param {string} target.installHint how to load the unpacked folder
  */
@@ -109,7 +110,8 @@ function buildBrowserPackage(target, argv) {
   const packageVersion = readPackageVersion(ROOT_DIR);
   const version = ciBuildVersion(packageVersion) ?? packageVersion;
 
-  const missingModel = missingPreparedModelAssets(ROOT_DIR);
+  // A target that downloads the model at runtime needs none at build time.
+  const missingModel = target.downloadsModel ? [] : missingPreparedModelAssets(ROOT_DIR);
   if (missingModel.length > 0) {
     if (options.requireModel) {
       throw new Error(

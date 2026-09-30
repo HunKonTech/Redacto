@@ -1,3 +1,4 @@
+import { modelAwareFetch } from '../shared/local-ai-model-download';
 import {
   DEFAULT_NER_MODEL,
   MAX_TEXT_LENGTH,
@@ -99,6 +100,7 @@ type TransformersModule = {
     useBrowserCache: boolean;
     useFSCache: boolean;
     useWasmCache: boolean;
+    fetch?: (input: string | URL, init?: RequestInit) => Promise<Response>;
     backends: {
       onnx: {
         wasm?: OnnxWasmEnv;
@@ -770,7 +772,7 @@ async function defaultAssetExists(url: string): Promise<boolean> {
   }
 
   try {
-    const response = await fetch(url, { method: 'HEAD' });
+    const response = await modelAwareFetch(url, { method: 'HEAD' });
     return response.ok;
   } catch {
     return false;
@@ -869,6 +871,9 @@ function configureTransformersEnvironment(
   // Skip Transformers.js's blob-URL wasm caching — extension CSP forbids
   // executing scripts from blob: URLs.
   transformers.env.useWasmCache = false;
+  // Serves a downloaded model (Firefox) from the extension's cache under its
+  // packaged URLs; passes every other request through unchanged.
+  transformers.env.fetch = modelAwareFetch;
 
   // Mutate the existing onnx.wasm object in place. Transformers.js exposes
   // env.backends.onnx as a shallow spread of ONNX's env, so its `wasm`

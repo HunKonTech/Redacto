@@ -84,6 +84,16 @@ Detection runs in the browser using local deterministic recognizers and, where a
 local AI/NER model packaged with the extension. Pasted text is **not** sent to any remote
 inference service by the extension.
 
+**Firefox add-on: model download.** addons.mozilla.org does not accept packages as large as the
+Local AI model, so the Firefox add-on downloads the model files once, on first use, from the
+project's Hugging Face repository (`huggingface.co`), and checks for a newer model after each
+add-on update. These requests contain no user content: they only fetch the model files and a file
+list with their checksums, which the add-on verifies before use. Like any web request, they reveal
+your IP address and browser user agent to Hugging Face (see Hugging Face's privacy policy). The
+model is kept in the add-on's local storage and runs locally like in the other browsers. With
+Local AI switched off, nothing is downloaded. The Chrome and Edge packages include the model and
+make no such requests.
+
 ## 6. Clipboard Access
 
 Because the extension works on text you copy and paste, this section describes precisely when
