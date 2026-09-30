@@ -73,7 +73,7 @@ PRIVACY POSTURE
 • With cross-session memory switched off, no original values are written to durable storage at all; restoration lasts only as long as the browser session.
 • The local AI model and runtime are packaged with the extension; there is no remote model fetch.
 • Settings, identity vault, allow/block lists, and local feedback logs are stored only in Chrome extension storage on your device.
-• Full details in the project's Privacy Policy: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md
+• Full details in the project's Privacy Policy: https://github.com/HunKonTech/Redacto/blob/main/PRIVACY.md
 
 
 SYSTEM REQUIREMENTS
@@ -118,10 +118,10 @@ PROVIDER & LEGAL NOTICE
 
 Published by Benedek Koncsik (private individual, non-commercial).
 
-• Impressum / Legal Notice (§ 5 DDG): https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/IMPRESSUM.md
-• Privacy Policy: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md
-• Terms of Use: https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/TERMS.md
-• Source code & releases: https://github.com/HunKonTech/pii-guardrail-browser-extension
+• Impressum / Legal Notice (§ 5 DDG): https://github.com/HunKonTech/Redacto/blob/main/IMPRESSUM.md
+• Privacy Policy: https://github.com/HunKonTech/Redacto/blob/main/PRIVACY.md
+• Terms of Use: https://github.com/HunKonTech/Redacto/blob/main/TERMS.md
+• Source code & releases: https://github.com/HunKonTech/Redacto
 ```
 
 ## Single Purpose Statement
@@ -188,10 +188,10 @@ Certify all three required statements:
 
 | Field | URL |
 |---|---|
-| Homepage URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension` |
-| Support URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/SUPPORT.md` |
-| Privacy policy URL | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/PRIVACY.md` |
-| Security reporting | `https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/main/SECURITY.md` |
+| Homepage URL | `https://github.com/HunKonTech/Redacto` |
+| Support URL | `https://github.com/HunKonTech/Redacto/blob/main/SUPPORT.md` |
+| Privacy policy URL | `https://github.com/HunKonTech/Redacto/blob/main/PRIVACY.md` |
+| Security reporting | `https://github.com/HunKonTech/Redacto/blob/main/SECURITY.md` |
 | Sensitive contact | `koncsik.benedek.andras@gmail.com` |
 
 ## Screenshots And Promo Tiles

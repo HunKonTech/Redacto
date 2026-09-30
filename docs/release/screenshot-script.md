@@ -1,6 +1,6 @@
 # Synthetic Screenshot Workflow
 
-Public beta screenshots for `git@github.com:HunKonTech/pii-guardrail-browser-extension.git` are captured manually by the release operator. They must use only synthetic prompts and must not reveal real personal data, real prompts, real responses, account identity, browser profile state, or internal project paths.
+Public beta screenshots for `git@github.com:HunKonTech/Redacto.git` are captured manually by the release operator. They must use only synthetic prompts and must not reveal real personal data, real prompts, real responses, account identity, browser profile state, or internal project paths.
 
 This document defines the capture workflow, the redaction rules for real-site capture, and the final review checklist. The synthetic prompts to paste live in [`synthetic-prompts.md`](./synthetic-prompts.md). The required shots live in [`screenshot-shot-list.md`](./screenshot-shot-list.md).
 

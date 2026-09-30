@@ -8,5 +8,5 @@ Your code is never changed. Detection (rules + the local AI model) runs on
 this device.
 
 Source code and documentation:
-<https://github.com/HunKonTech/pii-guardrail-browser-extension>
+<https://github.com/HunKonTech/Redacto>
 (`docs/developer/ide-plugins.md`).

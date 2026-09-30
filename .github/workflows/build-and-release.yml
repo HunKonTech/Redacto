@@ -431,7 +431,7 @@ jobs:
           body: |
             Build ${{ github.run_number }} of this fork, based on upstream version ${{ vars.BASE_VERSION || 'from package.json' }}, commit ${{ github.sha }}.
 
-            See [CHANGELOG.md](https://github.com/HunKonTech/pii-guardrail-browser-extension/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
+            See [CHANGELOG.md](https://github.com/HunKonTech/Redacto/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
 
             Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
           files: |

@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.hunkontech.privacyguardrail</id>
     <name>Redacto</name>
-    <vendor url="https://github.com/HunKonTech/pii-guardrail-browser-extension">HunKonTech</vendor>
+    <vendor url="https://github.com/HunKonTech/Redacto">HunKonTech</vendor>
     <description><![CDATA[
     Anonymize selected code or console output on this device, and restore the
     original values in an AI reply. Select text in an editor or a Run/Debug

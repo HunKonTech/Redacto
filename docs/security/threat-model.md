@@ -1,6 +1,6 @@
 # Threat Model
 
-Redacto is a public beta Chrome extension for local, assistive PII review before text is pasted into supported LLM chat apps. This document describes the intended security and privacy boundary for the public source at `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
+Redacto is a public beta Chrome extension for local, assistive PII review before text is pasted into supported LLM chat apps. This document describes the intended security and privacy boundary for the public source at `git@github.com:HunKonTech/Redacto.git`.
 
 ## Assets
 

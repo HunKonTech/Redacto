@@ -10,4 +10,4 @@ this device.
 Open the panel from View → Other Windows → Redacto.
 
 Source code and documentation:
-<https://github.com/HunKonTech/pii-guardrail-browser-extension>
+<https://github.com/HunKonTech/Redacto>

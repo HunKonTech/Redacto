@@ -1,6 +1,6 @@
 # Building Redacto
 
-This guide covers local development builds for Redacto, the public beta Chrome extension source published at `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
+This guide covers local development builds for Redacto, the public beta Chrome extension source published at `git@github.com:HunKonTech/Redacto.git`.
 
 ## Prerequisites
 

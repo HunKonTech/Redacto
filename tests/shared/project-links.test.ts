@@ -8,7 +8,7 @@ import {
 
 describe('public project links', () => {
   test('centralizes GitHub public beta URLs under the public repo', () => {
-    expect(PUBLIC_PROJECT_REPO_URL).toBe('https://github.com/HunKonTech/pii-guardrail-browser-extension');
+    expect(PUBLIC_PROJECT_REPO_URL).toBe('https://github.com/HunKonTech/Redacto');
     expect(PUBLIC_PROJECT_LINKS).toEqual({
       repo: PUBLIC_PROJECT_REPO_URL,
       issues: `${PUBLIC_PROJECT_REPO_URL}/issues`,

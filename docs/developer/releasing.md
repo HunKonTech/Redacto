@@ -1,6 +1,6 @@
 # Releasing
 
-This guide describes the intended public beta release workflow for `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
+This guide describes the intended public beta release workflow for `git@github.com:HunKonTech/Redacto.git`. Public beta releases should be published as GitHub pre-releases before the same reviewed artifact is uploaded manually to the Chrome Web Store.
 
 ## Release Invariants
 
@@ -24,7 +24,7 @@ The official package builder creates the reviewed Chrome Web Store upload artifa
    git ls-files docs/issues
    ```
 
-2. Confirm the public repo target is `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
+2. Confirm the public repo target is `git@github.com:HunKonTech/Redacto.git`.
 3. Confirm all public docs use beta wording and avoid guarantees of perfect detection, prevention, or regulatory compliance.
 
 See `docs/release/public-source-boundary.md` and `docs/release/public-initial-commit.md`.
@@ -132,7 +132,7 @@ The dry run is not a release artifact. It exists to verify include/exclude behav
 For the public beta:
 
 1. Create the fresh public initial commit from the curated tree.
-2. Push to `git@github.com:HunKonTech/pii-guardrail-browser-extension.git`.
+2. Push to `git@github.com:HunKonTech/Redacto.git`.
 3. Tag the release version, for example `v0.3.1`.
 4. Create a GitHub Release marked as a pre-release.
 5. Attach the exact Chrome extension zip and checksum.

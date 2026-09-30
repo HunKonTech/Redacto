@@ -1,4 +1,4 @@
-export const PUBLIC_PROJECT_REPO_URL = 'https://github.com/HunKonTech/pii-guardrail-browser-extension';
+export const PUBLIC_PROJECT_REPO_URL = 'https://github.com/HunKonTech/Redacto';
 
 export const PUBLIC_PROJECT_LINKS = {
   repo: PUBLIC_PROJECT_REPO_URL,

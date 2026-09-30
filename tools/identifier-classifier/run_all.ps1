@@ -115,7 +115,7 @@ to rename a pasted snippet's own identifiers and keep library names readable.
 
 - Base model: [$BaseModel](https://huggingface.co/$BaseModel) (Apache-2.0)
 - Format: int8-quantized ONNX (``onnx/model_quantized.onnx``)
-- Training pipeline: https://github.com/BenKoncsik/pii-guardrail-browser-extension/tree/main/tools/identifier-classifier
+- Training pipeline: https://github.com/HunKonTech/Redacto/tree/main/tools/identifier-classifier
 - Labels: derived automatically from open-source C# and TypeScript projects
   (Roslyn / TypeScript checker resolution), split by repository.
 "@
