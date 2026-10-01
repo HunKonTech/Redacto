@@ -6,6 +6,7 @@ The project follows public beta release notes for `0.x` versions.
 
 ## [Unreleased]
 
+- Web page: **Settings → Local AI model** shows the model's offline copy (when it was saved, how much space it takes) and can save it, update it from the site — bypassing a stale browser cache — or delete it. The model is always taken from the site itself, not from Hugging Face.
 - New **Local AI model** card in the options (and a summary row in the popup's Settings tab): it shows the model version, when it was downloaded and how much space it takes, and lets you download it by hand (also while Local AI is off), check for a newer model, or delete it to free the space. It links to the model files and checksums on Hugging Face.
 - Redesigned popup, side panel, options page and web page: a lighter, card-based look in the logo's teal-to-indigo colors, pill-shaped tabs, and a clear protection on/off banner in the popup. Every view now has a **light and a dark theme**; the theme button in the header switches between System, Light and Dark, and the choice is shared by all views (the IDE panels keep following the IDE's theme).
 - The interface is now translatable, starting with **English and Hungarian**. The language follows the browser by default and can be changed from the globe menu in the header (or Settings → Appearance & language on the web page and in the IDEs). The review overlay on chat pages is not translated yet. See `docs/developer/i18n.md`.

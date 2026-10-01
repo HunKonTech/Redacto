@@ -43,6 +43,15 @@ registered by `src/web/offline.ts`):
 - The local AI model is large, so it is cached the first time detection loads
   it, or all at once with *Save the local AI model for offline use* in the page
   footer (which also asks the browser to keep the storage persistent).
+- **Settings → Local AI model** shows the offline copy: the page version it
+  belongs to, when the cache last got a model file, and the space it takes
+  (from the file sizes the build writes into `sw.js`). *Save for offline use*
+  caches the missing files; *Update from this site* drops the copy and
+  downloads every file again from this site with `cache: 'reload'` (bypassing
+  the browser's HTTP cache) and checks for a newer `sw.js`; *Delete model*
+  removes the copy. The model always comes from this site, never from Hugging
+  Face. The worker runs one such task at a time and reports progress to every
+  open tab (`src/web/offline-model.ts`).
 - The build (`webpack.web.config.js`) writes the file list and a hash of the
   files into `sw.js`; a new deploy installs new caches and removes the old
   ones. App and model are cached separately, so an app update does not

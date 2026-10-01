@@ -430,6 +430,25 @@ const en = {
     'These buttons write directly to pg_system_check and the Local AI setting. Use only when testing — to return to the real passive check, click “Clear & re-run passive check”.',
   'debugCard.reset': 'Clear & re-run passive check',
 
+  // Web page: the model's offline copy
+  'webModel.hint': 'From this site, kept in this browser',
+  'webModel.checking': 'Checking the offline copy…',
+  'webModel.saved': 'Saved for offline use.',
+  'webModel.partial': 'Partly saved for offline use ({cached}/{total} files).',
+  'webModel.notSaved': 'Not saved for offline use. The page loads the model from this site when it needs it.',
+  'webModel.saving': 'Downloading the model from this site… {percent}%',
+  'webModel.savedAt': 'Saved',
+  'webModel.sizeOf': '{cached} of {total}',
+  'webModel.save': 'Save for offline use',
+  'webModel.refresh': 'Update from this site',
+  'webModel.deleteConfirm':
+    "Delete the local AI model's offline copy? The page loads it from this site again when it needs it.",
+  'webModel.hintOnline':
+    'The model comes from this site, not from Hugging Face. Nothing you type is sent anywhere.',
+  'webModel.refreshHint':
+    'If the page seems to use an outdated model, Update downloads every model file again from this site, bypassing the browser cache, and checks for a newer version of the page.',
+  'web.offline.deleting': 'Deleting the offline copy of the local AI model…',
+
   // Web page (web.html)
   'web.title': 'Redacto — Anonymize & restore',
   'web.tagline': 'Anonymize text before an AI chat, restore the reply — all in your browser.',

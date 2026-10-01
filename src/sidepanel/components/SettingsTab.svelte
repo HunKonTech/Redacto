@@ -2,6 +2,7 @@
 	import { t } from '../../shared/i18n/reactive';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
 	import PrefsControls from '../../popup/components/PrefsControls.svelte';
+	import WebModelCard from '../../web/WebModelCard.svelte';
 	import Toggle from '../../popup/components/Toggle.svelte';
 	import AllowlistCard from '../../options/components/AllowlistCard.svelte';
 	import BlocklistCard from '../../options/components/BlocklistCard.svelte';
@@ -71,6 +72,10 @@
 			<Toggle size="sm" checked={debug} label={t('settings.debugLogging')} onchange={(checked) => saveSettings({ debug: checked })} />
 		</div>
 	</article>
+
+	{#if host === 'web'}
+		<WebModelCard />
+	{/if}
 
 	<CodeBlocksCard {settings} setValue={model.setSkipCodeBlocks} setCodeAnonymization={model.setCodeAnonymization} />
 

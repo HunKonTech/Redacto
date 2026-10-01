@@ -68,7 +68,9 @@ class ServiceWorkerPlugin {
           };
           const models = names.filter((name) => name.startsWith('models/'));
           const shell = names.filter((name) => !name.startsWith('models/'));
-          const precache = { version: this.version, shellHash: hash(shell), modelHash: hash(models), shell, models };
+          // Sizes let the page show the model's download progress and the space it takes.
+          const modelSizes = Object.fromEntries(models.map((name) => [name, compilation.getAsset(name).source.size()]));
+          const precache = { version: this.version, shellHash: hash(shell), modelHash: hash(models), shell, models, modelSizes };
           const source = fs.readFileSync(SERVICE_WORKER_SOURCE, 'utf8');
           compilation.emitAsset(
             'sw.js',

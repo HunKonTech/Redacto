@@ -437,6 +437,25 @@ const hu: Record<keyof typeof en, string> = {
     'Ezek a gombok közvetlenül a pg_system_check-be és a helyi MI beállításába írnak. Csak teszteléshez használd — a valódi passzív ellenőrzéshez való visszatéréshez kattints a „Törlés és passzív ellenőrzés újrafuttatása” gombra.',
   'debugCard.reset': 'Törlés és passzív ellenőrzés újrafuttatása',
 
+  // Weboldal: a modell offline másolata
+  'webModel.hint': 'Erről az oldalról, ebben a böngészőben tárolva',
+  'webModel.checking': 'Az offline másolat ellenőrzése…',
+  'webModel.saved': 'Offline használatra mentve.',
+  'webModel.partial': 'Részben mentve offline használatra ({cached}/{total} fájl).',
+  'webModel.notSaved': 'Nincs offline használatra mentve. Az oldal szükség esetén erről az oldalról tölti be a modellt.',
+  'webModel.saving': 'A modell letöltése erről az oldalról… {percent}%',
+  'webModel.savedAt': 'Mentve',
+  'webModel.sizeOf': '{cached} / {total}',
+  'webModel.save': 'Mentés offline használatra',
+  'webModel.refresh': 'Frissítés erről az oldalról',
+  'webModel.deleteConfirm':
+    'Törlöd a helyi MI-modell offline másolatát? Az oldal szükség esetén újra betölti erről az oldalról.',
+  'webModel.hintOnline':
+    'A modell erről az oldalról érkezik, nem a Hugging Face-ről. Semmi, amit beírsz, nem kerül elküldésre.',
+  'webModel.refreshHint':
+    'Ha úgy tűnik, az oldal elavult modellt használ, a Frissítés a böngésző gyorsítótárát megkerülve újra letölti az összes modellfájlt erről az oldalról, és megnézi, van-e újabb oldalverzió.',
+  'web.offline.deleting': 'A helyi MI-modell offline másolatának törlése…',
+
   // Weboldal (web.html)
   'web.title': 'Redacto — Anonimizálás és visszaállítás',
   'web.tagline': 'Anonimizáld a szöveget az MI-csevegés előtt, állítsd vissza a választ — mindezt a böngésződben.',

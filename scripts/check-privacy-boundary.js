@@ -59,8 +59,8 @@ const ALLOWED_RUNTIME_FINDINGS = [
   {
     file: 'src/web/sw.js',
     id: 'fetch',
-    snippet: 'await fetch(url)',
-    reason: 'web page service worker: caching the site\'s own packaged model files for offline use',
+    snippet: "await fetch(url, reload ? { cache: 'reload' } : undefined)",
+    reason: 'web page service worker: caching the site\'s own packaged model files for offline use (re-fetched from the same site on "Update")',
   },
 ];
 

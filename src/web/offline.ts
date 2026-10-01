@@ -14,15 +14,10 @@
 
 import { debugWarn } from '../shared/debug-log';
 import { onLocaleChange, translate, type MessageKey, type MessageParams } from '../shared/i18n';
+import { isOfflineStatus, runOfflineModelTask, type OfflineStatus } from './offline-model';
 
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
-interface OfflineStatus {
-  type: 'offline-status';
-  modelFiles: number;
-  modelFilesCached: number;
-  error?: string;
-}
 
 /** The footer line, kept as a message key so a language change can redraw it. */
 let shown: { status: HTMLElement; key: MessageKey; params?: MessageParams } | null = null;
@@ -36,25 +31,33 @@ onLocaleChange(() => {
   if (shown) shown.status.textContent = translate(shown.key, shown.params);
 });
 
+/** Set by a click on the footer button until the worker reports the save running. */
+let savePending = false;
+
 function render(status: HTMLElement, button: HTMLButtonElement, message: OfflineStatus | null): void {
   if (!message) {
     show(status, 'web.offline.preparing');
     button.hidden = true;
     return;
   }
-  const { modelFiles, modelFilesCached, error } = message;
+  const { modelFiles, modelFilesCached, error, busy } = message;
   const modelReady = modelFiles === 0 || modelFilesCached === modelFiles;
-  if (error) {
+  if (busy || error || modelReady) savePending = false;
+  if (busy === 'delete-models') {
+    show(status, 'web.offline.deleting');
+  } else if (busy) {
+    show(status, 'web.offline.savingProgress', { cached: modelFilesCached, total: modelFiles });
+  } else if (error) {
     show(status, 'web.offline.modelError', { error });
   } else if (modelReady) {
     show(status, modelFiles === 0 ? 'web.offline.ready' : 'web.offline.readyWithModel');
-  } else if (button.disabled) {
-    show(status, 'web.offline.savingProgress', { cached: modelFilesCached, total: modelFiles });
+  } else if (savePending) {
+    show(status, 'web.offline.saving');
   } else {
     show(status, 'web.offline.rulesOnly');
   }
   button.hidden = modelReady;
-  if (modelReady || error) button.disabled = false;
+  button.disabled = Boolean(busy) || savePending;
 }
 
 function hasTypedText(): boolean {
@@ -97,17 +100,15 @@ export function setUpOffline(): void {
 
   render(status, button, null);
   reloadOnNewVersion();
-  navigator.serviceWorker.addEventListener('message', (event: MessageEvent<OfflineStatus>) => {
-    if (event.data?.type === 'offline-status') render(status, button, event.data);
+  navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
+    if (isOfflineStatus(event.data)) render(status, button, event.data);
   });
 
   button.addEventListener('click', async () => {
+    savePending = true;
     button.disabled = true;
-    // Ask the browser not to evict the (large) model under storage pressure.
-    await navigator.storage?.persist?.().catch(() => false);
-    const registration = await navigator.serviceWorker.ready;
-    registration.active?.postMessage({ type: 'cache-models' });
     show(status, 'web.offline.saving');
+    await runOfflineModelTask('cache-models');
   });
 
   navigator.serviceWorker
