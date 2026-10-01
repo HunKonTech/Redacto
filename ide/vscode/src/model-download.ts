@@ -169,7 +169,7 @@ export class ModelDownloader {
       const source = this.source();
       const fileUrl = (file: string) =>
         `https://huggingface.co/${source.repo}/resolve/${encodeURIComponent(source.revision)}/${file}`;
-      const response = await fetch(fileUrl(source.manifest), { cache: 'no-store' });
+      const response = await fetch(fileUrl(source.manifest), { headers: { 'cache-control': 'no-cache' } });
       if (!response.ok) throw new Error(`${source.manifest}: HTTP ${response.status}`);
       const manifestText = await response.text();
       const manifest = parseManifest(JSON.parse(manifestText));
@@ -211,7 +211,7 @@ export class ModelDownloader {
     for (const file of manifest.files) {
       const target = path.join(partial, ...file.path.split('/'));
       fs.mkdirSync(path.dirname(target), { recursive: true });
-      const response = await fetch(fileUrl(file.path), { cache: 'no-store' });
+      const response = await fetch(fileUrl(file.path), { headers: { 'cache-control': 'no-cache' } });
       if (!response.ok || !response.body) throw new Error(`${file.path}: HTTP ${response.status}`);
 
       const hash = crypto.createHash('sha256');
