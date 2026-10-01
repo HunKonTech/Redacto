@@ -486,11 +486,11 @@ jobs:
 
             See [CHANGELOG.md](https://github.com/HunKonTech/Redacto/blob/${{ github.sha }}/CHANGELOG.md) for release notes.
 
-            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge; `redacto-firefox-*.zip` for Firefox 140+ (not on addons.mozilla.org yet, see `docs/developer/firefox.md`); `redacto-vscode-*.vsix`, `redacto-jetbrains-*.zip` and `redacto-visualstudio-*.vsix` for the IDEs.
+            Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge; `redacto-firefox-*.zip` for Firefox 140+; `redacto-vscode-*.vsix`, `redacto-jetbrains-*.zip` and `redacto-visualstudio-*.vsix` for the IDEs.
 
             The Local AI model is not in the packages: every build downloads it (~170 MB) once, on first use, from [Hugging Face](https://huggingface.co/${{ vars.MODEL_HF_REPO || 'koncsik/redacto-eu-pii-ner-q4f16' }}), verifies it, and shows the progress (popup, side panel and toolbar icon in the browsers; the IDE's progress indicator and the Redacto panel in the IDEs). Until it is there, pattern-based detection is active.
 
-            Chrome Web Store uploads remain manual, and Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push (see `docs/developer/releasing.md`).
+            Chrome Web Store uploads remain manual, Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push, and addons.mozilla.org by the `firefox-publish` job on every run (see `docs/developer/releasing.md`).
           files: |
             release-artifacts/*.zip
             release-artifacts/*.sha256
@@ -572,6 +572,82 @@ jobs:
       - name: Skipped (Edge secrets not configured)
         if: ${{ env.EDGE_PRODUCT_ID == '' || env.EDGE_CLIENT_ID == '' || env.EDGE_API_KEY == '' }}
         run: echo "::notice::EDGE_PRODUCT_ID, EDGE_CLIENT_ID and EDGE_API_KEY are not all set; nothing was submitted to Edge Add-ons."
+
+  # Submits the Firefox package to addons.mozilla.org as a new listed version
+  # on every run (web-ext sign; it does not wait for Mozilla's review).
+  # Skipped without the AMO_JWT_* secrets. The first version of the add-on was
+  # submitted by hand (see docs/developer/firefox.md); this job adds versions.
+  firefox-publish:
+    name: Publish to addons.mozilla.org
+    needs: [prepare-models-and-package]
+    if: ${{ !cancelled() && needs.prepare-models-and-package.result == 'success' }}
+    runs-on: [self-hosted, linux]
+    # Store submission is best effort: nothing here may turn the run red (the
+    # submit step also turns its own errors into warnings).
+    continue-on-error: true
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
+    steps:
+      - name: Checkout
+        if: ${{ env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        if: ${{ env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Firefox package
+        if: ${{ env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: redacto-firefox-${{ needs.prepare-models-and-package.outputs.version }}
+          path: firefox-package
+
+      - name: Submit to addons.mozilla.org
+        if: ${{ env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A rejected submission (e.g. a version number AMO already has) must
+          # not fail the release: turn any error into a warning.
+          trap 'echo "::warning::addons.mozilla.org submission of v${VERSION} failed; see the log above."; exit 0' ERR
+
+          work="$RUNNER_TEMP/amo"
+          rm -rf "$work" && mkdir -p "$work/addon"
+          unzip -q firefox-package/redacto-firefox-*.zip -d "$work/addon"
+          # AMO asks for the source of bundled/minified code and the WASM binary.
+          git archive --format=zip -o "$work/redacto-source-${VERSION}.zip" HEAD
+
+          node -e '
+            const fs = require("fs");
+            const [notesFile, out, version, repo, sha] = process.argv.slice(1);
+            fs.writeFileSync(out, JSON.stringify({
+              version: {
+                approval_notes: fs.readFileSync(notesFile, "utf8"),
+                release_notes: {
+                  "en-US": `Redacto ${version}. Changes: https://github.com/${repo}/releases/tag/v${version} (source: https://github.com/${repo}/tree/${sha}).`,
+                },
+              },
+            }, null, 2));
+          ' docs/release/amo-reviewer-notes.txt "$work/amo-metadata.json" "$VERSION" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+
+          npx --yes web-ext@10 sign \
+            --channel listed \
+            --source-dir "$work/addon" \
+            --artifacts-dir "$work/signed" \
+            --upload-source-code "$work/redacto-source-${VERSION}.zip" \
+            --amo-metadata "$work/amo-metadata.json" \
+            --approval-timeout 0 \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET"
+
+      - name: Skipped (AMO secrets not configured)
+        if: ${{ env.AMO_JWT_ISSUER == '' || env.AMO_JWT_SECRET == '' }}
+        run: echo "::notice::AMO_JWT_ISSUER and AMO_JWT_SECRET are not both set; nothing was submitted to addons.mozilla.org."
 
   # Release announcement on X through Buffer. Runs last, and only when the
   # GitHub release was published; without BUFFER_API_KEY the script skips

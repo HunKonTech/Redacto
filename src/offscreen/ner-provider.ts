@@ -1,4 +1,5 @@
 import { modelAwareFetch } from '../shared/local-ai-model-download';
+import { nodeFs } from '../shared/node-fs';
 import {
   DEFAULT_NER_MODEL,
   MAX_TEXT_LENGTH,
@@ -763,9 +764,8 @@ function defaultExtensionUrl(path: string): string {
 async function defaultAssetExists(url: string): Promise<boolean> {
   if (!/^https?:|^chrome-extension:|^moz-extension:/i.test(url)) {
     try {
-      const requireFn = eval('require') as NodeRequire;
-      const fs = requireFn('fs') as typeof import('fs');
-      return fs.existsSync(url) && fs.statSync(url).isFile();
+      const fs = nodeFs();
+      return Boolean(fs && fs.existsSync(url) && fs.statSync(url).isFile());
     } catch {
       return false;
     }

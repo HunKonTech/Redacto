@@ -40,6 +40,28 @@ npx web-ext lint --source-dir dist-firefox
 
 The CI workflow (`.github/workflows/build-and-release.yml`) builds, lints and attaches the Firefox package to each GitHub release. It does not submit anything to AMO.
 
+## Linter warnings and reviewer notes
+
+`web-ext lint` (and the AMO upload validator) reports warnings, not errors. None of them come from remote or user-controlled code; paste this into **Notes to Reviewer** (the `firefox-publish` CI job sends the same text, from `docs/release/amo-reviewer-notes.txt`, with every version):
+
+```text
+Redacto detects personal data in text pasted into ChatGPT, Claude and Gemini, locally in the browser. Source: https://github.com/HunKonTech/Redacto (the commit linked in the release notes); build steps are at the end.
+
+Linter warnings:
+- "Unsafe assignment to innerHTML" in popup/options/sidepanel/content scripts: (1) the Svelte 5 runtime creates its compiled, static component templates with <template>.innerHTML (node_modules/svelte/src/internal/client/dom/reconciler.js); (2) our own shadow-DOM widgets (src/ui/*/ *.ts) render fixed templates whose only dynamic parts are our constant CSS, a light/dark theme value, and text passed through escapeHtml(). No page content or pasted text is inserted as HTML.
+- "The Function constructor is eval" in vendor/onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs and offscreen/offscreen.js: Emscripten's embind glue in ONNX Runtime Web 1.x (unmodified npm package onnxruntime-web, bundled via @huggingface/transformers) builds method invokers with new Function from its own fixed strings; plus webpack's global-object shim (new Function("return this"), only reached when globalThis is missing). No string from the network or the page reaches them.
+- "Unsafe call to import": ONNX Runtime loads its own packaged vendor/onnxruntime-web/*.mjs via import(chrome.runtime.getURL(...)).
+- sidePanel.open: guarded Chrome-only call; Firefox uses sidebarAction.open.
+
+Network: the add-on downloads only the Local AI model files (data, no code) from https://huggingface.co/koncsik/redacto-eu-pii-ner-q4f16 at a pinned commit, verifies each file's SHA-256 against redacto-model.json, and stores them in Cache Storage. No user data is sent anywhere.
+
+Build (Ubuntu 24.04, Node.js 20.16+, Rust stable with the wasm32-unknown-unknown target, wasm-bindgen-cli 0.2.118):
+  npm ci
+  npm run build:wasm
+  MODEL_REVISION=<Hugging Face commit from the release workflow log> npm run package:firefox
+Output: release/firefox/redacto-firefox-<version>/ (identical to the uploaded package, built by .github/workflows/build-and-release.yml).
+```
+
 ## Try it locally
 
 Release Firefox only installs add-ons signed by Mozilla. Until the add-on is signed:
@@ -65,4 +87,8 @@ Release Firefox only installs add-ons signed by Mozilla. Until the add-on is sig
 8. **Review.** Automatic signing is usually quick; a listed add-on also gets a human review that can take days. Answer reviewer questions in the Developer Hub.
 9. **Updates.** Raise the version (`npm run version:set`), rebuild, and upload a new version to the same add-on. The add-on ID must never change, or AMO treats it as a different add-on.
 
-Automating this later is possible with `web-ext sign --channel listed` and AMO API keys (Developer Hub → Tools → Manage API Keys), stored as repository secrets like the Edge job's.
+## Automatic submission (CI)
+
+After the first version is on AMO, the `firefox-publish` job in `.github/workflows/build-and-release.yml` submits every workflow run's package as a new listed version with `web-ext sign --channel listed --approval-timeout 0` (it submits and does not wait for the review). It uploads a source archive of the built commit, the reviewer notes from `docs/release/amo-reviewer-notes.txt`, and release notes pointing at the GitHub release.
+
+Setup: create API credentials at <https://addons.mozilla.org/developers/addon/api/key/> and store them as repository secrets `AMO_JWT_ISSUER` (JWT issuer) and `AMO_JWT_SECRET` (JWT secret). Without them the job is skipped. Every submission needs a version number higher than the last one; the CI build version (`<x.y.z>.<run>`) is. A rejected submission only warns and does not fail the release.
