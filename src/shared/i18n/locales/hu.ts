@@ -72,6 +72,25 @@ const hu: Record<keyof typeof en, string> = {
   'model.patternHint': 'Amíg elkészül, a mintaalapú észlelés védi a beillesztéseidet.',
   'model.progressAria': 'Helyi MI-modell letöltése',
 
+  // Helyi MI-modell kártya (beállítások) és a felugró ablak modell sora
+  'modelCard.hint': 'Letöltés a Hugging Face-ről',
+  'modelCard.version': 'Verzió',
+  'modelCard.downloadedAt': 'Letöltve',
+  'modelCard.downloadedOn': 'letöltve: {date}',
+  'modelCard.notRecorded': 'Nincs rögzítve',
+  'modelCard.size': 'Foglalt hely',
+  'modelCard.download': 'Letöltés most',
+  'modelCard.checkUpdates': 'Frissítés keresése',
+  'modelCard.delete': 'Modell törlése',
+  'modelCard.deleteConfirm':
+    'Törlöd a letöltött helyi MI-modellt? Az újbóli letöltésig csak a mintaalapú észlelés működik.',
+  'modelCard.downloadHint':
+    'Most letölti a modellt, akkor is, ha a helyi MI-észlelés ki van kapcsolva. A fájlok használat előtt a közzétett SHA-256 alapján ellenőrzésre kerülnek.',
+  'modelCard.deleteHint':
+    'A törlés felszabadítja a helyet. Ha a helyi MI-észlelés be van kapcsolva, a modell a következő használatkor újra letöltődik.',
+  'modelCard.manual': 'A modell fájljai és ellenőrzőösszegei:',
+  'modelCard.manage': 'Kezelés',
+
   // Felugró ablak
   'popup.aria': 'Redacto felugró ablak',
   'popup.tabs.aria': 'Felugró ablak részei',

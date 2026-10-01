@@ -1,61 +1,26 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
   import { t } from "../../shared/i18n/reactive";
   import {
-    INITIAL_MODEL_DOWNLOAD_STATE,
     isModelDownloadActive,
-    loadModelDownloadState,
-    MODEL_DOWNLOAD_STATE_KEY,
     modelDownloadPercent,
     modelDownloadsEnabled,
-    type ModelDownloadState,
   } from "../../shared/local-ai-model-download";
+  import { modelDownloadState, requestModelDownload } from "../../shared/model-download-store";
+  import { modelDownloadText } from "./model-download-text";
 
   // Shown in the popup and the side panel (browsers and IDE plugins) while the
   // Local AI model downloads or after a failed download; the web page, which
   // serves the model itself, never shows it.
-  let state: ModelDownloadState = $state(INITIAL_MODEL_DOWNLOAD_STATE);
   const enabled = modelDownloadsEnabled();
-
-  const onChanged = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
-    if (areaName === "local" && changes[MODEL_DOWNLOAD_STATE_KEY]) {
-      state = { ...INITIAL_MODEL_DOWNLOAD_STATE, ...changes[MODEL_DOWNLOAD_STATE_KEY].newValue };
-    }
-  };
-  if (enabled) {
-    void loadModelDownloadState().then((loaded) => { state = loaded; });
-    chrome.storage.onChanged.addListener(onChanged);
-  }
-  onDestroy(() => {
-    if (enabled) chrome.storage.onChanged.removeListener(onChanged);
-  });
+  const state = $derived($modelDownloadState);
 
   const active = $derived(isModelDownloadActive(state));
   const visible = $derived(enabled && (active || state.phase === "failed"));
   const percent = $derived(modelDownloadPercent(state));
-  const megabytes = (bytes: number): string => `${Math.round(bytes / (1024 * 1024))} MB`;
-  const message = $derived.by((): string => {
-    const updating = Boolean(state.readyVersion);
-    switch (state.phase) {
-      case "checking":
-        return updating ? t("model.checking.update") : t("model.checking");
-      case "downloading":
-        return t(updating ? "model.downloading.update" : "model.downloading", {
-          percent,
-          received: megabytes(state.receivedBytes),
-          total: megabytes(state.totalBytes),
-        });
-      case "verifying":
-        return t("model.verifying");
-      case "failed":
-        return t(updating ? "model.failed.update" : "model.failed", { error: state.error ?? t("model.unknownError") });
-      default:
-        return state.readyVersion ? t("model.ready") : t("model.notDownloaded");
-    }
-  });
+  const message = $derived(modelDownloadText(state));
 
   function retry(): void {
-    void chrome.runtime.sendMessage({ type: "DOWNLOAD_LOCAL_AI_MODEL" });
+    requestModelDownload();
   }
 </script>
 

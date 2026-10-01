@@ -70,6 +70,25 @@ const en = {
   'model.patternHint': 'Until it finishes, pattern-based detection protects your pastes.',
   'model.progressAria': 'Local AI model download',
 
+  // Local AI model card (options) and the popup's model row
+  'modelCard.hint': 'Downloaded from Hugging Face',
+  'modelCard.version': 'Version',
+  'modelCard.downloadedAt': 'Downloaded',
+  'modelCard.downloadedOn': 'downloaded {date}',
+  'modelCard.notRecorded': 'Not recorded',
+  'modelCard.size': 'Space used',
+  'modelCard.download': 'Download now',
+  'modelCard.checkUpdates': 'Check for updates',
+  'modelCard.delete': 'Delete model',
+  'modelCard.deleteConfirm':
+    'Delete the downloaded Local AI model? Detection is pattern-only until it is downloaded again.',
+  'modelCard.downloadHint':
+    'Downloads the model now, even while Local AI detection is off. The files are checked against their published SHA-256 before use.',
+  'modelCard.deleteHint':
+    'Deleting frees the space. While Local AI detection is on, the model is downloaded again the next time it is needed.',
+  'modelCard.manual': 'Model files and their checksums:',
+  'modelCard.manage': 'Manage',
+
   // Popup
   'popup.aria': 'Redacto popup',
   'popup.tabs.aria': 'Popup sections',

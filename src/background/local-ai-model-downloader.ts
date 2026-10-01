@@ -15,6 +15,7 @@
 
 import {
   huggingFaceFileUrl,
+  INITIAL_MODEL_DOWNLOAD_STATE,
   modelCompleteMarkerUrl,
   isModelCacheName,
   loadModelDownloadState,
@@ -124,7 +125,7 @@ async function downloadVersion(
   manifest: ModelManifest,
   state: ModelDownloadState,
 ): Promise<ModelDownloadState> {
-  const totalBytes = manifest.files.reduce((sum, file) => sum + file.size, 0);
+  const totalBytes = manifestBytes(manifest);
   let current = await saveState({
     ...state,
     phase: 'downloading',
@@ -185,14 +186,33 @@ async function removeOtherVersions(deps: ModelDownloaderDeps, keepVersion: strin
   }
 }
 
-async function run(deps: ModelDownloaderDeps, reason: string): Promise<ModelDownloadState> {
+function manifestBytes(manifest: ModelManifest): number {
+  return manifest.files.reduce((sum, file) => sum + file.size, 0);
+}
+
+/** The size of a complete cached version, from the manifest stored as its marker. */
+async function cachedVersionBytes(deps: ModelDownloaderDeps, version: string): Promise<number | undefined> {
+  const marker = await (await deps.caches.open(modelCacheName(version))).match(modelCompleteMarkerUrl());
+  try {
+    return marker ? manifestBytes(parseModelManifest(await marker.json())) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function run(deps: ModelDownloaderDeps, reason: string, checkNow: boolean): Promise<ModelDownloadState> {
   let state = await loadModelDownloadState();
   const extensionVersion = deps.extensionVersion();
   const readyInCache = state.readyVersion ? await hasCompleteCache(deps, state.readyVersion) : false;
-  if (!readyInCache) state = { ...state, readyVersion: undefined };
+  if (!readyInCache) state = { ...state, readyVersion: undefined, readyAt: undefined, readyBytes: undefined };
+  // Models downloaded before the size was recorded.
+  if (readyInCache && state.readyBytes === undefined) {
+    const readyBytes = await cachedVersionBytes(deps, state.readyVersion!);
+    if (readyBytes !== undefined) state = await saveState({ ...state, readyBytes });
+  }
 
-  // A ready model is checked for updates once per extension version.
-  if (readyInCache && state.checkedExtensionVersion === extensionVersion) {
+  // A ready model is checked for updates once per extension version, or when asked to.
+  if (readyInCache && !checkNow && state.checkedExtensionVersion === extensionVersion) {
     return state;
   }
 
@@ -205,13 +225,17 @@ async function run(deps: ModelDownloaderDeps, reason: string): Promise<ModelDown
     if (!response.ok) throw new Error(`${MODEL_MANIFEST_FILE}: HTTP ${response.status}`);
     const manifest = parseModelManifest(await response.json());
 
+    let readyAt = state.readyVersion === manifest.version ? state.readyAt : undefined;
     if (!(await hasCompleteCache(deps, manifest.version))) {
       state = await downloadVersion(deps, manifest, state);
+      readyAt = Date.now();
     }
 
     state = await saveState({
       ...state,
       readyVersion: manifest.version,
+      readyAt,
+      readyBytes: manifestBytes(manifest),
       targetVersion: undefined,
       phase: 'idle',
       receivedBytes: 0,
@@ -237,10 +261,29 @@ async function run(deps: ModelDownloaderDeps, reason: string): Promise<ModelDown
  * date. Concurrent callers share one run. No-op where the background does
  * not download it (the web page; in the IDE plugins the host does).
  */
-export function ensureLocalAiModel(reason: string, deps: ModelDownloaderDeps = defaultDeps()): Promise<ModelDownloadState> {
+export function ensureLocalAiModel(
+  reason: string,
+  deps: ModelDownloaderDeps = defaultDeps(),
+  options: { checkNow?: boolean } = {},
+): Promise<ModelDownloadState> {
   if (MODEL_SOURCE !== 'huggingface') return loadModelDownloadState();
-  inFlight ??= run(deps, reason).finally(() => {
+  inFlight ??= run(deps, reason, options.checkNow === true).finally(() => {
     inFlight = null;
   });
   return inFlight;
+}
+
+/**
+ * Removes the downloaded model to free its space; detection is pattern-only
+ * until it is downloaded again. Waits for a running download to end first.
+ */
+export async function deleteLocalAiModel(deps: ModelDownloaderDeps = defaultDeps()): Promise<ModelDownloadState> {
+  if (MODEL_SOURCE !== 'huggingface') return loadModelDownloadState();
+  await inFlight?.catch(() => undefined);
+  for (const name of await deps.caches.keys()) {
+    if (isModelCacheName(name)) await deps.caches.delete(name);
+  }
+  const state = await saveState({ ...INITIAL_MODEL_DOWNLOAD_STATE });
+  deps.onProgress?.(state);
+  return state;
 }

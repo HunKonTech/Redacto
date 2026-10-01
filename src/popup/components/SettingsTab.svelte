@@ -6,6 +6,9 @@
 	import type { NerModelChoice } from '../../shared/constants';
 	import Toggle from './Toggle.svelte';
 	import LegalCard from './LegalCard.svelte';
+	import { MODEL_SOURCE } from '../../shared/local-ai-model-download';
+	import { modelDownloadState } from '../../shared/model-download-store';
+	import { modelDownloadedAt, modelDownloadText, modelSize } from './model-download-text';
 
 	let {
 		minConfidence,
@@ -55,6 +58,16 @@
 		clearMappings: () => Promise<void>;
 	} = $props();
 	let sliderValue = $derived(Math.round($minConfidence * 100));
+	const modelSummary = $derived.by(() => {
+		const state = $modelDownloadState;
+		if (!state.readyVersion || state.phase !== 'idle') return modelDownloadText(state);
+		const at = modelDownloadedAt(state);
+		return [state.readyVersion, modelSize(state), at && t('modelCard.downloadedOn', { date: at })].filter(Boolean).join(' · ');
+	});
+
+	function openModelOptions(): void {
+		void chrome.tabs.create({ url: `${chrome.runtime.getURL('options/options.html')}#local-ai-model-section` });
+	}
 </script>
 
 <div class="settings-stack">
@@ -81,6 +94,16 @@
 				{/each}
 			</select>
 		</div>
+		{#if MODEL_SOURCE === 'huggingface'}
+			<div class="divider"></div>
+			<button type="button" class="link-row" onclick={openModelOptions}>
+				<span class="model-info">
+					<span class="row-label">{t('system.model')}</span>
+					<span class="row-meta">{modelSummary}</span>
+				</span>
+				<span class="manage">{t('modelCard.manage')} ›</span>
+			</button>
+		{/if}
 	</article>
 
 	<article class="card">
@@ -127,5 +150,8 @@
 	select, .select { display: flex; align-items: center; gap: 6px; max-width: 180px; padding: 5px 10px; border: 0; border-radius: var(--radius-sm); background: var(--color-muted-bg); color: var(--color-ink); font-size: 12px; font-weight: 500; cursor: pointer; }
 	.divider { height: 1px; background: var(--color-border); }
 	.right { display: flex; align-items: center; gap: 8px; }
+	.model-info { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+	.model-info .row-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.manage { flex-shrink: 0; color: var(--color-accent); font-size: 12px; font-weight: 500; }
 	.version-note { padding: 4px 0 8px; color: var(--color-subtle); font-family: var(--font-mono); font-size: 10px; text-align: center; }
 </style>

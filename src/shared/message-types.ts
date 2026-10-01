@@ -262,9 +262,19 @@ export interface SetLocalAiDetectionRequest {
   payload: { enabled: boolean };
 }
 
-/** Popup / side panel → background (IDE: → host): (re)start the Local AI model download. */
+/**
+ * Popup / side panel / options → background (IDE: → host): (re)start the Local
+ * AI model download. `checkNow` also checks for a newer model when one is
+ * ready, instead of once per extension version.
+ */
 export interface DownloadLocalAiModelRequest {
   type: 'DOWNLOAD_LOCAL_AI_MODEL';
+  payload?: { checkNow?: boolean };
+}
+
+/** Options → background: remove the downloaded Local AI model to free its space. */
+export interface DeleteLocalAiModelRequest {
+  type: 'DELETE_LOCAL_AI_MODEL';
 }
 
 export interface WarmUpLocalAiRequest {
@@ -479,6 +489,7 @@ export type Message =
   | SetLocalAiDetectionRequest
   | WarmUpLocalAiRequest
   | DownloadLocalAiModelRequest
+  | DeleteLocalAiModelRequest
   | SupportedPageActivityRequest
   | DismissCriticalLocalAiModalRequest
   | CollectSystemSignalsRequest

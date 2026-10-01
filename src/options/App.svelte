@@ -11,6 +11,8 @@
 	import CodeBlocksCard from './components/CodeBlocksCard.svelte';
 	import SearchProtectionCard from './components/SearchProtectionCard.svelte';
 	import DebugSystemCheckCard from './components/DebugSystemCheckCard.svelte';
+	import LocalAiModelCard from './components/LocalAiModelCard.svelte';
+	import { MODEL_SOURCE } from '../shared/local-ai-model-download';
 	import PublicSupportCard from './components/PublicSupportCard.svelte';
 	import SensitivityCard from './components/SensitivityCard.svelte';
 	import SystemCompatibilityCard from './components/SystemCompatibilityCard.svelte';
@@ -62,6 +64,10 @@
 			setKeepLocalAiLoadedWhileActive={model.setKeepLocalAiLoadedWhileActive}
 			setAutoWarmLocalAiOnActiveSupportedPage={model.setAutoWarmLocalAiOnActiveSupportedPage}
 		/>
+
+		{#if MODEL_SOURCE === 'huggingface'}
+			<LocalAiModelCard />
+		{/if}
 
 		<SensitivityCard
 			settings={model.settings}
@@ -208,6 +214,8 @@
 	}
 
 	.content { padding: 0 24px; }
+	/* Sections linked to (#vault-section, …) land below the sticky header. */
+	.content :global(article[id]) { scroll-margin-top: 112px; }
 	@media (max-width: 520px) {
 		.page-header { padding: 12px 16px; }
 		.content { padding: 0 16px; }
