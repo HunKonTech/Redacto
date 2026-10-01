@@ -26,6 +26,11 @@ server:
 - The page's Content-Security-Policy (`src/web/web.html`) only allows
   requests to its own origin, so no request can carry the text elsewhere.
 
+Below the panel, an *Also available as* section links the browser extension
+(GitHub Releases, until the Chrome Web Store listing is live) and the IDE
+plugins on the VS Code, JetBrains and Visual Studio marketplaces (see
+[ide-plugins.md](ide-plugins.md#publishing)).
+
 ## Offline use (PWA)
 
 The page is an installable Progressive Web App (`src/web/manifest.webmanifest`)

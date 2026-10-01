@@ -4,8 +4,7 @@
  * Build Redacto for Firefox.
  *
  * Same sources as the Chrome build; webpack switches to the Firefox manifest
- * (scripts/firefox/firefox-manifest.js), leaves the Local AI model out (the
- * add-on downloads it from Hugging Face) and writes to `dist-firefox/`:
+ * (scripts/firefox/firefox-manifest.js) and writes to `dist-firefox/`:
  *
  *   release/firefox/redacto-firefox-<version>/      unpacked
  *   release/firefox/redacto-firefox-<version>.zip   for addons.mozilla.org
@@ -21,8 +20,6 @@ const FIREFOX_TARGET = {
   label: 'Firefox',
   distDir: 'dist-firefox',
   buildEnv: { BROWSER: 'firefox' },
-  // Downloaded from Hugging Face on first use (src/shared/local-ai-model-download.ts).
-  downloadsModel: true,
   usage: 'node scripts/firefox/build-firefox.js',
   installHint: 'open about:debugging#/runtime/this-firefox, click "Load Temporary Add-on…", and pick manifest.json in',
 };

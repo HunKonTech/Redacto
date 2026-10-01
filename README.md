@@ -112,10 +112,10 @@ Model-free pull-request checks:
 npm run validate:ci
 ```
 
-The full transformer build requires preparing BardsAI EU multilingual NER assets — see [`docs/developer/model-assets.md`](docs/developer/model-assets.md). Once prepared, build with strict enforcement:
+Builds do not contain the Local AI model: every Redacto build downloads it from Hugging Face on first use (see [`docs/developer/model-download.md`](docs/developer/model-download.md)). To package it instead, prepare the BardsAI EU multilingual NER assets (see [`docs/developer/model-assets.md`](docs/developer/model-assets.md)) and build with strict enforcement:
 
 ```bash
-NER_MODEL_ASSETS_REQUIRED=1 npm run build
+MODEL_SOURCE=bundled NER_MODEL_ASSETS_REQUIRED=1 npm run build
 ```
 
 ### Repository layout

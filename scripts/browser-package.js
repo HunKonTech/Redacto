@@ -65,7 +65,7 @@ function build(target, options) {
   run('WASM build', npm, ['run', 'build:wasm']);
   run('Extension build', npm, ['run', 'build:ext'], {
     ...target.buildEnv,
-    ...(options.requireModel ? { NER_MODEL_ASSETS_REQUIRED: '1' } : {}),
+    ...(options.requireModel ? { NER_MODEL_ASSETS_REQUIRED: '1', MODEL_SOURCE: 'bundled' } : {}),
   });
 }
 
@@ -101,7 +101,6 @@ function stage(target, version) {
  * @param {string} target.label     browser name for log output
  * @param {string} target.distDir   webpack output folder of this build
  * @param {object} [target.buildEnv] extra env for `npm run build:ext`
- * @param {boolean} [target.downloadsModel] Local AI model is downloaded at runtime, not packaged
  * @param {string} target.usage     command line shown on bad arguments
  * @param {string} target.installHint how to load the unpacked folder
  */
@@ -110,8 +109,10 @@ function buildBrowserPackage(target, argv) {
   const packageVersion = readPackageVersion(ROOT_DIR);
   const version = ciBuildVersion(packageVersion) ?? packageVersion;
 
-  // A target that downloads the model at runtime needs none at build time.
-  const missingModel = target.downloadsModel ? [] : missingPreparedModelAssets(ROOT_DIR);
+  // The Local AI model is downloaded on first use (docs/developer/model-download.md);
+  // it is needed at build time only when packaged (--require-model or MODEL_SOURCE=bundled).
+  const bundlesModel = options.requireModel || process.env.MODEL_SOURCE === 'bundled';
+  const missingModel = bundlesModel ? missingPreparedModelAssets(ROOT_DIR) : [];
   if (missingModel.length > 0) {
     if (options.requireModel) {
       throw new Error(

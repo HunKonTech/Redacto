@@ -2,7 +2,9 @@
 
 /**
  * Stages the prepared Local AI model for its Hugging Face repository, where
- * the Firefox build downloads it from (src/background/local-ai-model-downloader.ts):
+ * every Redacto build downloads it from on first use (browsers:
+ * src/background/local-ai-model-downloader.ts; IDE plugins: their host,
+ * see docs/developer/model-download.md):
  *
  *   <out>/config.json, tokenizer*.json, onnx/model_q4f16.onnx(.data)
  *   <out>/redacto-model.json   size + SHA-256 of every file, and a version
@@ -11,7 +13,7 @@
  * The version is derived from the file hashes, so an unchanged model stages
  * byte-identical files and the upload makes no new commit.
  *
- * Usage: node scripts/firefox/stage-hf-model.js --out <dir>
+ * Usage: node scripts/hf-model/stage-hf-model.js --out <dir>
  */
 
 const crypto = require('crypto');
@@ -70,13 +72,13 @@ tags:
 # Redacto Local AI model (q4f16 ONNX)
 
 The PII token-classification model that the [Redacto](https://github.com/HunKonTech/Redacto)
-browser extension runs locally. The Firefox add-on downloads it from here on first use
-(addons.mozilla.org does not accept packages over 200 MB); the Chrome and Edge packages
-ship the same files.
+browser extension and IDE plugins run locally. Every Redacto build (Chrome, Edge, Firefox,
+VS Code, JetBrains, Visual Studio) downloads it from here on first use instead of shipping it,
+which keeps the packages small.
 
 - Source model: [bardsai/eu-pii-anonimization-multilang](https://huggingface.co/bardsai/eu-pii-anonimization-multilang) (Apache-2.0, DOI 10.57967/hf/8721)
 - Changes: converted to ONNX fp16, then 4-bit MatMulNBits weight-only quantization (block size 32, symmetric), ONNX external-data format. These are not the upstream-original files.
-- \`redacto-model.json\` lists every file with its size and SHA-256; the extension verifies each download against it.
+- \`redacto-model.json\` lists every file with its size and SHA-256; Redacto verifies each download against it.
 
 Uploaded by Redacto's release workflow. See the repository's \`THIRD_PARTY_NOTICES.md\` and \`docs/developer/model-assets.md\`.
 `;
@@ -102,7 +104,7 @@ function stageHfModel(outDir, rootDir = ROOT_DIR) {
 function main(argv = process.argv.slice(2)) {
   const outIndex = argv.indexOf('--out');
   const outDir = outIndex >= 0 ? argv[outIndex + 1] : undefined;
-  if (!outDir) throw new Error('Usage: node scripts/firefox/stage-hf-model.js --out <dir>');
+  if (!outDir) throw new Error('Usage: node scripts/hf-model/stage-hf-model.js --out <dir>');
   const manifest = stageHfModel(path.resolve(outDir));
   const totalMb = manifest.files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
   console.log(`Staged model version ${manifest.version} (${manifest.files.length} files, ${totalMb.toFixed(1)} MB) in ${outDir}`);

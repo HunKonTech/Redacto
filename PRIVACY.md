@@ -81,18 +81,18 @@ Redacto does **not** include:
 - upload of model input
 
 Detection runs in the browser using local deterministic recognizers and, where available, a
-local AI/NER model packaged with the extension. Pasted text is **not** sent to any remote
+local AI/NER model that runs on your device. Pasted text is **not** sent to any remote
 inference service by the extension.
 
-**Firefox add-on: model download.** addons.mozilla.org does not accept packages as large as the
-Local AI model, so the Firefox add-on downloads the model files once, on first use, from the
-project's Hugging Face repository (`huggingface.co`), and checks for a newer model after each
-add-on update. These requests contain no user content: they only fetch the model files and a file
-list with their checksums, which the add-on verifies before use. Like any web request, they reveal
-your IP address and browser user agent to Hugging Face (see Hugging Face's privacy policy). The
-model is kept in the add-on's local storage and runs locally like in the other browsers. With
-Local AI switched off, nothing is downloaded. The Chrome and Edge packages include the model and
-make no such requests.
+**Local AI model download.** To keep the packages small, the extension (Chrome, Edge and Firefox)
+and the IDE plugins (VS Code, JetBrains, Visual Studio) do not include the Local AI model. They
+download the model files once, on first use, from the project's Hugging Face repository
+(`huggingface.co`), and check for a newer model after each update. These requests contain no user
+content: they only fetch the model files and a file list with their checksums, which Redacto
+verifies before use. Like any web request, they reveal your IP address and browser or IDE user
+agent to Hugging Face (see Hugging Face's privacy policy). The model is kept in the extension's
+local storage (in the IDEs: the plugin's local data folder) and runs locally. With Local AI
+switched off, nothing is downloaded.
 
 ## 6. Clipboard Access
 

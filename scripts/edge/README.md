@@ -12,9 +12,9 @@ Edge runs the same Manifest V3 extension as Chrome, so no code or manifest chang
   cargo install wasm-bindgen-cli --version 0.2.118
   ```
 
-## Local AI model (one-time)
+## Local AI model (optional)
 
-Without the model the extension runs pattern-only detection and reports "NER unavailable". To include Local AI, prepare the model once (macOS / Linux):
+The package does not contain the Local AI model: the extension downloads it from Hugging Face on first use (see [`docs/developer/model-download.md`](../../docs/developer/model-download.md)), so it is not needed to build. To package it instead, for testing without a network, prepare the model once (macOS / Linux):
 
 ```bash
 scripts/edge/prepare-model.sh
@@ -49,7 +49,7 @@ Output in `release/edge/`:
 Options:
 
 - `--skip-build` — repackage the existing `dist/` without rebuilding.
-- `--require-model` — fail unless the Local AI model assets are prepared (see [`docs/developer/model-assets.md`](../../docs/developer/model-assets.md)). Without them the build still works, with pattern-only detection.
+- `--require-model` — package the prepared Local AI model instead of downloading it on first use, and fail unless it is prepared (see [`docs/developer/model-assets.md`](../../docs/developer/model-assets.md)).
 
 ## Install in Edge
 

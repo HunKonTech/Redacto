@@ -71,10 +71,10 @@ npm run convert:model:external-data -- --model bardsai-fp16
 npm run convert:model:q4f16:bardsai
 ```
 
-Then build with missing model assets treated as fatal:
+Then build with the model packaged (builds otherwise download it on first use, see [model-download.md](model-download.md)) and missing model assets treated as fatal:
 
 ```bash
-NER_MODEL_ASSETS_REQUIRED=1 npm run build
+MODEL_SOURCE=bundled NER_MODEL_ASSETS_REQUIRED=1 npm run build
 ```
 
 Expected prepared asset location:
@@ -153,6 +153,6 @@ The side panel as a static web page on GitHub Pages: see [web-page.md](web-page.
 
 - Missing `wasm-bindgen`: install `wasm-bindgen-cli` version `0.2.118`.
 - Missing ONNX Runtime Web files: run `npm install`.
-- Missing BardsAI assets in strict mode: prepare the model assets, then rerun `NER_MODEL_ASSETS_REQUIRED=1 npm run build`.
+- Missing BardsAI assets in strict mode: prepare the model assets, then rerun `MODEL_SOURCE=bundled NER_MODEL_ASSETS_REQUIRED=1 npm run build`.
 - Release-strict validation fails on missing BardsAI assets by design; use `npm run validate:ci` for model-free pull request checks.
 - Python conversion import errors: activate `.venv` and install `onnx`, `onnxruntime`, and `sympy`.

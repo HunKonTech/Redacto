@@ -8,7 +8,8 @@
     console, right-click → <b>Anonymize with Redacto</b>: the
     Redacto tool window shows the original next to the anonymized
     text and saves it to History. Your code is never changed. Detection
-    (rules + a local AI model) runs on this device.
+    (rules + a local AI model) runs on this device; the local AI model is
+    downloaded once, on first use, from Redacto's Hugging Face repository.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -18,6 +19,7 @@
                     anchor="right"
                     icon="/icons/redacto.svg"
                     factoryClass="com.hunkontech.privacyguardrail.PanelToolWindowFactory"/>
+        <notificationGroup id="Redacto" displayType="BALLOON"/>
     </extensions>
 
     <actions>

@@ -1,8 +1,14 @@
 /**
  * The side panel for the IDE plugins (VS Code, JetBrains, Visual Studio):
  * one self-contained folder, `dist-ide/webview/`, each plugin loads into its
- * webview. Same loaders and the same WASM / ONNX Runtime / model assets as
- * the extension build (webpack.config.js); see docs/developer/ide-plugins.md.
+ * webview. Same loaders and the same WASM / ONNX Runtime assets as the
+ * extension build (webpack.config.js); see docs/developer/ide-plugins.md.
+ *
+ * The Local AI model is not in the folder: the plugin host downloads it from
+ * Hugging Face on first use (docs/developer/model-download.md) and reads
+ * where from in `model-source.json`, emitted here. The web page
+ * (webpack.web.config.js) reuses this config with the model packaged
+ * (`modelSource: 'bundled'`), as it serves the model next to itself.
  */
 const path = require('path');
 const webpack = require('webpack');
@@ -11,11 +17,26 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const baseConfig = require('./webpack.config');
 const { LocalNerAssetsPlugin, getNerAssetCopyPatterns } = require('./scripts/extension-packaging');
+const { modelSourceJson } = require('./scripts/hf-model/model-source');
+
+/** `model-source.json`: where the IDE hosts download the model from. */
+class ModelSourcePlugin {
+  apply(compiler) {
+    const { Compilation, sources } = compiler.webpack;
+    compiler.hooks.thisCompilation.tap('ModelSourcePlugin', (compilation) => {
+      compilation.hooks.processAssets.tap({ name: 'ModelSourcePlugin', stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL }, () => {
+        compilation.emitAsset('model-source.json', new sources.RawSource(modelSourceJson()));
+      });
+    });
+  }
+}
 
 module.exports = (env = {}) => {
-  const base = baseConfig(env);
+  const modelSource = env.modelSource || 'host';
+  const base = baseConfig({ ...env, modelSource });
   const requirePreparedModel =
-    process.env.NER_MODEL_ASSETS_REQUIRED === '1' || env.requireNerModelAssets === true;
+    (process.env.NER_MODEL_ASSETS_REQUIRED === '1' || env.requireNerModelAssets === true) && modelSource === 'bundled';
+  const define = base.plugins.find((plugin) => plugin instanceof webpack.DefinePlugin);
 
   return {
     ...base,
@@ -42,6 +63,7 @@ module.exports = (env = {}) => {
     plugins: [
       new MiniCssExtractPlugin({ filename: '[name].css' }),
       new LocalNerAssetsPlugin({ rootDir: __dirname, requirePreparedModel }),
+      define,
       // The entry imports the panel only after the chrome.* shim is in place;
       // keep those imports in the one bundle rather than separate chunks.
       new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
@@ -53,9 +75,10 @@ module.exports = (env = {}) => {
           { from: 'src/assets/fonts', to: 'fonts' },
           { from: 'src/assets/icons/icon128.png', to: 'icon128.png' },
           { from: 'crate/pkg/privacy_guardrail_wasm_bg.wasm', to: 'wasm/[name][ext]' },
-          ...getNerAssetCopyPatterns(__dirname),
+          ...getNerAssetCopyPatterns(__dirname, { includeNerModel: modelSource === 'bundled' }),
         ],
       }),
+      ...(modelSource === 'host' ? [new ModelSourcePlugin()] : []),
       new HtmlWebpackPlugin({
         template: 'src/ide/ide-webview.html',
         filename: 'index.html',

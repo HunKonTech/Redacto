@@ -262,7 +262,7 @@ export interface SetLocalAiDetectionRequest {
   payload: { enabled: boolean };
 }
 
-/** Popup → background: (re)start the Local AI model download (Firefox build). */
+/** Popup / side panel → background (IDE: → host): (re)start the Local AI model download. */
 export interface DownloadLocalAiModelRequest {
   type: 'DOWNLOAD_LOCAL_AI_MODEL';
 }

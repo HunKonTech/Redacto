@@ -1,10 +1,11 @@
 /**
- * Downloads the Local AI model from Hugging Face in builds that do not
- * package it (Firefox), see src/shared/local-ai-model-download.ts.
+ * Downloads the Local AI model from Hugging Face in the browser extension
+ * (Chrome, Edge, Firefox), see src/shared/local-ai-model-download.ts.
  *
  * - First use: every file in `redacto-model.json` is downloaded, checked
  *   against its size and SHA-256, and stored in a cache named after the model
- *   version. Only a complete, verified version becomes `readyVersion`.
+ *   version. The manifest itself goes in last and marks the cache complete;
+ *   only a complete, verified version becomes `readyVersion`.
  * - Each new extension version checks the manifest again; a newer model is
  *   downloaded next to the old one, which stays in use until the new one is
  *   complete. Older caches are then removed.
@@ -13,12 +14,14 @@
  */
 
 import {
-  extensionModelUrl,
   huggingFaceFileUrl,
+  modelCompleteMarkerUrl,
   isModelCacheName,
   loadModelDownloadState,
   MODEL_DOWNLOAD_STATE_KEY,
   MODEL_MANIFEST_FILE,
+  MODEL_SOURCE,
+  modelCacheKey,
   modelCacheName,
   modelDownloadsEnabled,
   type ModelDownloadState,
@@ -78,17 +81,13 @@ async function sha256Hex(data: ArrayBuffer): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function hasCompleteCache(deps: ModelDownloaderDeps, version: string, manifest?: ModelManifest): Promise<boolean> {
+async function hasCompleteCache(deps: ModelDownloaderDeps, version: string): Promise<boolean> {
   if (!(await deps.caches.has(modelCacheName(version)))) return false;
-  if (!manifest) return true;
   const cache = await deps.caches.open(modelCacheName(version));
-  for (const file of manifest.files) {
-    if (!(await cache.match(extensionModelUrl(file.path)))) return false;
-  }
-  return true;
+  return Boolean(await cache.match(modelCompleteMarkerUrl()));
 }
 
-/** True when a verified model is in the cache (always true for packaged builds). */
+/** True when a verified model is in the cache (always true where nothing is downloaded). */
 export async function isLocalAiModelReady(deps: ModelDownloaderDeps = defaultDeps()): Promise<boolean> {
   if (!modelDownloadsEnabled()) return true;
   const { readyVersion } = await loadModelDownloadState();
@@ -162,7 +161,7 @@ async function downloadVersion(
       throw new Error(`${file.path}: SHA-256 mismatch (downloaded file is not the published model)`);
     }
     await cache.put(
-      extensionModelUrl(file.path),
+      modelCacheKey(file.path),
       new Response(blob, {
         headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(file.size) },
       }),
@@ -170,6 +169,11 @@ async function downloadVersion(
     current = await saveState({ ...current, phase: 'downloading' });
   }
 
+  // Last: marks the version complete (see modelCompleteMarkerUrl).
+  await cache.put(
+    modelCompleteMarkerUrl(),
+    new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/json' } }),
+  );
   return current;
 }
 
@@ -201,7 +205,7 @@ async function run(deps: ModelDownloaderDeps, reason: string): Promise<ModelDown
     if (!response.ok) throw new Error(`${MODEL_MANIFEST_FILE}: HTTP ${response.status}`);
     const manifest = parseModelManifest(await response.json());
 
-    if (manifest.version !== state.readyVersion || !(await hasCompleteCache(deps, manifest.version, manifest))) {
+    if (!(await hasCompleteCache(deps, manifest.version))) {
       state = await downloadVersion(deps, manifest, state);
     }
 
@@ -230,10 +234,11 @@ async function run(deps: ModelDownloaderDeps, reason: string): Promise<ModelDown
 
 /**
  * Makes sure the model is downloaded and, once per extension version, up to
- * date. Concurrent callers share one run. No-op for packaged builds.
+ * date. Concurrent callers share one run. No-op where the background does
+ * not download it (the web page; in the IDE plugins the host does).
  */
 export function ensureLocalAiModel(reason: string, deps: ModelDownloaderDeps = defaultDeps()): Promise<ModelDownloadState> {
-  if (!modelDownloadsEnabled()) return loadModelDownloadState();
+  if (MODEL_SOURCE !== 'huggingface') return loadModelDownloadState();
   inFlight ??= run(deps, reason).finally(() => {
     inFlight = null;
   });

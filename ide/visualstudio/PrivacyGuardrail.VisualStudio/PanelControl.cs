@@ -17,11 +17,17 @@ namespace PrivacyGuardrail.VisualStudio
     /// <summary>
     /// The shared side panel (the extension's webview\ folder) in WebView2,
     /// served as https://pg.local/, and the bridge it talks to (protocol:
-    /// src/ide/protocol.ts in the repository root).
+    /// src/ide/protocol.ts in the repository root). The downloaded Local AI
+    /// model (ModelDownload) is served as https://pg-model.local/.
     /// </summary>
     public sealed class PanelControl : Grid
     {
         private const string Host = "pg.local";
+
+        /// <summary>The panel files installed with the extension.</summary>
+        internal static readonly string WebviewDirectory =
+            Path.Combine(Path.GetDirectoryName(typeof(PanelControl).Assembly.Location), "webview");
+
         private readonly WebView2 web = new WebView2();
         /// <summary>Selections made before the panel finished loading.</summary>
         private readonly Queue<JObject> pending = new Queue<JObject>();
@@ -42,7 +48,7 @@ namespace PrivacyGuardrail.VisualStudio
         private async Task InitializeAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var root = Path.Combine(Path.GetDirectoryName(typeof(PanelControl).Assembly.Location), "webview");
+            var root = WebviewDirectory;
             // WebView2's default profile folder sits next to devenv.exe, which is not writable.
             var environment = await CoreWebView2Environment.CreateAsync(null, Path.Combine(PanelStorage.DataDirectory, "WebView2"));
             // No white flash in a dark theme while the page loads.
@@ -51,6 +57,11 @@ namespace PrivacyGuardrail.VisualStudio
 
             var core = web.CoreWebView2;
             core.SetVirtualHostNameToFolderMapping(Host, root, CoreWebView2HostResourceAccessKind.Allow);
+            // Allow: the panel (https://pg.local) loads the model from this other origin.
+            var model = ModelDownload.Instance;
+            Directory.CreateDirectory(model.ModelDirectory);
+            core.SetVirtualHostNameToFolderMapping(ModelDownload.Host, model.ModelDirectory, CoreWebView2HostResourceAccessKind.Allow);
+            model.Changed += OnModelChanged;
             core.WebMessageReceived += OnWebMessage;
             core.NavigationStarting += (sender, args) => ready = false;
             VSColorTheme.ThemeChanged += OnThemeChanged;
@@ -65,6 +76,16 @@ namespace PrivacyGuardrail.VisualStudio
                 web.DefaultBackgroundColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
                 if (ready) Send(new JObject { ["type"] = "theme", ["theme"] = PanelTheme.Snapshot(this) });
             }).FileAndForget("PrivacyGuardrail/Theme");
+        }
+
+        /// <summary>Download progress for the panel's header.</summary>
+        private void OnModelChanged()
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (ready) Send(new JObject { ["type"] = "model", ["state"] = ModelDownload.Instance.ToJson() });
+            }).FileAndForget("PrivacyGuardrail/ModelProgress");
         }
 
         /// <summary>Show <paramref name="text"/> anonymized in the panel.</summary>
@@ -99,7 +120,14 @@ namespace PrivacyGuardrail.VisualStudio
             switch ((string)message["type"])
             {
                 case "ready":
-                    Send(new JObject { ["type"] = "init", ["hostName"] = "Visual Studio", ["storage"] = storage.Snapshot(), ["theme"] = PanelTheme.Snapshot(this) });
+                    Send(new JObject
+                    {
+                        ["type"] = "init",
+                        ["hostName"] = "Visual Studio",
+                        ["storage"] = storage.Snapshot(),
+                        ["theme"] = PanelTheme.Snapshot(this),
+                        ["model"] = ModelDownload.Instance.ToJson(),
+                    });
                     ready = true;
                     Flush();
                     break;
@@ -111,6 +139,9 @@ namespace PrivacyGuardrail.VisualStudio
                     break;
                 case "copy":
                     Clipboard.SetText((string)message["text"] ?? string.Empty);
+                    break;
+                case "model.download":
+                    ModelDownload.Instance.Ensure();
                     break;
             }
         }

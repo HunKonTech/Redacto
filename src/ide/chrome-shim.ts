@@ -26,6 +26,8 @@ export interface ShimOptions {
   storage: Partial<Record<StorageAreaName, StorageSnapshot>>;
   post: (message: WebviewToHost) => void;
   handleMessage: MessageHandler;
+  /** `local` keys kept in this page only, never written to the host (e.g. download progress). */
+  volatileKeys?: string[];
 }
 
 function pick(data: Map<string, unknown>, keys?: string | string[] | Record<string, unknown> | null): StorageSnapshot {
@@ -50,7 +52,9 @@ function createArea(
   initial: StorageSnapshot | undefined,
   post: ShimOptions['post'],
   emit: (changes: Parameters<ChangeListener>[0], area: StorageAreaName) => void,
+  volatileKeys: ReadonlySet<string> = new Set(),
 ) {
+  const persisted = (key: string): boolean => !volatileKeys.has(key);
   const data = new Map<string, unknown>(Object.entries(initial ?? {}));
   return {
     async get(keys?: string | string[] | Record<string, unknown> | null): Promise<StorageSnapshot> {
@@ -63,7 +67,8 @@ function createArea(
         changes[key] = { oldValue: data.get(key), newValue: value };
         data.set(key, value);
       }
-      post({ type: 'storage.set', area: name, items: copy });
+      const written = Object.fromEntries(Object.entries(copy).filter(([key]) => persisted(key)));
+      if (Object.keys(written).length > 0) post({ type: 'storage.set', area: name, items: written });
       emit(changes, name);
     },
     async remove(keys: string | string[]): Promise<void> {
@@ -76,7 +81,8 @@ function createArea(
       }
       const removed = Object.keys(changes);
       if (removed.length === 0) return;
-      post({ type: 'storage.remove', area: name, keys: removed });
+      const written = removed.filter(persisted);
+      if (written.length > 0) post({ type: 'storage.remove', area: name, keys: written });
       emit(changes, name);
     },
     async clear(): Promise<void> {
@@ -101,7 +107,7 @@ export function createChromeShim(options: ShimOptions) {
 
   return {
     storage: {
-      local: createArea('local', options.storage.local, options.post, emit),
+      local: createArea('local', options.storage.local, options.post, emit, new Set(options.volatileKeys)),
       session: createArea('session', options.storage.session, options.post, emit),
       onChanged: {
         addListener: (listener: ChangeListener) => void listeners.add(listener),

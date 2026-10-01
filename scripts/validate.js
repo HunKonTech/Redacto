@@ -82,8 +82,9 @@ function runReleaseStrictValidation(options = {}) {
   runNpm('Svelte and TypeScript component checks', ['run', 'check:svelte']);
   runNpm('Rust tests', ['run', 'test:rust']);
   runNpm('WASM release build', ['run', 'build:wasm']);
+  // Packaged on purpose: checks the prepared model assets build.
   runNpm('Extension build with required BardsAI assets', ['run', 'build:ext'], {
-    env: { NER_MODEL_ASSETS_REQUIRED: '1' },
+    env: { NER_MODEL_ASSETS_REQUIRED: '1', MODEL_SOURCE: 'bundled' },
   });
 }
 

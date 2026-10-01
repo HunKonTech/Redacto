@@ -4,14 +4,16 @@
  * Hosts the shared side panel (`webview/`, built by `npm run build:ide-webview`
  * in the repository root) in an Activity Bar view and hands it the selection
  * the user picks "Anonymize" on. The panel does the detection and shows the
- * original next to the anonymized text; this file only moves messages and
- * keeps the panel's storage. The selected text is never modified.
+ * original next to the anonymized text; this file only moves messages, keeps
+ * the panel's storage and downloads the Local AI model on first use
+ * (model-download.ts). The selected text is never modified.
  *
  * Protocol: src/ide/protocol.ts in the repository root.
  */
 
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { ModelDownloader, type ModelState } from './model-download';
 import { panelHtml } from './webview-html';
 
 type StorageAreaName = 'local' | 'session';
@@ -22,7 +24,8 @@ type FromWebview =
   | { type: 'ready' }
   | { type: 'storage.set'; area: StorageAreaName; items: Snapshot }
   | { type: 'storage.remove'; area: StorageAreaName; keys: string[] }
-  | { type: 'copy'; text: string };
+  | { type: 'copy'; text: string }
+  | { type: 'model.download' };
 
 const VIEW_ID = 'privacyGuardrail.panel';
 const LOCAL_STATE_KEY = 'privacyGuardrail.storage.local';
@@ -65,13 +68,21 @@ class PanelProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly store: PanelStore,
-  ) {}
+    private readonly model: ModelDownloader,
+  ) {
+    model.onState(() => {
+      if (this.view && this.ready) void this.view.webview.postMessage({ type: 'model', state: this.modelState() });
+    });
+  }
 
   resolveWebviewView(view: vscode.WebviewView): void {
     const root = vscode.Uri.joinPath(this.extensionUri, 'webview');
     this.view = view;
     this.ready = false;
-    view.webview.options = { enableScripts: true, localResourceRoots: [root] };
+    view.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [root, vscode.Uri.file(this.model.modelDir)],
+    };
     view.webview.html = this.html(view.webview, root);
     view.webview.onDidReceiveMessage((message: FromWebview) => void this.onMessage(message));
     view.onDidDispose(() => {
@@ -100,7 +111,12 @@ class PanelProvider implements vscode.WebviewViewProvider {
   private async onMessage(message: FromWebview): Promise<void> {
     switch (message.type) {
       case 'ready':
-        await this.view?.webview.postMessage({ type: 'init', hostName: 'VS Code', storage: this.store.snapshot() });
+        await this.view?.webview.postMessage({
+          type: 'init',
+          hostName: 'VS Code',
+          storage: this.store.snapshot(),
+          model: this.modelState(),
+        });
         this.ready = true;
         this.flush();
         break;
@@ -113,7 +129,17 @@ class PanelProvider implements vscode.WebviewViewProvider {
       case 'copy':
         await vscode.env.clipboard.writeText(message.text);
         break;
+      case 'model.download':
+        void this.model.ensure();
+        break;
     }
+  }
+
+  /** The download state, plus where the webview loads the ready model from. */
+  private modelState(): ModelState & { baseUrl?: string } {
+    const dir = this.model.readyDir();
+    const baseUrl = dir && this.view ? `${this.view.webview.asWebviewUri(vscode.Uri.file(dir)).toString()}/` : undefined;
+    return { ...this.model.current(), baseUrl };
   }
 
   private html(webview: vscode.Webview, root: vscode.Uri): string {
@@ -150,8 +176,66 @@ async function terminalSelection(): Promise<string> {
   }
 }
 
+/**
+ * Download feedback outside the panel: a progress notification while the
+ * model downloads, and a warning with "Try again" when the first download
+ * fails (the panel shows the same in its header).
+ */
+function showModelProgress(model: ModelDownloader): void {
+  let session: { report: (state: ModelState) => void; done: () => void } | null = null;
+  model.onState((state) => {
+    const active = state.phase === 'downloading' || state.phase === 'verifying';
+    if (active && !session) {
+      void vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: state.readyVersion ? 'Redacto: updating the Local AI model' : 'Redacto: downloading the Local AI model',
+        },
+        (progress) =>
+          new Promise<void>((resolve) => {
+            let reported = 0;
+            session = {
+              report: (next) => {
+                const percent = next.totalBytes > 0 ? Math.floor((next.receivedBytes / next.totalBytes) * 100) : 0;
+                const megabytes = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`;
+                progress.report({
+                  increment: Math.max(0, percent - reported),
+                  message: `${percent}% (${megabytes(next.receivedBytes)} of ${megabytes(next.totalBytes)})`,
+                });
+                reported = Math.max(reported, percent);
+              },
+              done: resolve,
+            };
+            session.report(state);
+          }),
+      );
+    } else if (active) {
+      session?.report(state);
+    } else if (session) {
+      session.done();
+      session = null;
+    }
+    if (state.phase === 'failed' && !state.readyVersion) {
+      void vscode.window
+        .showWarningMessage(
+          `Redacto: the Local AI model could not be downloaded (${state.error ?? 'unknown error'}). Pattern-based detection keeps working meanwhile.`,
+          'Try again',
+        )
+        .then((choice) => {
+          if (choice) void model.ensure();
+        });
+    }
+  });
+}
+
 export function activate(context: vscode.ExtensionContext): void {
-  const provider = new PanelProvider(context.extensionUri, new PanelStore(context.globalState));
+  const model = new ModelDownloader(
+    vscode.Uri.joinPath(context.extensionUri, 'webview').fsPath,
+    vscode.Uri.joinPath(context.globalStorageUri, 'local-ai-model').fsPath,
+    String(context.extension.packageJSON.version),
+  );
+  showModelProgress(model);
+  const provider = new PanelProvider(context.extensionUri, new PanelStore(context.globalState), model);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(VIEW_ID, provider, {
       // Detection loads a model; keep the page (and it) alive while hidden.

@@ -38,7 +38,7 @@ The clipboard interceptor includes a page-world script where needed to observe p
 
 ### Local Model Runtime
 
-Transformer NER runs locally using packaged model and ONNX Runtime Web assets. The release package should include reviewed local assets. Runtime code must not fetch a remote model or send model input to a remote service.
+Transformer NER runs locally using ONNX Runtime Web assets packaged with the release and a model downloaded once from the project's Hugging Face repository, pinned to a commit per release and verified against the SHA-256 hashes in its `redacto-model.json` before use (see `docs/developer/model-download.md`). The model download carries no user data. Runtime code must not send model input to a remote service, and must not load model files that failed verification.
 
 ## In Scope Threats
 

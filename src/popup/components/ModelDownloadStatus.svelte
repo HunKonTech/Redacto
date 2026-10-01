@@ -11,7 +11,9 @@
     type ModelDownloadState,
   } from "../../shared/local-ai-model-download";
 
-  // Only builds that download the Local AI model (Firefox) show this.
+  // Shown in the popup and the side panel (browsers and IDE plugins) while the
+  // Local AI model downloads or after a failed download; the web page, which
+  // serves the model itself, never shows it.
   let state: ModelDownloadState = $state(INITIAL_MODEL_DOWNLOAD_STATE);
   const enabled = modelDownloadsEnabled();
 

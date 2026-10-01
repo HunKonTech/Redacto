@@ -42,6 +42,25 @@ describe('IDE chrome shim', () => {
     await expect(shim.storage.local.get('a')).resolves.toEqual({});
   });
 
+  it('keeps volatile keys in the page only', async () => {
+    const posted: WebviewToHost[] = [];
+    const shim = createChromeShim({
+      assetBase: 'https://pg.local/index.html',
+      storage: {},
+      post: (message) => posted.push(message),
+      handleMessage: jest.fn(),
+      volatileKeys: ['progress'],
+    });
+    const listener = jest.fn();
+    shim.storage.onChanged.addListener(listener);
+
+    await shim.storage.local.set({ progress: 50 });
+    await shim.storage.local.set({ progress: 60, a: 1 });
+    await shim.storage.local.remove('progress');
+    expect(posted).toEqual([{ type: 'storage.set', area: 'local', items: { a: 1 } }]);
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
   it('hands out copies, so callers cannot change stored values in place', async () => {
     const { shim } = setup({ local: { list: [1] } });
     const { list } = (await shim.storage.local.get('list')) as { list: number[] };

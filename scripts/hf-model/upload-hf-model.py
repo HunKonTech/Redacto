@@ -1,10 +1,10 @@
-"""Uploads the staged Local AI model (scripts/firefox/stage-hf-model.js) to its
+"""Uploads the staged Local AI model (scripts/hf-model/stage-hf-model.js) to its
 Hugging Face repository and prints the commit SHA of the repository's main
-branch, which the Firefox build pins as MODEL_REVISION.
+branch, which the builds pin as MODEL_REVISION.
 
 An unchanged model makes no new commit, so the SHA stays the same.
 
-Usage: HF_TOKEN=... python scripts/firefox/upload-hf-model.py <staged dir> <repo id>
+Usage: HF_TOKEN=... python scripts/hf-model/upload-hf-model.py <staged dir> <repo id>
 """
 
 import sys
@@ -17,11 +17,11 @@ def main() -> None:
         sys.exit(__doc__)
     folder, repo_id = sys.argv[1], sys.argv[2]
     api = HfApi()
-    # The add-on downloads without a token, so the repository must be public.
+    # Redacto downloads without a token, so the repository must be public.
     api.create_repo(repo_id, repo_type="model", private=False, exist_ok=True)
     if api.model_info(repo_id).private:
         sys.exit(
-            f"{repo_id} is private, but the Firefox add-on downloads the model without a token. "
+            f"{repo_id} is private, but Redacto downloads the model without a token. "
             "Make it public on huggingface.co (Settings -> Change repository visibility)."
         )
     api.upload_folder(

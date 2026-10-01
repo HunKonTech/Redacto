@@ -9,32 +9,12 @@ Firefox runs the same sources as the Chrome build. What differs is small and kep
 | `side_panel` + `chrome.sidePanel.open` | `sidebar_action` + `sidebarAction.open` | `scripts/firefox/firefox-manifest.js`, `src/shared/side-panel.ts` |
 | `options_page` | `options_ui` | `scripts/firefox/firefox-manifest.js` |
 | — | `browser_specific_settings.gecko` (add-on ID `redacto@hunkontech.github.io`, Firefox 140+, no data collection) | `scripts/firefox/firefox-manifest.js` |
-| Local AI model packaged | Local AI model downloaded from Hugging Face on first use | `src/background/local-ai-model-downloader.ts`, `src/shared/local-ai-model-download.ts` |
 
 `manifest.json` stays the single manifest source: webpack rewrites it for Firefox when built with `BROWSER=firefox` (`npm run build:ext:firefox`) and writes the output to `dist-firefox/`.
 
 ## Local AI model download
 
-addons.mozilla.org rejects packages over 200 MB, and the Local AI model alone is larger than that. So the Firefox package leaves the model out (about 40 MB instead of about 230 MB) and downloads it:
-
-- **Source:** the Hugging Face repository `koncsik/redacto-eu-pii-ner-q4f16` (build env `MODEL_HF_REPO`), at the revision the build pins (`MODEL_REVISION`, a commit SHA in CI; `main` otherwise). It holds the same files the Chrome package ships plus `redacto-model.json`, which lists every file with its size and SHA-256 and a model version derived from them.
-- **When:** right after install, and whenever Local AI is needed while the model is missing (for example after an interrupted download, or when Local AI is switched back on). After every add-on update the add-on reads `redacto-model.json` again and downloads the model if its version changed; the old model stays in use until the new one is complete. With Local AI switched off nothing is downloaded.
-- **Verification and storage:** each file must match its size and SHA-256 before it is stored in the add-on's Cache Storage, under the same `moz-extension://…/models/ner/…` URLs a packaged model would have. The model loader reads those URLs through `modelAwareFetch`, so the loading code is shared with Chrome.
-- **Progress:** the popup shows a progress bar and the downloaded MB under its header (with **Try again** after a failure), and the toolbar icon's badge shows the percentage. Until the model is ready, detection runs pattern-only and Local AI reports "loading", so it is not switched off by the load-failure handling.
-
-The release workflow uploads the model: step **Publish Local AI model to Hugging Face** stages it with `scripts/firefox/stage-hf-model.js` and uploads it with `scripts/firefox/upload-hf-model.py`. An unchanged model makes no new commit. It needs:
-
-- repository secret `HF_TOKEN`: a Hugging Face access token with **write** access to the model repository (huggingface.co → Settings → Access Tokens). The repository is created (public) on the first upload; it must stay public, since the add-on downloads without a token, and the upload step fails if it is private.
-- optional repository variable `MODEL_HF_REPO` to use a different repository.
-
-Without `HF_TOKEN` the step only warns, uploads nothing, and the Firefox build follows the repository's `main` branch.
-
-Uploading by hand (after preparing the model):
-
-```bash
-node scripts/firefox/stage-hf-model.js --out release/hf-model
-HF_TOKEN=hf_... uv run --no-project --with huggingface_hub python scripts/firefox/upload-hf-model.py release/hf-model koncsik/redacto-eu-pii-ner-q4f16
-```
+Like every Redacto build, the Firefox add-on downloads the Local AI model from Hugging Face on first use instead of packaging it. For addons.mozilla.org this is required: it rejects packages over 200 MB, and the model alone is larger. See [model-download.md](model-download.md).
 
 ## Build
 
@@ -92,7 +72,7 @@ Release Firefox only installs add-ons signed by Mozilla. Until the add-on is sig
 ## Publish on addons.mozilla.org (manual, for now)
 
 1. **Account.** Sign in at <https://addons.mozilla.org/developers/> with a Mozilla account and turn on two-factor authentication (required for submitting).
-2. **Size.** AMO rejects uploads over 200 MB. The Firefox package does not contain the Local AI model (it downloads it, see above), so it is well under the limit.
+2. **Size.** AMO rejects uploads over 200 MB. The package does not contain the Local AI model (it downloads it, see above), so it is well under the limit.
 3. **Submit.** Developer Hub → **Submit a New Add-on** → choose where it is distributed:
    - **On this site** — listed on AMO, reviewed, installable by everyone. This is the normal choice.
    - **On your own** — AMO only signs it (unlisted); you host the signed `.xpi` yourself, e.g. on the GitHub release. Use this to ship signed builds before the listing is ready.
