@@ -40,6 +40,7 @@ const MIRRORED_TOKENS: Record<string, string> = {
   '--pg-color-muted': '--color-muted',
   '--pg-color-subtle': '--color-subtle',
   '--pg-color-accent': '--color-accent',
+  '--pg-color-accent-hover': '--color-accent-hover',
   '--pg-color-accent-soft': '--color-accent-soft',
   '--pg-color-success': '--color-success',
   '--pg-radius-sm': '--radius-sm',
@@ -55,8 +56,11 @@ const MIRRORED_TOKENS: Record<string, string> = {
  * `--pg-font-sans` carries a broader fallback stack (BlinkMacSystemFont,
  * "Segoe UI") than the canonical `--font-sans` because it renders inside
  * arbitrary third-party pages rather than the extension's own surfaces.
+ *
+ * `--pg-color-focus` is a solid outline color picked to show on any host
+ * page, where the canonical `--color-focus` is a translucent focus ring.
  */
-const KNOWN_DIVERGENCES = new Set<string>(['--pg-font-sans']);
+const KNOWN_DIVERGENCES = new Set<string>(['--pg-font-sans', '--pg-color-focus']);
 
 /** First-wins map of `--name` → value, so a `:host`/`:root` declaration
  *  is captured ahead of any later theme override of the same token. */

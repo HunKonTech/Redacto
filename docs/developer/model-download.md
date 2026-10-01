@@ -39,6 +39,7 @@ After a failure, detection asks again at most every five minutes; **Try again** 
 Every build shows that the model is downloading, how far along it is, and when it failed:
 
 - **Browsers:** a progress bar with the downloaded MB under the header of the popup and of the side panel, with **Try again** after a failure. The toolbar icon's badge shows the percentage (`!` after a failed first download).
+- **Browsers, options page:** the **Local AI model** card shows the ready version, when it was downloaded (`readyAt`) and the space it takes (`readyBytes`, the sum of the manifest's file sizes), and has **Download now** (works while Local AI is off), **Check for updates** (`DOWNLOAD_LOCAL_AI_MODEL` with `checkNow`, which skips the once-per-extension-version rule) and **Delete model** (`DELETE_LOCAL_AI_MODEL`: removes every model cache and closes the offscreen document; with Local AI on, the model is downloaded again when next needed). The popup's Settings tab sums this up in one row that links to the card. Models downloaded before `readyAt` was recorded show it as not recorded; their size is read back from the cached manifest.
 - **IDE plugins:** the same bar in the Redacto panel, plus the IDE's own indicator:
   - VS Code: a progress notification, and a warning with **Try again** if the first download fails.
   - JetBrains: a background task with a progress bar in the status bar (cancellable), and a balloon with **Try again** if the first download fails.

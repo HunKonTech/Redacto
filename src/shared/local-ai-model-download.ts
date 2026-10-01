@@ -68,6 +68,10 @@ export interface ModelDownloadState {
   checkedExtensionVersion?: string;
   /** IDE plugins: where the host serves the ready model (`…/<version>/`). */
   baseUrl?: string;
+  /** When `readyVersion` finished downloading (unknown for models downloaded before this was recorded). */
+  readyAt?: number;
+  /** Size of `readyVersion`'s files, i.e. the space the model takes. */
+  readyBytes?: number;
   updatedAt: number;
 }
 
@@ -102,6 +106,11 @@ export function modelCacheName(version: string): string {
 
 export function isModelCacheName(name: string): boolean {
   return name.startsWith(CACHE_PREFIX);
+}
+
+/** The model's page on Hugging Face, where its files can also be downloaded by hand. */
+export function huggingFaceRepoUrl(repo = MODEL_HF_REPO, revision = MODEL_REVISION): string {
+  return `https://huggingface.co/${repo}/tree/${encodeURIComponent(revision)}`;
 }
 
 export function huggingFaceFileUrl(path: string, repo = MODEL_HF_REPO, revision = MODEL_REVISION): string {
@@ -156,7 +165,7 @@ export function modelDownloadMessage(state: ModelDownloadState): string {
   }
 }
 
-function formatMegabytes(bytes: number): string {
+export function formatMegabytes(bytes: number): string {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 

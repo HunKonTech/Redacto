@@ -16,8 +16,8 @@
 		padding: 10px;
 		overflow: auto;
 		border: 1px solid var(--color-border-strong);
-		border-radius: 6px;
-		background: #f8fafc;
+		border-radius: var(--radius-sm);
+		background: var(--color-input);
 		color: var(--color-ink);
 		font: 11px/1.55 var(--font-mono);
 		white-space: pre-wrap;

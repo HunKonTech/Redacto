@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import PGLogo from '../popup/components/PGLogo.svelte';
+	import PrefsControls from '../popup/components/PrefsControls.svelte';
+	import { t } from '../shared/i18n/reactive';
 	import { createOptionsModel } from './options-model.svelte';
 	import AllowlistCard from './components/AllowlistCard.svelte';
 	import PublicDomainsCard from './components/PublicDomainsCard.svelte';
@@ -9,6 +11,8 @@
 	import CodeBlocksCard from './components/CodeBlocksCard.svelte';
 	import SearchProtectionCard from './components/SearchProtectionCard.svelte';
 	import DebugSystemCheckCard from './components/DebugSystemCheckCard.svelte';
+	import LocalAiModelCard from './components/LocalAiModelCard.svelte';
+	import { MODEL_SOURCE } from '../shared/local-ai-model-download';
 	import PublicSupportCard from './components/PublicSupportCard.svelte';
 	import SensitivityCard from './components/SensitivityCard.svelte';
 	import SystemCompatibilityCard from './components/SystemCompatibilityCard.svelte';
@@ -38,11 +42,12 @@
 <div class="page">
 	<header class="page-header">
 		<div class="brand-row">
-			<div class="logo-box"><PGLogo size={24} /></div>
+			<div class="logo-box"><PGLogo size={36} /></div>
 			<div class="brand-copy">
-				<h1>Redacto <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
-				<p>Extension Settings</p>
+				<h1>Redacto <span class="beta-badge" title={t('common.beta.title')}>{t('common.beta')}</span></h1>
+				<p>{t('options.subtitle')}</p>
 			</div>
+			<PrefsControls />
 		</div>
 	</header>
 
@@ -59,6 +64,10 @@
 			setKeepLocalAiLoadedWhileActive={model.setKeepLocalAiLoadedWhileActive}
 			setAutoWarmLocalAiOnActiveSupportedPage={model.setAutoWarmLocalAiOnActiveSupportedPage}
 		/>
+
+		{#if MODEL_SOURCE === 'huggingface'}
+			<LocalAiModelCard />
+		{/if}
 
 		<SensitivityCard
 			settings={model.settings}
@@ -135,27 +144,31 @@
 		background: var(--color-surface);
 		color: var(--color-ink);
 		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
 	}
 
 	.page {
-		max-width: 760px;
+		max-width: 800px;
 		margin: 0 auto;
 		padding: 0 0 64px;
 	}
 
 	.page-header {
-		margin: 0 -24px 24px;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		margin-bottom: 20px;
 		padding: 16px 24px;
-		background: var(--color-header);
-		color: white;
+		border-bottom: 1px solid var(--color-border);
+		background: var(--color-chrome);
+		backdrop-filter: saturate(160%) blur(12px);
 	}
-	@media (min-width: 808px) {
+	@media (min-width: 848px) {
 		.page-header {
-			margin-left: 0;
-			margin-right: 0;
-			padding-left: 20px;
-			padding-right: 20px;
-			border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+			margin-top: 16px;
+			border: 1px solid var(--color-border);
+			border-radius: var(--radius-lg);
+			box-shadow: var(--shadow-md);
 		}
 	}
 
@@ -165,42 +178,46 @@
 		gap: 12px;
 	}
 	.logo-box {
-		width: 36px;
-		height: 36px;
+		width: 40px;
+		height: 40px;
 		display: grid;
 		place-items: center;
-		border-radius: 8px;
 		flex-shrink: 0;
+		filter: drop-shadow(0 4px 10px rgb(79 70 229 / 25%));
 	}
 	.brand-copy { flex: 1; min-width: 0; }
 	.brand-copy h1 {
 		margin: 0;
 		font-size: 20px;
-		font-weight: 300;
-		letter-spacing: -0.1px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
 	}
 	.beta-badge {
 		display: inline-block;
-		padding: 2px 7px;
-		border-radius: 999px;
-		background: var(--color-glow, #f59e0b);
-		color: #fff;
-		text-shadow: 0 0 1px #000;
+		padding: 2px 8px;
+		border-radius: var(--radius-pill);
+		background: var(--color-accent-soft);
+		color: var(--color-accent);
 		font-size: 10px;
 		font-weight: 700;
 		letter-spacing: 0.6px;
 		line-height: 1.4;
 		text-transform: uppercase;
-		vertical-align: middle;
 	}
 	.brand-copy p {
 		margin: 2px 0 0;
-		color: rgb(255 255 255 / 65%);
-		font-size: 12px;
+		color: var(--color-muted);
+		font-size: 12.5px;
 	}
 
 	.content { padding: 0 24px; }
+	/* Sections linked to (#vault-section, …) land below the sticky header. */
+	.content :global(article[id]) { scroll-margin-top: 112px; }
+	@media (max-width: 520px) {
+		.page-header { padding: 12px 16px; }
+		.content { padding: 0 16px; }
+	}
 </style>

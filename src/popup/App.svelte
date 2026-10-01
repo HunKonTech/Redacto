@@ -1,10 +1,12 @@
 <script lang="ts">
   import { debugError } from '../shared/debug-log';
+  import { t } from '../shared/i18n/reactive';
   import { canOpenSidePanel, openSidePanel as openBrowserSidePanel } from '../shared/side-panel';
   import { createAppModels, tabs } from "./popup-model.svelte";
   import DetectTab from "./components/DetectTab.svelte";
   import ModelDownloadStatus from "./components/ModelDownloadStatus.svelte";
   import PGLogo from "./components/PGLogo.svelte";
+  import PrefsControls from "./components/PrefsControls.svelte";
   import ProtectTab from "./components/ProtectTab.svelte";
   import SettingsTab from "./components/SettingsTab.svelte";
   import TestTab from "./components/TestTab.svelte";
@@ -28,22 +30,31 @@
 </script>
 
 <div class="page-frame">
-  <main class="popup-shell" aria-label="Redacto popup">
+  <main class="popup-shell" aria-label={t('popup.aria')}>
     <header class="shell-header">
       <div class="brand-row">
-        <div class="logo-box"><PGLogo size={24} /></div>
+        <div class="logo-box"><PGLogo size={30} /></div>
         <div class="brand-copy">
-          <h1>Redacto <span class="beta-badge" title="Public beta — features may change">BETA</span></h1>
-          <p>v{$version} · {$modelLabel}</p>
+          <h1>Redacto <span class="beta-badge" title={t('common.beta.title')}>{t('common.beta')}</span></h1>
+          <p>v{$version}{$modelLabel ? ` · ${$modelLabel}` : ''}</p>
+        </div>
+        <PrefsControls />
+      </div>
+
+      <div class={['master', $protectionEnabled && 'on']}>
+        <span class="master-dot" aria-hidden="true"></span>
+        <div class="master-copy">
+          <strong>{$protectionEnabled ? t('popup.master.on') : t('popup.master.off')}</strong>
+          <span>{$protectionEnabled ? t('popup.master.onHint') : t('popup.master.offHint')}</span>
         </div>
         <Toggle
           checked={$protectionEnabled}
-          label="Master protection"
+          label={t('popup.master.label')}
           onchange={(checked) => protection.setEnabled(checked)}
         />
       </div>
 
-      <nav class="tab-nav" aria-label="Popup sections">
+      <nav class="tab-nav" aria-label={t('popup.tabs.aria')}>
         {#each tabs as tab (tab.id)}
           <button
             type="button"
@@ -51,7 +62,7 @@
             aria-current={$activeTab === tab.id ? "page" : undefined}
             onclick={() => setActiveTab(tab.id)}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         {/each}
       </nav>
@@ -110,8 +121,14 @@
     </section>
 
     <footer class="shell-footer">
-      <button type="button" onclick={openSidePanel} title="History, restore and anonymize (Alt+Shift+P)">Open side panel</button>
-      <button type="button" onclick={() => settings.openOptions()}>More settings…</button>
+      <button type="button" onclick={openSidePanel} title={t('popup.footer.sidePanel.title')}>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.8" y="3.5" width="14.4" height="13" rx="2" /><path d="M12.2 3.5v13" /></svg>
+        {t('popup.footer.sidePanel')}
+      </button>
+      <button type="button" onclick={() => settings.openOptions()}>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3.5 6h8M15 6h1.5M3.5 14h1.5M8.5 14h8" /><circle cx="13" cy="6" r="1.8" /><circle cx="6.8" cy="14" r="1.8" /></svg>
+        {t('popup.footer.options')}
+      </button>
     </footer>
   </main>
 </div>
@@ -126,8 +143,9 @@
   }
   :global(body) {
     font-family: var(--font-sans);
-    background: #e5e7eb;
+    background: var(--color-surface);
     color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
   }
 
   .page-frame {
@@ -147,23 +165,25 @@
   }
   .shell-header {
     flex-shrink: 0;
-    background: var(--color-header);
-    color: white;
-    border-bottom: 1px solid rgb(255 255 255 / 6%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 14px 10px;
+    background: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
   }
   .brand-row {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 12px 18px;
+    gap: 10px;
   }
   .logo-box {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     display: grid;
     place-items: center;
-    border-radius: 8px;
     flex-shrink: 0;
+    filter: drop-shadow(0 4px 10px rgb(79 70 229 / 25%));
   }
   .brand-copy {
     flex: 1;
@@ -171,9 +191,9 @@
   }
   .brand-copy h1 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 300;
-    letter-spacing: -0.1px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
@@ -181,50 +201,95 @@
   }
   .beta-badge {
     display: inline-block;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: var(--color-glow, #f59e0b);
-    color: #ffffff;
-    text-shadow: 0 0 1px #000;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.6px;
-    line-height: 1.4;
+    line-height: 1.5;
     text-transform: uppercase;
-    vertical-align: middle;
   }
   .brand-copy p {
     margin: 1px 0 0;
     color: var(--color-muted);
-    font-size: 11px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .master {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-input);
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .master.on {
+    border-color: var(--tone-ok-border);
+    background: var(--tone-ok-bg);
+  }
+  .master-dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-toggle-off);
+  }
+  .master.on .master-dot {
+    background: var(--color-success);
+    box-shadow: 0 0 0 4px rgb(34 197 94 / 18%);
+  }
+  .master-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .master-copy strong {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .master-copy span {
+    color: var(--color-muted);
+    font-size: 11px;
+  }
   .tab-nav {
     display: flex;
-    position: relative;
-    border-top: 1px solid rgb(255 255 255 / 6%);
+    gap: 2px;
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--color-muted-bg);
   }
   .tab-nav button {
-    position: relative;
     flex: 1;
-    padding: 11px 8px 12px;
+    padding: 6px 8px;
     border: 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
+    border-radius: var(--radius-pill);
     background: transparent;
-    color: rgb(255 255 255 / 50%);
+    color: var(--color-muted);
     font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.1px;
     cursor: pointer;
+    transition: color 120ms ease, background 120ms ease;
+  }
+  .tab-nav button:hover {
+    color: var(--color-ink);
   }
   .tab-nav button.active {
-    border-bottom-color: var(--color-glow);
-    box-shadow: inset 0 -14px 28px -11px var(--color-glow);
-    color: white;
+    background: var(--color-elevated);
+    color: var(--color-ink);
     font-weight: 600;
+    box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
+  }
+  .tab-nav button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-focus);
   }
   .shell-body {
     flex: 1;
@@ -238,17 +303,32 @@
     display: flex;
     gap: 8px;
     padding: 8px 12px;
-    border-top: 1px solid rgb(14 23 38 / 8%);
-    background: var(--color-header);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-card);
   }
   .shell-footer button {
-    width: 100%;
-    padding: 6px;
-    border: 0;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
     background: transparent;
-    color: #93c5fd;
+    color: var(--color-ink);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .shell-footer button:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-hover);
+  }
+  .shell-footer svg {
+    width: 15px;
+    height: 15px;
+    color: var(--color-accent);
   }
 </style>

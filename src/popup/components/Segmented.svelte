@@ -30,23 +30,32 @@
 <style>
 	.segmented {
 		display: inline-flex;
-		padding: 2px;
-		border-radius: 6px;
-		background: #f1f5f9;
+		gap: 2px;
+		padding: 3px;
+		border-radius: var(--radius-pill);
+		background: var(--color-muted-bg);
 	}
 	.segmented button {
-		padding: 4px 10px;
+		padding: 4px 12px;
 		border: 0;
-		border-radius: 4px;
+		border-radius: var(--radius-pill);
 		background: transparent;
 		color: var(--color-muted);
-		font-size: 11px;
+		font-size: 11.5px;
 		font-weight: 500;
 		cursor: pointer;
+		transition: color 120ms ease, background 120ms ease;
+	}
+	.segmented button:hover {
+		color: var(--color-ink);
 	}
 	.segmented button.active {
-		background: white;
+		background: var(--color-elevated);
 		color: var(--color-ink);
-		box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+		box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
+	}
+	.segmented button:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px var(--color-focus);
 	}
 </style>

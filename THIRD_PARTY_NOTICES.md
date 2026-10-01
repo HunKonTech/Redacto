@@ -157,8 +157,14 @@ and the intended distribution purpose have been reviewed for that release.
 Official packages include these bundled font files:
 
 - IBM Plex Sans: `ibm-plex-sans-300.woff2`, `ibm-plex-sans-400.woff2`,
-  `ibm-plex-sans-500.woff2`, `ibm-plex-sans-600.woff2`
-- JetBrains Mono: `jetbrains-mono-400.woff2`, `jetbrains-mono-600.woff2`
+  `ibm-plex-sans-500.woff2`, `ibm-plex-sans-600.woff2`, and the Latin Extended
+  subsets `ibm-plex-sans-latin-ext-{300,400,500,600}.woff2`
+- JetBrains Mono: `jetbrains-mono-400.woff2`, `jetbrains-mono-600.woff2`, and
+  the Latin Extended subsets `jetbrains-mono-latin-ext-{400,600}.woff2`
+
+The Latin Extended subsets (needed for languages such as Hungarian) are taken
+from the Fontsource packages `@fontsource/ibm-plex-sans` and
+`@fontsource/jetbrains-mono` 5.3.0.
 
 IBM Plex Sans is Copyright (c) IBM Corp. and licensed under the SIL Open Font
 License, Version 1.1. "Plex" is a Reserved Font Name.

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { date, t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { BlocklistEntry, EntityType, Settings } from '../../shared/message-types';
 	import { ENTITY_TYPES } from '../../shared/message-types';
@@ -34,7 +35,7 @@
 	}
 
 	function formatDate(ts: number): string {
-		return new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+		return date(ts, { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	function entryScopeAsCategory(entry: BlocklistEntry): EntityType {
@@ -43,25 +44,25 @@
 </script>
 
 <article class="card" id="blocklist-section">
-	<CardHeading title="Blocklist" hint="Always flag these strings" />
+	<CardHeading title={t('blocklist.title')} hint={t('blocklist.hint')} />
 
 	<div class="body">
 		<form class="add-form" autocomplete="off" onsubmit={handleSubmit}>
 			<input
 				type="text"
 				class="input"
-				placeholder="Pattern (e.g. Project Bluebird)"
-				aria-label="Blocklist pattern"
+				placeholder={t('blocklist.placeholder')}
+				aria-label={t('blocklist.inputAria')}
 				aria-invalid={$error !== null}
 				bind:value={inputValue}
 				oninput={() => clearError()}
 			/>
-			<select class="select" aria-label="Category" bind:value={category}>
+			<select class="select" aria-label={t('lists.category')} bind:value={category}>
 				{#each ENTITY_TYPES as et (et)}
-					<option value={et}>{et === 'MISC' ? 'MISC (default)' : et}</option>
+					<option value={et}>{et === 'MISC' ? t('blocklist.miscDefault') : et}</option>
 				{/each}
 			</select>
-			<button type="submit" class="add-btn">Add</button>
+			<button type="submit" class="add-btn">{t('common.add')}</button>
 		</form>
 
 		{#if $error}
@@ -69,15 +70,15 @@
 		{/if}
 
 		{#if entries.length === 0}
-			<p class="empty">No entries yet.</p>
+			<p class="empty">{t('lists.empty')}</p>
 		{:else}
-			<table class="list-table" aria-label="Blocklist entries">
+			<table class="list-table" aria-label={t('blocklist.tableAria')}>
 				<thead>
 					<tr>
-						<th>Pattern</th>
-						<th>Category</th>
-						<th>Added</th>
-						<th>Source</th>
+						<th>{t('lists.pattern')}</th>
+						<th>{t('lists.category')}</th>
+						<th>{t('lists.added')}</th>
+						<th>{t('lists.source')}</th>
 						<th></th>
 					</tr>
 				</thead>
@@ -87,7 +88,7 @@
 							<td class="cell-pattern">{entry.pattern}</td>
 							<td class="cell-category">
 								<select
-									aria-label={`Category for ${entry.pattern}`}
+									aria-label={t('blocklist.categoryFor', { pattern: entry.pattern })}
 									value={entryScopeAsCategory(entry)}
 									onchange={(event) => updateCategory(i, event.currentTarget.value as EntityType)}
 								>
@@ -102,7 +103,7 @@
 								<button
 									type="button"
 									class="delete-btn"
-									aria-label={`Remove ${entry.pattern}`}
+									aria-label={t('common.removeItem', { item: entry.pattern })}
 									onclick={() => removeEntry(i)}
 								>×</button>
 							</td>
@@ -115,7 +116,7 @@
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 	.add-form { display: flex; gap: 8px; }
 	.input {
@@ -146,12 +147,12 @@
 		border: 0;
 		border-radius: var(--radius-md);
 		background: var(--color-accent);
-		color: white;
+		color: var(--color-on-accent);
 		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
 	}
-	.add-btn:hover { background: #1e40af; }
+	.add-btn:hover { background: var(--color-accent-hover); }
 	.error { margin: 0; color: var(--color-danger); font-size: 12px; }
 	.empty { margin: 0; color: var(--color-subtle); font-size: 13px; font-style: italic; }
 
@@ -173,7 +174,7 @@
 	.cell-category select {
 		padding: 4px 8px;
 		border: var(--border-hairline);
-		border-radius: 6px;
+		border-radius: var(--radius-sm);
 		background: var(--color-surface);
 		color: var(--color-ink);
 		font-size: 12px;
@@ -191,5 +192,5 @@
 		line-height: 1;
 		cursor: pointer;
 	}
-	.delete-btn:hover { color: var(--color-danger); background: rgb(239 68 68 / 8%); }
+	.delete-btn:hover { color: var(--color-danger); background: var(--color-danger-soft); }
 </style>

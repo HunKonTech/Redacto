@@ -75,6 +75,20 @@ html[data-ide-host] {
   --radius-md: var(--ide-radius);
   --radius-lg: var(--ide-radius-lg);
   --border-hairline: 1px solid var(--ide-border);
+  --color-elevated: var(--ide-card-bg);
+  --color-input: var(--ide-input-bg);
+  --color-muted-bg: var(--ide-list-hover);
+  --color-hover: var(--ide-list-hover);
+  --color-chrome: var(--ide-tab-bar-bg);
+  --color-accent-hover: var(--ide-button-hover);
+  --color-on-accent: var(--ide-button-fg);
+  --color-focus: var(--ide-focus);
+  --color-toggle-off: var(--ide-toggle-off);
+  --color-toast-bg: var(--ide-toast-bg);
+  --color-toast-fg: var(--ide-toast-fg);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 4px 14px var(--ide-shadow);
 }
 
 /* Fallbacks for a dark theme the host sent no colors for. */
@@ -121,14 +135,20 @@ html[data-ide-host] body {
 
 /* ── Header: the IDE titles the view already, so only the tabs stay. ── */
 [data-ide-host] #app .panel-header {
+  position: static;
+  gap: 0;
+  padding: 0;
+  backdrop-filter: none;
   background: var(--ide-tab-bar-bg);
   color: var(--ide-fg);
   border-bottom: 1px solid var(--ide-tab-border);
 }
 [data-ide-host] #app .brand-row { display: none; }
-[data-ide-host] #app .tab-nav { gap: 2px; padding: 0 8px; border-top: 0; }
+[data-ide-host] #app .tab-nav { gap: 2px; padding: 0 8px; border-top: 0; border-radius: 0; background: transparent; }
 [data-ide-host] #app .tab-nav button {
   flex: 0 1 auto;
+  border-radius: 0;
+  background: transparent;
   padding: 7px 8px 6px;
   border-bottom: 1px solid transparent;
   color: var(--ide-tab-inactive-fg);

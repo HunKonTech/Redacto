@@ -42,7 +42,7 @@ import {
   modelDownloadPercent,
   modelDownloadsEnabled,
 } from '../shared/local-ai-model-download';
-import { ensureLocalAiModel, isLocalAiModelReady } from './local-ai-model-downloader';
+import { deleteLocalAiModel, ensureLocalAiModel, isLocalAiModelReady } from './local-ai-model-downloader';
 import {
   closeOffscreenDocument,
   createOffscreenDocument,
@@ -489,6 +489,7 @@ function isBackgroundRequest(message: Message): boolean {
     || message.type === "SET_LOCAL_AI_DETECTION"
     || message.type === "WARM_UP_LOCAL_AI"
     || message.type === "DOWNLOAD_LOCAL_AI_MODEL"
+    || message.type === "DELETE_LOCAL_AI_MODEL"
     || message.type === "SUPPORTED_PAGE_ACTIVITY"
     || message.type === "DISMISS_CRITICAL_LOCAL_AI_MODAL"
     || message.type === "RE_RUN_SYSTEM_CHECK"
@@ -663,7 +664,16 @@ async function handleMessage(
     }
 
     case "DOWNLOAD_LOCAL_AI_MODEL": {
-      void ensureLocalAiModel("user-retry");
+      const checkNow = message.payload?.checkNow === true;
+      void ensureLocalAiModel(checkNow ? "user-check" : "user-retry", undefined, { checkNow });
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case "DELETE_LOCAL_AI_MODEL": {
+      await deleteLocalAiModel();
+      // A loaded model stays in memory until its document goes.
+      await closeOffscreenBestEffort();
       sendResponse({ ok: true });
       break;
     }

@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
+	import PrefsControls from '../../popup/components/PrefsControls.svelte';
 	import Toggle from '../../popup/components/Toggle.svelte';
 	import AllowlistCard from '../../options/components/AllowlistCard.svelte';
 	import BlocklistCard from '../../options/components/BlocklistCard.svelte';
@@ -29,35 +31,44 @@
 
 <div class="stack">
 	<article class="card">
-		<CardHeading title="Detection" hint={inIde ? 'Saved in this IDE' : 'Saved in this browser'} />
+		<CardHeading title={t('settings.appearance')} />
 		<div class="row">
 			<div class="info">
-				<span class="row-label">Local AI detection</span>
+				<span class="row-label">{t('prefs.language')}</span>
+				<p class="hint">{t('settings.language.hint')}</p>
+			</div>
+			<PrefsControls showTheme={!inIde} />
+		</div>
+	</article>
+
+	<article class="card">
+		<CardHeading title={t('settings.detection')} hint={inIde ? t('settings.savedIde') : t('settings.savedBrowser')} />
+		<div class="row">
+			<div class="info">
+				<span class="row-label">{t('settings.localAi')}</span>
 				<p class="hint">
 					{#if inIde}
-						Finds names, addresses and other personal data with the local AI model bundled with the plugin,
-						run inside the IDE. When off, only the built-in rules detect.
+						{t('settings.localAi.hintIde')}
 					{:else}
-						Finds names, addresses and other personal data with the local AI model, downloaded from this site
-						and run in this browser. When off, only the built-in rules detect.
+						{t('settings.localAi.hintWeb')}
 					{/if}
 				</p>
 			</div>
 			<Toggle
 				size="sm"
 				checked={localAi}
-				label="Local AI detection"
+				label={t('settings.localAi')}
 				onchange={(checked) => saveSettings({ nerProvider: checked ? 'transformers' : 'off' })}
 			/>
 		</div>
 		<div class="row">
 			<div class="info">
-				<span class="row-label">Debug logging</span>
+				<span class="row-label">{t('settings.debugLogging')}</span>
 				<p class="hint">
-					Writes detection details (<code>[PG:…]</code>) to the {inIde ? 'webview developer tools console' : 'browser console'}.
+					{t('settings.debugLogging.hintBefore')}<code>[PG:…]</code>{inIde ? t('settings.debugLogging.hintIde') : t('settings.debugLogging.hintWeb')}
 				</p>
 			</div>
-			<Toggle size="sm" checked={debug} label="Debug logging" onchange={(checked) => saveSettings({ debug: checked })} />
+			<Toggle size="sm" checked={debug} label={t('settings.debugLogging')} onchange={(checked) => saveSettings({ debug: checked })} />
 		</div>
 	</article>
 
@@ -111,7 +122,7 @@
 
 <style>
 	.stack { display: flex; flex-direction: column; }
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.row + .row { border-top: var(--border-hairline); }
 	.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px; }
 	.info { flex: 1; }

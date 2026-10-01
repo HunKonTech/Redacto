@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { date, t, time } from '../../shared/i18n/reactive';
 	import { restoreFromHistory, type HistoryEntry } from '../../shared/anonymization-history';
 	import type { IdentityVaultData } from '../../shared/identity-vault';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -55,16 +56,15 @@
 			await copyText(text);
 			flash(note);
 		} catch {
-			flash('Copy failed');
+			flash(t('history.copyFailed'));
 		}
 	}
 
 	function when(timestamp: number): string {
-		const date = new Date(timestamp);
-		const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-		return date.toDateString() === new Date().toDateString()
-			? time
-			: `${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`;
+		const clock = time(timestamp, { hour: '2-digit', minute: '2-digit' });
+		return new Date(timestamp).toDateString() === new Date().toDateString()
+			? clock
+			: `${date(timestamp, { month: 'short', day: 'numeric' })}, ${clock}`;
 	}
 
 	function snippet(text: string): string {
@@ -73,8 +73,8 @@
 	}
 
 	function summary(entry: HistoryEntry): string {
-		const parts = [`${entry.replacedCount} replaced`];
-		if (entry.renamedIdentifiers > 0) parts.push(`${entry.renamedIdentifiers} renamed`);
+		const parts = [t('history.replaced', { count: entry.replacedCount })];
+		if (entry.renamedIdentifiers > 0) parts.push(t('history.renamed', { count: entry.renamedIdentifiers }));
 		return parts.join(' · ');
 	}
 
@@ -91,14 +91,13 @@
 
 <div class="stack">
 	<article class="card">
-		<CardHeading title="History" badge={entries.length} />
+		<CardHeading title={t('history.title')} badge={entries.length} />
 		{#if entries.length === 0}
 			<p class="empty">
-				Nothing anonymized yet. Pastes you review on ChatGPT, Claude and Gemini, and text you
-				anonymize in the Anonymize tab, show up here.
+				{t('history.empty')}
 			</p>
 		{:else}
-			<ul class="entries" aria-label="Anonymization history">
+			<ul class="entries" aria-label={t('history.aria')}>
 				{#each entries as entry (entry.id)}
 					<li class={['entry', entry.id === selectedId && 'selected']}>
 						<button
@@ -108,7 +107,7 @@
 							onclick={() => onselect(entry.id)}
 						>
 							<span class="entry-head">
-								<span class="site">{entry.site ?? 'Side panel'}</span>
+								<span class="site">{entry.site ?? t('history.sidePanel')}</span>
 								<span class="time">{when(entry.createdAt)}</span>
 							</span>
 							<span class="entry-text">{snippet(entry.anonymizedText)}</span>
@@ -119,15 +118,15 @@
 								type="button"
 								class="icon"
 								aria-expanded={expandedId === entry.id}
-								title="Show details"
-								aria-label="Show details"
+								title={t('history.details')}
+								aria-label={t('history.details')}
 								onclick={() => (expandedId = expandedId === entry.id ? null : entry.id)}
 							>{expandedId === entry.id ? '▾' : '▸'}</button>
 							<button
 								type="button"
 								class="icon danger"
-								title="Delete this entry"
-								aria-label="Delete this entry"
+								title={t('history.delete')}
+								aria-label={t('history.delete')}
 								onclick={() => ondelete(entry.id)}
 							>×</button>
 						</div>
@@ -141,11 +140,11 @@
 									</tbody>
 								</table>
 								{#if entry.truncated}
-									<p class="hint">Long text: only the beginning is kept here. Restoring is not affected.</p>
+									<p class="hint">{t('history.truncated')}</p>
 								{/if}
 								<div class="detail-buttons">
-									<button type="button" class="secondary" onclick={() => copy(entry.anonymizedText, 'Anonymized text copied')}>Copy anonymized</button>
-									<button type="button" class="secondary" onclick={() => copy(entry.originalText, 'Original text copied')}>Copy original</button>
+									<button type="button" class="secondary" onclick={() => copy(entry.anonymizedText, t('history.copiedAnonymized'))}>{t('history.copyAnonymized')}</button>
+									<button type="button" class="secondary" onclick={() => copy(entry.originalText, t('history.copiedOriginal'))}>{t('history.copyOriginal')}</button>
 								</div>
 							</div>
 						{/if}
@@ -154,42 +153,42 @@
 			</ul>
 			<div class="list-foot">
 				<button type="button" class="link danger" onclick={clearAll}>
-					{confirmingClear ? 'Click again to delete all history' : 'Clear history'}
+					{confirmingClear ? t('history.clearConfirm') : t('history.clear')}
 				</button>
 			</div>
 		{/if}
 	</article>
 
 	<article class="card">
-		<CardHeading title="Restore original values" />
+		<CardHeading title={t('history.restore.title')} />
 		<div class="body">
 			<textarea
 				value={restoreInput}
 				oninput={(event) => onrestoreinput(event.currentTarget.value)}
-				aria-label="Anonymized text to restore"
+				aria-label={t('history.restore.aria')}
 				placeholder={entries.length > 0
-					? 'Paste the AI reply or any text with placeholders from the history…'
-					: 'Anonymize something first, then paste the AI reply here…'}
+					? t('history.restore.placeholder')
+					: t('history.restore.placeholderEmpty')}
 			></textarea>
 			{#if selected}
 				<p class="source-line">
-					Using <strong>{selected.site ?? 'Side panel'} · {when(selected.createdAt)}</strong>
+					{t('history.using')} <strong>{selected.site ?? t('history.sidePanel')} · {when(selected.createdAt)}</strong>
 					{#if autoPicked}
-						<span class="muted">— picked automatically</span>
+						<span class="muted">— {t('history.pickedAuto')}</span>
 					{:else}
-						<span class="muted">— picked by you</span>
-						<button type="button" class="link" onclick={onauto}>Pick automatically</button>
+						<span class="muted">— {t('history.pickedByYou')}</span>
+						<button type="button" class="link" onclick={onauto}>{t('history.pickAuto')}</button>
 					{/if}
 				</p>
 			{/if}
 			{#if restoreInput && selected && restored}
 				<div class="result-head">
-					<span class="count">{restored.matches.length} restored</span>
-					<button type="button" class="primary" onclick={() => copy(restored.deAnonText, 'Restored text copied')}>Copy restored text</button>
+					<span class="count">{t('history.restoredCount', { count: restored.matches.length })}</span>
+					<button type="button" class="primary" onclick={() => copy(restored.deAnonText, t('history.copiedRestored'))}>{t('history.copyRestored')}</button>
 				</div>
-				<MarkedText segments={restoredSegments} label="Restored text" />
+				<MarkedText segments={restoredSegments} label={t('history.restoredAria')} />
 				{#if restored.matches.length === 0}
-					<p class="hint">None of this entry's replacements appear in the text. Is the right entry selected?</p>
+					<p class="hint">{t('history.noMatches')}</p>
 				{/if}
 			{/if}
 		</div>
@@ -202,7 +201,7 @@
 
 <style>
 	.stack { display: flex; flex-direction: column; gap: 8px; }
-	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: white; }
+	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
 	.empty { margin: 0; padding: 14px 12px; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 
@@ -229,7 +228,7 @@
 		width: 24px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent;
 		color: var(--color-muted); font-size: 14px; line-height: 24px; cursor: pointer;
 	}
-	.icon:hover, .icon:focus-visible { background: rgb(14 23 38 / 6%); color: var(--color-ink); outline: none; }
+	.icon:hover, .icon:focus-visible { background: var(--color-hover); color: var(--color-ink); outline: none; }
 	.icon.danger:hover, .icon.danger:focus-visible { color: var(--color-danger); }
 
 	.details { padding: 0 10px 10px 10px; }
@@ -246,10 +245,10 @@
 
 	textarea {
 		box-sizing: border-box; width: 100%; min-height: 110px; padding: 10px; resize: vertical;
-		border: 1px solid var(--color-border-strong); border-radius: 6px; outline: none;
-		background: #f8fafc; color: var(--color-ink); font: 11px/1.5 var(--font-mono);
+		border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); outline: none;
+		background: var(--color-input); color: var(--color-ink); font: 11px/1.5 var(--font-mono);
 	}
-	textarea:focus { border-color: var(--color-accent); }
+	textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-focus); }
 	.result-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 	.count { color: var(--color-muted); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 	.hint { margin: 0; color: var(--color-muted); font-size: 11px; line-height: 1.45; }
@@ -259,15 +258,15 @@
 	.source-line .link { margin-left: 4px; color: var(--color-accent); text-decoration: underline; }
 
 	.primary, .secondary {
-		padding: 7px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+		padding: 7px 10px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer;
 	}
-	.primary { border: 0; background: var(--color-accent); color: white; }
-	.secondary { flex: 1; border: 1px solid var(--color-border-strong); background: white; color: var(--color-ink); }
-	.secondary:hover { background: #f8fafc; }
+	.primary { border: 0; background: var(--color-accent); color: var(--color-on-accent); }
+	.secondary { flex: 1; border: 1px solid var(--color-border-strong); background: var(--color-card); color: var(--color-ink); }
+	.secondary:hover { background: var(--color-input); }
 
 	.toast {
 		position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
-		padding: 7px 12px; border-radius: var(--radius-pill); background: var(--color-header);
-		color: white; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+		padding: 7px 12px; border-radius: var(--radius-pill); background: var(--color-toast-bg);
+		color: var(--color-toast-fg); font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
 	}
 </style>

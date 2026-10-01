@@ -1,7 +1,9 @@
 /* The side panel is laid out for a narrow browser panel; centre it on a page. */
 body {
   margin: 0;
-  background: var(--color-surface);
+  background:
+    radial-gradient(1200px 400px at 50% -120px, var(--color-accent-soft), transparent 70%),
+    var(--color-surface);
 }
 
 /* Beats the panel's own `#app { margin: 0 }`. */
@@ -12,35 +14,136 @@ body #app {
   margin: 0 auto;
 }
 
-.pg-web-note {
+/* The panel scrolls with the page here, so the header sticks to the window. */
+body #app .panel-header {
+  border: 1px solid var(--color-border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.pg-web-footer {
   max-width: 960px;
   margin: 0 auto;
-  padding: 10px 16px 16px;
+  padding: 8px 20px 28px;
   box-sizing: border-box;
-  font: 12px/1.5 var(--font-sans);
+  font: 12px/1.55 var(--font-sans);
   color: var(--color-muted);
 }
 
-.pg-web-note a {
+.pg-web-footer a {
   color: var(--color-accent);
+  text-decoration: none;
+}
+
+.pg-web-footer a:hover {
+  text-decoration: underline;
+}
+
+.pg-web-get h2 {
+  margin: 0 0 10px;
+  color: var(--color-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.pg-web-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.pg-web-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-muted);
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+a.pg-web-tile:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.pg-web-tile > span:not(.pg-web-cta, .pg-web-links) {
+  color: var(--color-muted);
+}
+
+.pg-web-tile strong {
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pg-web-cta {
+  margin-top: 4px;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.pg-web-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pg-web-links a {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  font-weight: 500;
+}
+
+.pg-web-links a:hover {
+  text-decoration: none;
+  filter: brightness(1.05);
+}
+
+.pg-web-note {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.pg-web-note svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-success);
 }
 
 .pg-web-offline {
-  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding-top: 0;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 
 .pg-web-offline button {
   font: inherit;
   color: var(--color-accent);
   background: var(--color-accent-soft);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 6px;
-  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
   cursor: pointer;
+}
+
+.pg-web-offline button[hidden] {
+  display: none;
 }
 
 .pg-web-version {
@@ -54,14 +157,8 @@ body #app {
   cursor: progress;
 }
 
-.pg-web-get h2 {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.pg-web-get ul {
-  margin: 0;
-  padding-left: 18px;
+@media (max-width: 520px) {
+  .pg-web-footer {
+    padding: 8px 16px 24px;
+  }
 }

@@ -142,6 +142,57 @@ describe('Local AI model downloader', () => {
     await expect((await shared.modelAwareFetch(shared.extensionModelUrl('config.json'))).text()).resolves.toBe('one');
   });
 
+  test('records when the model was downloaded and how much space it takes', async () => {
+    const files = { 'config.json': '{"a":1}', 'onnx/model.onnx.data': 'weights' };
+    const before = Date.now();
+    const state = await downloader.ensureLocalAiModel('install', deps(fakeFetch(files, manifestFor(files, 'v1'))));
+
+    expect(state.readyBytes).toBe(7 + 7);
+    expect(state.readyAt).toBeGreaterThanOrEqual(before);
+
+    // A later check that finds the same version keeps the original download time.
+    extensionVersion = '1.1.0';
+    const checked = await downloader.ensureLocalAiModel('update', deps(fakeFetch(files, manifestFor(files, 'v1'))));
+    expect(checked.readyAt).toBe(state.readyAt);
+  });
+
+  test('fills in the size of a model downloaded before it was recorded', async () => {
+    const files = { 'config.json': 'one' };
+    await downloader.ensureLocalAiModel('install', deps(fakeFetch(files, manifestFor(files, 'v1'))));
+    const key = shared.MODEL_DOWNLOAD_STATE_KEY;
+    storage[key] = { ...(storage[key] as object), readyAt: undefined, readyBytes: undefined };
+
+    const unused = fakeFetch(files, manifestFor(files, 'v1'));
+    const state = await downloader.ensureLocalAiModel('startup', deps(unused));
+
+    expect(unused).not.toHaveBeenCalled();
+    expect(state).toEqual(expect.objectContaining({ readyVersion: 'v1', readyBytes: 3, readyAt: undefined }));
+  });
+
+  test('checks for a newer model on request, not only once per extension version', async () => {
+    const v1 = { 'config.json': 'one' };
+    await downloader.ensureLocalAiModel('install', deps(fakeFetch(v1, manifestFor(v1, 'v1'))));
+
+    const v2 = { 'config.json': 'two' };
+    const state = await downloader.ensureLocalAiModel('user-check', deps(fakeFetch(v2, manifestFor(v2, 'v2'))), { checkNow: true });
+
+    expect(state.readyVersion).toBe('v2');
+    expect(await caches.keys()).toEqual([shared.modelCacheName('v2')]);
+  });
+
+  test('deletes the downloaded model on request', async () => {
+    const v1 = { 'config.json': 'one' };
+    await downloader.ensureLocalAiModel('install', deps(fakeFetch(v1, manifestFor(v1, 'v1'))));
+
+    const state = await downloader.deleteLocalAiModel(deps(fakeFetch({}, {})));
+
+    expect(state.phase).toBe('idle');
+    expect(state.readyVersion).toBeUndefined();
+    expect(state.readyBytes).toBeUndefined();
+    expect(await caches.keys()).toEqual([]);
+    await expect(downloader.isLocalAiModelReady(deps(fakeFetch({}, {})))).resolves.toBe(false);
+  });
+
   test('rejects manifests with unsafe paths', () => {
     expect(() => downloader.parseModelManifest({ format: 1, version: 'v1', files: [{ path: '../x', size: 1, sha256: 'a'.repeat(64) }] }))
       .toThrow(/not a valid model manifest/);

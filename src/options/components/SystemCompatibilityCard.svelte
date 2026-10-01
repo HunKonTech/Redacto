@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { LocalAiUnloadTimeoutMs, Settings, SystemCompatibilityStatus } from '../../shared/message-types';
 	import { LOCAL_AI_UNLOAD_TIMEOUT_CHOICES, nerModelChoices, nerModelChoiceValue } from '../../shared/constants';
-	import { AI_TRANSPARENCY_NOTICE } from '../../shared/project-links';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
 
 	let {
@@ -42,35 +42,35 @@
 	}
 
 	let memoryLabel = $derived.by(() => {
-		if (!$status) return 'Checking…';
+		if (!$status) return t('system.checking');
 		return typeof $status.browserMemoryGb === 'number'
-			? `${$status.browserMemoryGb} GB browser-reported memory`
-			: 'Browser-reported memory unavailable';
+			? t('system.memory', { gb: $status.browserMemoryGb })
+			: t('system.memoryUnavailable');
 	});
 
 	let tierLabel = $derived.by(() => {
-		if (!$status) return 'Checking compatibility';
-		if ($status.tier === 'critical') return 'Critical resource risk';
-		if ($status.tier === 'warning') return 'Resource warning';
-		if ($status.tier === 'unknown') return 'Compatibility partially unknown';
-		return 'No known resource concern';
+		if (!$status) return t('system.tier.checking');
+		if ($status.tier === 'critical') return t('system.tier.critical');
+		if ($status.tier === 'warning') return t('system.tier.warning');
+		if ($status.tier === 'unknown') return t('system.tier.unknown');
+		return t('system.tier.ok');
 	});
 
 	let localAiLabel = $derived.by(() => {
-		if (!$settings) return 'Loading setting…';
-		if ($settings.nerProvider === 'off') return 'Local AI detection off';
-		if ($settings.nerProvider === 'fixture') return 'Fixture Local AI mode (development)';
-		return 'Local AI detection on';
+		if (!$settings) return t('system.localAi.loading');
+		if ($settings.nerProvider === 'off') return t('system.localAi.off');
+		if ($settings.nerProvider === 'fixture') return t('system.localAi.fixture');
+		return t('system.localAi.on');
 	});
 
 	let runtimeLabel = $derived.by(() => {
 		const runtime = $status?.runtimeState ?? 'unknown';
-		if ($warmupState === 'loading') return 'Runtime loading';
-		if ($warmupState === 'ready') return 'Runtime ready';
-		if ($warmupState === 'failed') return 'Runtime failed';
-		if (runtime === 'not-loaded') return 'Runtime not loaded';
-		if (runtime === 'unknown') return 'Runtime unknown';
-		return `Runtime ${runtime}`;
+		if ($warmupState === 'loading') return t('system.runtime.loading');
+		if ($warmupState === 'ready') return t('system.runtime.ready');
+		if ($warmupState === 'failed') return t('system.runtime.failed');
+		if (runtime === 'not-loaded') return t('system.runtime.notLoaded');
+		if (runtime === 'unknown') return t('system.runtime.unknown');
+		return t('system.runtime.other', { state: runtime });
 	});
 
 	let localAiEnabled = $derived($settings?.nerProvider !== 'off');
@@ -87,8 +87,8 @@
 	);
 
 	function timeoutLabel(value: LocalAiUnloadTimeoutMs): string {
-		if (value === null) return 'Browser session';
-		return `${Math.round(value / 60000)} min`;
+		if (value === null) return t('system.unload.session');
+		return t('system.unload.minutes', { minutes: Math.round(value / 60000) });
 	}
 
 	function parseTimeout(value: string): LocalAiUnloadTimeoutMs {
@@ -97,7 +97,7 @@
 </script>
 
 <article class="card" id="system-compatibility-section" aria-live="polite">
-	<CardHeading title="System Compatibility" hint="Local AI resource guard" />
+	<CardHeading title={t('system.title')} hint={t('system.hint')} />
 	<div class="body">
 		<div class="summary" data-tier={$status?.tier ?? 'loading'}>
 			<span class="summary-title">{tierLabel}</span>
@@ -105,14 +105,13 @@
 		</div>
 
 		<div class="local-ai-control">
-			<p class="ai-notice" role="note">{AI_TRANSPARENCY_NOTICE}</p>
+			<p class="ai-notice" role="note">{t('popup.aiNotice')}</p>
 
 			<div class="toggle-row">
 				<div>
-					<label for="local-ai-toggle">Local AI detection</label>
+					<label for="local-ai-toggle">{t('settings.localAi')}</label>
 					<p>
-						Detects names, organizations, locations, and context-only PII. When off,
-						pattern detection remains active, but those contextual details may be missed.
+						{t('system.localAi.hint')}
 					</p>
 				</div>
 				<input
@@ -124,7 +123,7 @@
 				/>
 			</div>
 
-			<label class="model-label" for="local-ai-model">Local AI model</label>
+			<label class="model-label" for="local-ai-model">{t('system.model')}</label>
 			<select
 				id="local-ai-model"
 				value={modelChoiceValue}
@@ -136,25 +135,25 @@
 				{/each}
 			</select>
 			<p class="hint">
-				q4f16: compact 4-bit model used for WebGPU and CPU fallback.
+				{t('system.model.hint')}
 			</p>
 			{#if $warmupState === 'loading'}
-				<p class="hint">Loading Local AI detection…</p>
+				<p class="hint">{t('system.loadingLocalAi')}</p>
 			{/if}
 			{#if showRetry}
 				<div class="failure" role="status">
-					<p class="failure-title">Local AI failed to load</p>
+					<p class="failure-title">{t('system.failed')}</p>
 					{#if loadFailureMessage}
 						<p class="failure-detail">{loadFailureMessage}</p>
 					{:else}
-						<p class="failure-detail">Pattern detection remains active.</p>
+						<p class="failure-detail">{t('system.patternActive')}</p>
 					{/if}
-					<button type="button" class="retry" onclick={() => retryLocalAi()}>Retry Local AI</button>
+					<button type="button" class="retry" onclick={() => retryLocalAi()}>{t('system.retry')}</button>
 				</div>
 			{/if}
 
 			<div class="runtime-controls">
-				<label class="model-label" for="local-ai-unload-timeout">Unload after inactivity</label>
+				<label class="model-label" for="local-ai-unload-timeout">{t('system.unload')}</label>
 				<select
 					id="local-ai-unload-timeout"
 					value={unloadTimeoutValue}
@@ -172,7 +171,7 @@
 						disabled={!$settings}
 						onchange={(event) => setKeepLocalAiLoadedWhileActive(event.currentTarget.checked)}
 					/>
-					<span>Keep loaded while active on a supported page</span>
+					<span>{t('system.keepLoaded')}</span>
 				</label>
 				<label class="checkbox-row">
 					<input
@@ -181,47 +180,47 @@
 						disabled={!$settings || !localAiEnabled}
 						onchange={(event) => setAutoWarmLocalAiOnActiveSupportedPage(event.currentTarget.checked)}
 					/>
-					<span>Warm Local AI on capable active supported pages</span>
+					<span>{t('system.autoWarm')}</span>
 				</label>
 			</div>
 		</div>
 
 		<div class="grid">
 			<div>
-				<span class="label">Local AI status</span>
+				<span class="label">{t('system.localAiStatus')}</span>
 				<strong>{localAiLabel}</strong>
 			</div>
 			<div>
-				<span class="label">Runtime status</span>
+				<span class="label">{t('system.runtimeStatus')}</span>
 				<strong>{runtimeLabel}</strong>
 			</div>
 			<div>
-				<span class="label">Passive WebGPU</span>
-				<strong>{$status?.webGpu ?? 'checking'}</strong>
+				<span class="label">{t('system.webGpu')}</span>
+				<strong>{$status?.webGpu ?? t('system.webGpu.checking')}</strong>
 			</div>
 		</div>
 
 		{#if $status?.notes?.length}
-			<ul class="notes" aria-label="Compatibility notes">
+			<ul class="notes" aria-label={t('system.notesAria')}>
 				{#each $status.notes as note (note)}
 					<li>{note}</li>
 				{/each}
 			</ul>
 		{:else}
-			<p class="hint">Compatibility check is pending. This check uses passive browser APIs only and does not load the Local AI model.</p>
+			<p class="hint">{t('system.pending')}</p>
 		{/if}
 
 		<div class="actions">
 			<button type="button" class="rerun" onclick={handleRerun} disabled={rerunInFlight}>
-				{rerunInFlight ? 'Re-running system check…' : 'Re-run system check'}
+				{rerunInFlight ? t('system.rerunning') : t('system.rerun')}
 			</button>
-			<p class="hint">Refreshes browser-reported memory and WebGPU signals. The Local AI model is not loaded.</p>
+			<p class="hint">{t('system.rerun.hint')}</p>
 		</div>
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { padding: 14px; }
 	.summary { display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: var(--radius-md); background: var(--color-surface); border: var(--border-hairline); }
 	.summary[data-tier='critical'] { border-color: rgb(239 68 68 / 55%); }
@@ -244,12 +243,13 @@
 	.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
 	.grid > div { min-width: 0; }
 	.label { display: block; margin-bottom: 2px; }
-	strong { display: block; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+	strong { display: block; font-size: 12px; font-weight: 600; }
+	strong::first-letter { text-transform: uppercase; }
 	.notes { margin: 12px 0 0; padding-left: 18px; }
 	.notes li + li { margin-top: 4px; }
 	.hint { margin: 12px 0 0; }
-	.failure { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid rgb(239 68 68 / 55%); background: rgb(239 68 68 / 8%); }
-	.failure-title { margin: 0; font-size: 13px; font-weight: 600; color: rgb(220 38 38); }
+	.failure { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid rgb(239 68 68 / 55%); background: var(--color-danger-soft); }
+	.failure-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-danger); }
 	.failure-detail { margin: 4px 0 8px; font-size: 12px; line-height: 1.5; color: var(--color-muted); }
 	.retry { padding: 6px 12px; border-radius: var(--radius-sm); border: var(--border-hairline); background: var(--color-surface); color: var(--color-ink); font-size: 12px; cursor: pointer; }
 	.retry:hover { border-color: var(--color-accent); }
