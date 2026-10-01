@@ -120,6 +120,9 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           MODEL_PYTHON: ${{ steps.python.outputs.path }}
+          # Intermediate model copies are ~1.5 GB; /tmp is RAM-backed tmpfs on
+          # the Raspberry Pi runner, so stage them on disk instead.
+          TMPDIR: ${{ runner.temp }}
         run: |
           if [ "${{ inputs.force_model_refresh }}" = "true" ]; then
             scripts/edge/prepare-model.sh --python "$MODEL_PYTHON" --force

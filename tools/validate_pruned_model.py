@@ -5,7 +5,7 @@ against the full-vocab baseline: same tokenization, same predictions.
 Usage:
   python3 tools/validate_pruned_model.py --baseline-dir <dir> --pruned-dir <dir> [--pruned-onnx <file>]
 """
-import argparse, json, os, sys
+import argparse, gc, json, os, sys
 import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
@@ -24,11 +24,24 @@ SAMPLES = [
 
 def load(dir_, onnx_file=None):
     tok = Tokenizer.from_file(os.path.join(dir_, "tokenizer.json"))
+    opts = ort.SessionOptions()
+    # Keep peak RSS low: this runs on small CI hosts (Raspberry Pi) where the
+    # arena plus fp16->fp32 cast copies of the weights can trip the OOM killer.
+    opts.enable_cpu_mem_arena = False
     sess = ort.InferenceSession(
         onnx_file or os.path.join(dir_, "onnx", "model_fp16.onnx"),
+        sess_options=opts,
         providers=["CPUExecutionProvider"],
     )
     return tok, sess
+
+def all_logits(dir_, onnx_file=None):
+    # Load one model at a time so the baseline and pruned sessions never coexist.
+    tok, sess = load(dir_, onnx_file)
+    out = [logits(tok, sess, text) for text in SAMPLES]
+    del tok, sess
+    gc.collect()
+    return out
 
 def logits(tok, sess, text):
     enc = tok.encode(text)
@@ -50,15 +63,13 @@ def main():
     )
     a = p.parse_args()
 
-    tok_b, sess_b = load(a.baseline_dir)
-    tok_p, sess_p = load(a.pruned_dir, a.pruned_onnx)
+    base = all_logits(a.baseline_dir)
+    pruned = all_logits(a.pruned_dir, a.pruned_onnx)
     id2label = json.load(open(os.path.join(a.baseline_dir, "config.json")))["id2label"]
 
     worst = 0.0
     fail = False
-    for text in SAMPLES:
-        t_b, l_b = logits(tok_b, sess_b, text)
-        t_p, l_p = logits(tok_p, sess_p, text)
+    for text, (t_b, l_b), (t_p, l_p) in zip(SAMPLES, base, pruned):
         if t_b != t_p:
             print("FAIL: tokenization mismatch:", text, file=sys.stderr)
             print("  base:", t_b, file=sys.stderr)

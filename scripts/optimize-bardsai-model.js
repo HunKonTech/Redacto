@@ -117,7 +117,9 @@ function run(command, args, options = {}) {
   });
   if (result.error) throw result.error;
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed with exit code ${result.status}.`);
+    // status is null when the child was killed by a signal (e.g. SIGKILL from the OOM killer).
+    const reason = result.signal ? `was killed by ${result.signal}` : `failed with exit code ${result.status}`;
+    throw new Error(`${command} ${args.join(' ')} ${reason}.`);
   }
 }
 
