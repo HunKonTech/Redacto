@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { groupLabelKey } from '../../shared/i18n';
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { GroupName, Settings } from '../../shared/message-types';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -24,26 +26,25 @@
 </script>
 
 <article class="card" id="sensitivity-section">
-	<CardHeading title="Sensitivity" hint="Detection threshold tuning" />
+	<CardHeading title={t('sensitivity.title')} hint={t('sensitivity.hint')} />
 
 	<div class="body">
 		<div class="mode-row">
 			<Segmented
-				ariaLabel="Sensitivity mode"
+				ariaLabel={t('sensitivity.mode')}
 				value={mode}
-				options={[{ value: 'global', label: 'Global' }, { value: 'individual', label: 'Individual' }]}
+				options={[{ value: 'global', label: t('sensitivity.global') }, { value: 'individual', label: t('sensitivity.individual') }]}
 				onchange={(next) => setSensitivityMode(next)}
 			/>
 		</div>
 
 		{#if mode === 'global'}
 			<p class="hint">
-				One slider controls all categories proportionally, respecting each category's
-				intrinsic sensitivity range.
+				{t('sensitivity.global.hint')}
 			</p>
 			<div class="slider-row">
 				<div class="slider-head">
-					<span class="row-label">Sensitivity</span>
+					<span class="row-label">{t('sensitivity.title')}</span>
 					<span class="mono">{globalValue.toFixed(2)}</span>
 				</div>
 				<input
@@ -52,40 +53,39 @@
 					max="100"
 					value={Math.round(globalValue * 100)}
 					oninput={(event) => setGlobalThreshold(Number(event.currentTarget.value) / 100)}
-					aria-label="Global sensitivity"
+					aria-label={t('sensitivity.globalAria')}
 				/>
-				<div class="ticks"><span>Fewer detections</span><span>More detections</span></div>
+				<div class="ticks"><span>{t('sensitivity.fewer')}</span><span>{t('sensitivity.more')}</span></div>
 			</div>
 		{:else}
 			<p class="hint">
-				Each category group has its own slider. Switching back to Global will clear
-				your individual overrides.
+				{t('sensitivity.individual.hint')}
 			</p>
 			<div class="group-list">
 				{#each groupNames as group (group)}
 					{@const stored = groupThresholds[group]}
 					{@const pos = stored !== undefined ? stored : 0.5}
 					<div class="group-row">
-						<span class="group-label">{group}</span>
+						<span class="group-label">{t(groupLabelKey(group))}</span>
 						<input
 							type="range"
 							min="0"
 							max="100"
 							value={Math.round(pos * 100)}
 							oninput={(event) => setGroupThreshold(group, Number(event.currentTarget.value) / 100)}
-							aria-label="{group} sensitivity"
+							aria-label={t('sensitivity.groupAria', { group: t(groupLabelKey(group)) })}
 						/>
 						<span class="mono">{pos.toFixed(2)}</span>
 					</div>
 				{/each}
 			</div>
-			<div class="ticks ticks-indent"><span>Fewer detections</span><span>More detections</span></div>
+			<div class="ticks ticks-indent"><span>{t('sensitivity.fewer')}</span><span>{t('sensitivity.more')}</span></div>
 		{/if}
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 	.mode-row { display: flex; }
 	.hint { margin: 0; color: var(--color-muted); font-size: 12px; }

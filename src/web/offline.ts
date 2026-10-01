@@ -13,6 +13,7 @@
  */
 
 import { debugWarn } from '../shared/debug-log';
+import { onLocaleChange, translate, type MessageKey, type MessageParams } from '../shared/i18n';
 
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -23,22 +24,34 @@ interface OfflineStatus {
   error?: string;
 }
 
+/** The footer line, kept as a message key so a language change can redraw it. */
+let shown: { status: HTMLElement; key: MessageKey; params?: MessageParams } | null = null;
+
+function show(status: HTMLElement, key: MessageKey, params?: MessageParams): void {
+  shown = { status, key, params };
+  status.textContent = translate(key, params);
+}
+
+onLocaleChange(() => {
+  if (shown) shown.status.textContent = translate(shown.key, shown.params);
+});
+
 function render(status: HTMLElement, button: HTMLButtonElement, message: OfflineStatus | null): void {
   if (!message) {
-    status.textContent = 'Preparing offline use…';
+    show(status, 'web.offline.preparing');
     button.hidden = true;
     return;
   }
   const { modelFiles, modelFilesCached, error } = message;
   const modelReady = modelFiles === 0 || modelFilesCached === modelFiles;
   if (error) {
-    status.textContent = `Works offline; the local AI model could not be saved (${error}).`;
+    show(status, 'web.offline.modelError', { error });
   } else if (modelReady) {
-    status.textContent = modelFiles === 0 ? 'Works offline.' : 'Works offline, including the local AI model.';
+    show(status, modelFiles === 0 ? 'web.offline.ready' : 'web.offline.readyWithModel');
   } else if (button.disabled) {
-    status.textContent = `Saving the local AI model for offline use… (${modelFilesCached}/${modelFiles} files)`;
+    show(status, 'web.offline.savingProgress', { cached: modelFilesCached, total: modelFiles });
   } else {
-    status.textContent = 'Works offline with rule-based detection; the local AI model is saved the first time it is used.';
+    show(status, 'web.offline.rulesOnly');
   }
   button.hidden = modelReady;
   if (modelReady || error) button.disabled = false;
@@ -78,7 +91,7 @@ export function setUpOffline(): void {
   const button = document.getElementById('pg-offline-model') as HTMLButtonElement | null;
   if (!status || !button) return;
   if (!('serviceWorker' in navigator)) {
-    status.textContent = 'This browser cannot keep the page for offline use.';
+    show(status, 'web.offline.unsupported');
     return;
   }
 
@@ -94,7 +107,7 @@ export function setUpOffline(): void {
     await navigator.storage?.persist?.().catch(() => false);
     const registration = await navigator.serviceWorker.ready;
     registration.active?.postMessage({ type: 'cache-models' });
-    status.textContent = 'Saving the local AI model for offline use…';
+    show(status, 'web.offline.saving');
   });
 
   navigator.serviceWorker
@@ -106,6 +119,6 @@ export function setUpOffline(): void {
     })
     .catch((err) => {
       debugWarn('[PG:web] service worker registration failed', err);
-      status.textContent = 'Offline use is unavailable in this browser session.';
+      show(status, 'web.offline.unavailable');
     });
 }

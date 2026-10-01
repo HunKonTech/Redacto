@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LIMITS_DISCLAIMER } from '../../shared/project-links';
+	import { t } from '../../shared/i18n/reactive';
 
 	let {
 		openPrivacyPolicy,
@@ -13,17 +13,17 @@
 </script>
 
 <article class="card">
-	<div class="head"><span>Legal</span></div>
-	<button type="button" class="link-row" onclick={openPrivacyPolicy}><span class="row-label">Privacy Policy</span><span class="right">›</span></button>
+	<div class="head"><span>{t('legal.title')}</span></div>
+	<button type="button" class="link-row" onclick={openPrivacyPolicy}><span class="row-label">{t('legal.privacy')}</span><span class="right">›</span></button>
 	<div class="divider"></div>
-	<button type="button" class="link-row" onclick={openTermsOfUse}><span class="row-label">Terms of Use</span><span class="right">›</span></button>
+	<button type="button" class="link-row" onclick={openTermsOfUse}><span class="row-label">{t('legal.terms')}</span><span class="right">›</span></button>
 	<div class="divider"></div>
-	<button type="button" class="link-row" onclick={openImpressum}><span class="row-label">Legal notice</span><span class="right">›</span></button>
-	<p class="note">{LIMITS_DISCLAIMER}</p>
+	<button type="button" class="link-row" onclick={openImpressum}><span class="row-label">{t('legal.notice')}</span><span class="right">›</span></button>
+	<p class="note">{t('legal.disclaimer')}</p>
 </article>
 
 <style>
-	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: white; }
+	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.head { display: flex; justify-content: space-between; padding: 11px 12px; border-bottom: 1px solid var(--color-border); }
 	.head span { font-size: 12px; font-weight: 600; }
 	.link-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: transparent; color: var(--color-ink); cursor: pointer; }

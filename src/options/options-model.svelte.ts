@@ -1,4 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
+import { translate } from '../shared/i18n';
 import type {
   AllowlistEntry,
   BlocklistEntry,
@@ -299,7 +300,7 @@ export function createOptionsModel(): OptionsModel {
       if (!pattern || !currentSettings) return false;
       const conflict = findConflictingPattern(pattern, currentSettings.blocklist);
       if (conflict) {
-        allowlistError.set(`"${conflict}" is already on the blocklist. Remove it there before adding it to the allowlist.`);
+        allowlistError.set(translate('lists.error.onBlocklist', { pattern: conflict }));
         return false;
       }
       const entry: AllowlistEntry = { pattern, scope: 'any', addedAt: Date.now(), source: 'manual' };
@@ -318,11 +319,11 @@ export function createOptionsModel(): OptionsModel {
       if (!currentSettings) return false;
       const domain = normalizeDomain(raw);
       if (!domain) {
-        publicDomainError.set('Enter a domain such as acme.com.');
+        publicDomainError.set(translate('domains.error.invalid'));
         return false;
       }
       if (currentSettings.publicDomains.includes(domain)) {
-        publicDomainError.set(`${domain} is already on the list.`);
+        publicDomainError.set(translate('domains.error.duplicate', { domain }));
         return false;
       }
       await saveAndBroadcast({ publicDomains: [...currentSettings.publicDomains, domain] });
@@ -340,7 +341,7 @@ export function createOptionsModel(): OptionsModel {
       if (!pattern || !currentSettings) return false;
       const conflict = findConflictingPattern(pattern, currentSettings.allowlist);
       if (conflict) {
-        blocklistError.set(`"${conflict}" is already on the allowlist. Remove it there before adding it to the blocklist.`);
+        blocklistError.set(translate('lists.error.onAllowlist', { pattern: conflict }));
         return false;
       }
       const entry: BlocklistEntry = { pattern, scope, addedAt: Date.now(), source: 'manual' };

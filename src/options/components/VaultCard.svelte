@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { date, t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { ReplacementModeSetting, Settings } from '../../shared/message-types';
 	import type { IdentityRecord } from '../../shared/identity-vault';
@@ -38,12 +39,12 @@
 
 	function formatRelative(ts: number): string {
 		const diff = Date.now() - ts;
-		if (diff < 60_000) return 'just now';
-		if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-		if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+		if (diff < 60_000) return t('time.justNow');
+		if (diff < 3_600_000) return t('time.minutesAgo', { count: Math.floor(diff / 60_000) });
+		if (diff < 86_400_000) return t('time.hoursAgo', { count: Math.floor(diff / 3_600_000) });
 		const days = Math.floor(diff / 86_400_000);
-		if (days < 30) return `${days}d ago`;
-		return new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+		if (days < 30) return t('time.daysAgo', { count: days });
+		return date(ts, { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	async function onSyntheticChange(record: IdentityRecord, value: string) {
@@ -66,18 +67,18 @@
 		const result = await importVault(file);
 		target.value = '';
 		if ('error' in result) alert(result.error);
-		else alert(`Imported ${result.imported} record(s).`);
+		else alert(t('vault.imported', { count: result.imported }));
 	}
 
 	async function onClearUnpinned() {
 		const count = await new Promise<number>((resolve) => {
 			const unpinned = $records.filter((r) => !r.pinned).length;
 			if (unpinned === 0) {
-				alert('No unpinned records to clear.');
+				alert(t('vault.nothingToClear'));
 				resolve(0);
 				return;
 			}
-			if (!confirm(`Remove ${unpinned} unpinned record(s)? This cannot be undone.`)) {
+			if (!confirm(t('vault.clearConfirm', { count: unpinned }))) {
 				resolve(0);
 				return;
 			}
@@ -88,46 +89,42 @@
 </script>
 
 <article class="card" id="vault-section">
-	<CardHeading title="Identity vault" hint="Cross-session, cross-provider mappings" />
+	<CardHeading title={t('vault.title')} hint={t('vault.hint')} />
 
 	<div class="body">
 		<p class="intro">
-			Each detected identity is stored once and reused everywhere. Toggle
-			<em>Synthetic</em> mode to replace placeholders like <code>[PERSON_1]</code>
-			with realistic but obviously-fake values such as <code>Jordan Park</code>,
-			which often improves LLM response quality. Pin a record to lock its
-			replacement against automatic changes.
+			{t('vault.intro1')}<em>{t('vault.mode.synthetic')}</em>{t('vault.intro2')}<code>[PERSON_1]</code>{t('vault.intro3')}<code>Jordan Park</code>{t('vault.intro4')}
 		</p>
 
 		<div class="controls">
 			<div class="row">
-				<span class="row-label">Enable cross-session vault</span>
-				<Toggle size="sm" checked={vaultEnabled} label="Enable cross-session vault" onchange={(checked) => setVaultEnabled(checked)} />
+				<span class="row-label">{t('vault.enable')}</span>
+				<Toggle size="sm" checked={vaultEnabled} label={t('vault.enable')} onchange={(checked) => setVaultEnabled(checked)} />
 			</div>
 			<div class="row">
-				<span class="row-label">Default mode</span>
+				<span class="row-label">{t('vault.defaultMode')}</span>
 				<Segmented
-					ariaLabel="Default replacement mode"
+					ariaLabel={t('vault.defaultModeAria')}
 					value={defaultMode}
-					options={[{ value: 'placeholder', label: 'Placeholder' }, { value: 'synthetic', label: 'Synthetic' }]}
+					options={[{ value: 'placeholder', label: t('vault.mode.placeholder') }, { value: 'synthetic', label: t('vault.mode.synthetic') }]}
 					onchange={(mode) => setDefaultReplacementMode(mode)}
 				/>
 			</div>
 		</div>
 
 		{#if $records.length === 0}
-			<p class="empty">The vault is empty. Records will appear here as you confirm replacements.</p>
+			<p class="empty">{t('vault.empty')}</p>
 		{:else}
 			<div class="table-wrap">
-				<table class="vault-table" aria-label="Identity vault entries">
+				<table class="vault-table" aria-label={t('vault.tableAria')}>
 					<thead>
 						<tr>
-							<th>Original</th>
-							<th>Type</th>
-							<th>Replacement</th>
-							<th>Mode</th>
-							<th>Used</th>
-							<th>Pin</th>
+							<th>{t('vault.col.original')}</th>
+							<th>{t('vault.col.type')}</th>
+							<th>{t('vault.col.replacement')}</th>
+							<th>{t('vault.col.mode')}</th>
+							<th>{t('vault.col.used')}</th>
+							<th>{t('vault.col.pin')}</th>
 							<th></th>
 						</tr>
 					</thead>
@@ -143,7 +140,7 @@
 											type="text"
 											class="synthetic-edit"
 											value={record.syntheticValue}
-											aria-label={`Synthetic replacement for ${record.originalText}`}
+											aria-label={t('vault.syntheticFor', { item: record.originalText })}
 											onchange={(event) => onSyntheticChange(record, event.currentTarget.value)}
 										/>
 									{:else}
@@ -152,14 +149,14 @@
 								</td>
 								<td class="cell-mode">
 									<select
-										aria-label={`Replacement mode for ${record.originalText}`}
+										aria-label={t('vault.modeFor', { item: record.originalText })}
 										value={modeDisabled ? 'placeholder' : record.replacementMode}
 										disabled={modeDisabled}
-										title={modeDisabled ? 'Synthetic mode is unavailable for this entity type' : undefined}
+										title={modeDisabled ? t('vault.syntheticUnavailable') : undefined}
 										onchange={(event) => onModeChange(record, event.currentTarget.value as ReplacementModeSetting)}
 									>
-										<option value="placeholder">Placeholder</option>
-										<option value="synthetic">Synthetic</option>
+										<option value="placeholder">{t('vault.mode.placeholder')}</option>
+										<option value="synthetic">{t('vault.mode.synthetic')}</option>
 									</select>
 								</td>
 								<td class="cell-meta">{record.usageCount}× · {formatRelative(record.lastSeenAt)}</td>
@@ -168,8 +165,8 @@
 										type="button"
 										class="pin-btn"
 										class:pinned={record.pinned}
-										title={record.pinned ? 'Pinned (click to unpin)' : 'Pin record'}
-										aria-label={record.pinned ? 'Unpin record' : 'Pin record'}
+										title={record.pinned ? t('vault.pinned') : t('vault.pin')}
+										aria-label={record.pinned ? t('vault.unpin') : t('vault.pin')}
 										onclick={() => updateRecord(record.id, { pinned: !record.pinned })}
 									>{record.pinned ? '📌' : '📍'}</button>
 								</td>
@@ -177,7 +174,7 @@
 									<button
 										type="button"
 										class="delete-btn"
-										aria-label={`Remove ${record.originalText}`}
+										aria-label={t('common.removeItem', { item: record.originalText })}
 										onclick={() => deleteRecord(record.id)}
 									>×</button>
 								</td>
@@ -189,16 +186,16 @@
 		{/if}
 
 		<div class="bulk">
-			<button type="button" class="action-btn" onclick={exportVault}>Export JSON</button>
-			<button type="button" class="action-btn" onclick={() => fileInput?.click()}>Import JSON</button>
+			<button type="button" class="action-btn" onclick={exportVault}>{t('vault.export')}</button>
+			<button type="button" class="action-btn" onclick={() => fileInput?.click()}>{t('vault.import')}</button>
 			<input type="file" accept="application/json" hidden bind:this={fileInput} onchange={onImportChange} />
-			<button type="button" class="action-btn danger" onclick={onClearUnpinned}>Clear unpinned</button>
+			<button type="button" class="action-btn danger" onclick={onClearUnpinned}>{t('vault.clearUnpinned')}</button>
 		</div>
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 	.intro { margin: 0; color: var(--color-muted); font-size: 13px; line-height: 1.5; }
 	.intro code {
@@ -276,7 +273,7 @@
 		font-family: inherit;
 		font-size: 12px;
 	}
-	.synthetic-edit:focus { outline: none; border-color: var(--color-accent); background: white; }
+	.synthetic-edit:focus { outline: none; border-color: var(--color-accent); background: var(--color-card); }
 
 	.pin-btn {
 		padding: 2px 6px;
@@ -300,7 +297,7 @@
 		line-height: 1;
 		cursor: pointer;
 	}
-	.delete-btn:hover { color: var(--color-danger); background: rgb(239 68 68 / 8%); }
+	.delete-btn:hover { color: var(--color-danger); background: var(--color-danger-soft); }
 
 	.bulk { display: flex; gap: 8px; flex-wrap: wrap; }
 	.action-btn {
@@ -313,6 +310,6 @@
 		cursor: pointer;
 	}
 	.action-btn:hover { background: var(--color-accent-soft); border-color: var(--color-accent); }
-	.action-btn.danger { color: #b91c1c; border-color: rgb(239 68 68 / 35%); }
-	.action-btn.danger:hover { background: #fef2f2; border-color: var(--color-danger); }
+	.action-btn.danger { color: var(--color-danger); border-color: rgb(239 68 68 / 35%); }
+	.action-btn.danger:hover { background: var(--color-danger-soft); border-color: var(--color-danger); }
 </style>

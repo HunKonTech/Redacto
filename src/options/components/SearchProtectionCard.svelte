@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { Settings } from '../../shared/message-types';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -25,39 +26,34 @@
 </script>
 
 <article class="card" id="search-protection-section">
-	<CardHeading title="Web search" hint="Bing, Google, DuckDuckGo, Ecosia, Brave, Startpage" />
+	<CardHeading title={t('search.title')} hint="Bing, Google, DuckDuckGo, Ecosia, Brave, Startpage" />
 	<div class="row">
 		<div class="info">
-			<span class="row-label">Protect web searches</span>
+			<span class="row-label">{t('search.label')}</span>
 			<p class="hint">
-				Checks what you paste into a search engine's search box, and holds each search
-				until its query has been checked. Personal data you approve is replaced with
-				placeholders such as <code>[PERSON_1]</code> before the search is sent.
-				Turning this on asks the browser for access to these search sites.
+				{t('search.body1Before')}<code>[PERSON_1]</code>{t('search.body1After')}
 			</p>
 			<p class="hint">
-				Not covered: searches typed into the browser's address bar, which never reach
-				the page, and the suggestions a search engine requests while you type. Turn off
-				search suggestions in the engine's settings for the strongest protection.
+				{t('search.body2')}
 			</p>
 			{#if declined}
-				<p class="hint warn">Access to the search sites was not granted, so protection stays off.</p>
+				<p class="hint warn">{t('search.declined')}</p>
 			{/if}
 		</div>
 		{#key toggleKey}
-			<Toggle size="sm" checked={value} label="Protect web searches" onchange={(checked) => void change(checked)} />
+			<Toggle size="sm" checked={value} label={t('search.label')} onchange={(checked) => void change(checked)} />
 		{/key}
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px; }
 	.info { flex: 1; }
 	.row-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; }
 	.hint { margin: 0 0 6px; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 	.hint:last-child { margin-bottom: 0; }
-	.warn { color: var(--color-danger, #b42318); }
+	.warn { color: var(--color-danger); }
 	.hint code {
 		padding: 1px 5px;
 		border-radius: 3px;

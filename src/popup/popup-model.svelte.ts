@@ -46,10 +46,11 @@ import { deriveResourceSummary, type ResourceSummary } from '../shared/popup-res
 import { packagedTermsUrl, PUBLIC_PROJECT_LINKS } from '../shared/project-links';
 import { minResolvedThreshold, resolveThreshold } from '../shared/sensitivity-resolver';
 import { SYSTEM_CHECK_STORAGE_KEY } from '../shared/system-check-storage';
+import { translate, type MessageKey } from '../shared/i18n';
 import { clearEntityMaps, clearFeedback as clearFeedbackLog, getFeedbackLog, loadSettings, saveSettings } from '../shared/storage';
 
 export type TabId = 'protect' | 'detect' | 'test' | 'settings';
-export type TabDefinition = { id: TabId; label: string };
+export type TabDefinition = { id: TabId; label: MessageKey };
 export type DetectionCategoryId = GroupName;
 export type DetectionCategory = {
   id: GroupName;
@@ -133,28 +134,28 @@ export type AppModels = {
 };
 
 export const tabs: TabDefinition[] = [
-  { id: 'protect', label: 'Protect' },
-  { id: 'detect', label: 'Detect' },
-  { id: 'test', label: 'Test' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'protect', label: 'popup.tab.protect' },
+  { id: 'detect', label: 'popup.tab.detect' },
+  { id: 'test', label: 'popup.tab.test' },
+  { id: 'settings', label: 'popup.tab.settings' },
 ];
 
-const CATEGORY_DESCRIPTIONS: Record<GroupName, string> = {
-  Identity: 'Names, usernames',
-  Contact: 'Email, phone, address',
-  Financial: 'Cards, IBAN, accounts',
-  Network: 'IP addresses, hosts, private links and paths',
-  Location: 'Places and regions',
-  Password: 'Secrets and keys',
-  Organization: 'Companies and orgs',
-  'Low-signal': 'Dates, misc',
+const CATEGORY_DESCRIPTIONS: Record<GroupName, MessageKey> = {
+  Identity: 'category.Identity.description',
+  Contact: 'category.Contact.description',
+  Financial: 'category.Financial.description',
+  Network: 'category.Network.description',
+  Location: 'category.Location.description',
+  Password: 'category.Password.description',
+  Organization: 'category.Organization.description',
+  'Low-signal': 'category.Low-signal.description',
 };
 
 function categoriesFromSettings(settings: Settings): DetectionCategory[] {
   return GROUP_NAMES.map((group) => ({
     id: group,
     label: group,
-    description: CATEGORY_DESCRIPTIONS[group],
+    description: translate(CATEGORY_DESCRIPTIONS[group]),
     enabled: settings.groupsEnabled[group],
     defaultEnabled: GROUP_DEFAULT_ON[group],
   }));
@@ -189,8 +190,8 @@ export function createAppModels(): AppModels {
 
   const activeTab = writable<TabId>('protect');
   const enabled = writable(true);
-  const wasmStatus = writable<StatusPill>(status('Loading...', 'muted'));
-  const nerStatus = writable<StatusPill>(status('Loading...', 'muted'));
+  const wasmStatus = writable<StatusPill>(status(translate('status.loading'), 'muted'));
+  const nerStatus = writable<StatusPill>(status(translate('status.loading'), 'muted'));
   const cpuFallback = writable(false);
   const version = writable(typeof chrome !== 'undefined' ? chrome.runtime.getManifest().version : '');
   const modelLabel = writable('');
@@ -260,9 +261,9 @@ export function createAppModels(): AppModels {
         type: 'DETECT_PII',
         payload: { text: 'test', requestId: 'init_check', config: { ner_provider: 'off', ner_enabled: false } },
       } as DetectPiiRequest);
-      wasmStatus.set(response?.type === 'PII_RESULT' ? status('Loaded', 'ok') : status('Not loaded', 'danger'));
+      wasmStatus.set(response?.type === 'PII_RESULT' ? status(translate('status.loaded'), 'ok') : status(translate('status.notLoaded'), 'danger'));
     } catch {
-      wasmStatus.set(status('Not loaded', 'danger'));
+      wasmStatus.set(status(translate('status.notLoaded'), 'danger'));
     }
   }
 
@@ -281,20 +282,20 @@ export function createAppModels(): AppModels {
     nerStatusRaw.set(statusValue);
     cpuFallback.set(statusValue.mode === 'transformers' && statusValue.state === 'ready' && statusValue.device === 'wasm');
     if (statusValue.modelLabel) modelLabel.set(statusValue.modelLabel);
-    const readyLabel = statusValue.modelLabel ? `Ready: ${shortModelLabel(statusValue.modelLabel)}` : 'Ready';
+    const readyLabel = statusValue.modelLabel ? translate('status.readyModel', { model: shortModelLabel(statusValue.modelLabel) }) : translate('status.ready');
     const title = statusValue.message ? (statusValue.modelLabel ? `${statusValue.modelLabel}: ${statusValue.message}` : statusValue.message) : undefined;
     switch (statusValue.state) {
       case 'ready': nerStatus.set(status(readyLabel, 'ok', title)); break;
-      case 'idle': nerStatus.set(status('Not loaded', 'muted', title)); break;
-      case 'loading': nerStatus.set(status('Loading...', 'muted', title)); break;
-      case 'failed': nerStatus.set(status('Failed', 'danger', title)); break;
-      case 'unavailable': nerStatus.set(status('Unavailable', 'muted', title)); break;
+      case 'idle': nerStatus.set(status(translate('status.notLoaded'), 'muted', title)); break;
+      case 'loading': nerStatus.set(status(translate('status.loading'), 'muted', title)); break;
+      case 'failed': nerStatus.set(status(translate('status.failed'), 'danger', title)); break;
+      case 'unavailable': nerStatus.set(status(translate('status.unavailable'), 'muted', title)); break;
     }
   }
 
   async function refreshNerStatus(config = currentDetectionConfig(currentSettings, nerModel)): Promise<void> {
     cpuFallback.set(false);
-    nerStatus.set(status('Loading...', 'muted'));
+    nerStatus.set(status(translate('status.loading'), 'muted'));
     const statusValue = await fetchNerStatus(config);
     if (statusValue) renderNerStatus(statusValue);
     // If fetch failed (e.g., offscreen listener wasn't ready yet), leave the
@@ -348,7 +349,7 @@ export function createAppModels(): AppModels {
     lastNerStatus = null;
     nerStatusRaw.set(null);
     cpuFallback.set(false);
-    nerStatus.set(status('Off', 'muted', 'Local AI detection is off. Pattern detection remains active.'));
+    nerStatus.set(status(translate('status.off'), 'muted', translate('status.off.title')));
   }
 
   async function init(): Promise<void> {
@@ -465,7 +466,7 @@ export function createAppModels(): AppModels {
     if (!text || isRunning && get(isRunning)) return;
     isRunning.set(true);
     resultText.set('Running detection pipeline...');
-    nerStatus.set(status('Loading...', 'muted'));
+    nerStatus.set(status(translate('status.loading'), 'muted'));
     cpuFallback.set(false);
     try {
       const settings = await loadSettings();
@@ -567,7 +568,7 @@ export function createAppModels(): AppModels {
         if (parsed.nerWebGpuDtype) patch.nerWebGpuDtype = parsed.nerWebGpuDtype;
         await saveAndBroadcast(patch);
         const config = currentDetectionConfig(currentSettings, nerModel);
-        nerStatus.set(status('Loading...', 'muted'));
+        nerStatus.set(status(translate('status.loading'), 'muted'));
         cpuFallback.set(false);
         await warmUpNer(config).catch(() => undefined);
         await refreshNerStatus(config);

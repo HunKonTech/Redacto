@@ -11,19 +11,19 @@ export const SHADOW_DESIGN_SYSTEM_STYLES = `
     --pg-color-text-light: #f8fafc;
     --pg-color-muted-dark: #cbd5e1;
     --pg-color-header: #0f172a;
-    --pg-color-surface: #f7f8fa;
+    --pg-color-surface: #f4f5fa;
     --pg-color-card: #ffffff;
-    --pg-color-border: rgb(14 23 38 / 8%);
-    --pg-color-ink: #0e1726;
-    --pg-color-muted: #64748b;
-    --pg-color-subtle: #94a3b8;
-    --pg-color-accent: #1d4ed8;
-    --pg-color-accent-hover: #1e40af;
-    --pg-color-accent-soft: #eff6ff;
-    --pg-color-success: #22c55e;
+    --pg-color-border: rgb(15 23 42 / 13%);
+    --pg-color-ink: #0f1424;
+    --pg-color-muted: #5b6478;
+    --pg-color-subtle: #8a93a8;
+    --pg-color-accent: #4f46e5;
+    --pg-color-accent-hover: #4338ca;
+    --pg-color-accent-soft: rgb(79 70 229 / 9%);
+    --pg-color-success: #16a34a;
     --pg-color-warning: #f59e0b;
-    --pg-radius-sm: 6px;
-    --pg-radius-md: 8px;
+    --pg-radius-sm: 8px;
+    --pg-radius-md: 10px;
     --pg-shadow-floating: 0 16px 40px rgb(15 23 42 / 24%);
     --pg-shadow-floating-light: 0 10px 28px rgb(15 23 42 / 12%);
   }
@@ -43,7 +43,7 @@ export const SHADOW_DESIGN_SYSTEM_STYLES = `
     background: var(--pg-color-card);
     color: var(--pg-color-ink);
     box-shadow: var(--pg-shadow-floating-light);
-    --pg-color-focus: #1e40af;
+    --pg-color-focus: #4338ca;
   }
 
   .pg-design-muted {

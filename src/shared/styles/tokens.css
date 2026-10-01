@@ -41,36 +41,135 @@
   src: url("/fonts/jetbrains-mono-600.woff2") format("woff2");
 }
 
+/* Latin Extended (ő, ű and the like), picked per character by unicode-range. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin-ext-300.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin-ext-400.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin-ext-500.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin-ext-600.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext-400.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext-600.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root,
 .pg-overlay-backdrop {
   --popup-width: 420px;
   --popup-height: 600px;
   --font-sans: "IBM Plex Sans", -apple-system, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Surfaces, from the page background up to raised controls. */
   --color-header: #0f172a;
-  --color-surface: #f7f8fa;
+  --color-surface: #f4f5fa;
   --color-card: #ffffff;
-  --color-border: rgb(14 23 38 / 6%);
-  --color-border-strong: rgb(14 23 38 / 8%);
-  --color-ink: #0e1726;
-  --color-muted: #64748b;
-  --color-subtle: #94a3b8;
-  --color-accent: #1d4ed8;
-  --color-accent-soft: #eff6ff;
-  --color-glow: #7f66cc;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
+  --color-elevated: #ffffff;
+  --color-input: #f8f9fc;
+  --color-muted-bg: #eef0f6;
+  --color-hover: rgb(15 23 42 / 4%);
+  --color-chrome: rgb(255 255 255 / 82%);
+  --color-border: rgb(15 23 42 / 8%);
+  --color-border-strong: rgb(15 23 42 / 13%);
+
+  /* Text. */
+  --color-ink: #0f1424;
+  --color-muted: #5b6478;
+  --color-subtle: #8a93a8;
+
+  /* Brand: the logo's teal → indigo. */
+  --color-accent: #4f46e5;
+  --color-accent-hover: #4338ca;
+  --color-accent-soft: rgb(79 70 229 / 9%);
+  --color-on-accent: #ffffff;
+  --color-brand-gradient: linear-gradient(135deg, #14b8a6 0%, #4f46e5 100%);
+  --color-glow: #7c6cf0;
+  --color-focus: rgb(79 70 229 / 35%);
+
+  --color-success: #16a34a;
+  --color-danger: #e11d48;
+  --color-danger-soft: rgb(225 29 72 / 9%);
+  --color-toggle-off: #cbd2e0;
+  --color-toast-bg: #0f1424;
+  --color-toast-fg: #ffffff;
+
+  /* Notice boxes (resource warnings and the like): border, background, text. */
+  --tone-warning-border: rgb(245 158 11 / 42%);
+  --tone-warning-bg: rgb(245 158 11 / 11%);
+  --tone-warning-fg: #92400e;
+  --tone-warning-strong: #b45309;
+  --tone-critical-border: rgb(239 68 68 / 50%);
+  --tone-critical-bg: rgb(239 68 68 / 10%);
+  --tone-critical-fg: #991b1b;
+  --tone-critical-strong: #b91c1c;
+  --tone-info-border: rgb(79 70 229 / 35%);
+  --tone-info-bg: rgb(79 70 229 / 8%);
+  --tone-info-fg: #312e81;
+  --tone-info-strong: #4338ca;
+  --tone-ok-border: rgb(34 197 94 / 42%);
+  --tone-ok-bg: rgb(34 197 94 / 10%);
+  --tone-ok-fg: #065f46;
+  --tone-ok-strong: #047857;
+  --tone-muted-border: rgb(148 163 184 / 45%);
+  --tone-muted-bg: rgb(148 163 184 / 10%);
+  --tone-muted-fg: #334155;
+  --tone-muted-strong: #1e293b;
+
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 5%);
+  --shadow-md: 0 1px 2px rgb(15 23 42 / 4%), 0 4px 16px rgb(15 23 42 / 6%);
+  --shadow-lg: 0 10px 30px rgb(15 23 42 / 16%);
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-pill: 999px;
   --border-hairline: 1px solid var(--color-border);
   --toggle-width: 42px;
   --toggle-height: 24px;
   --toggle-knob: 18px;
+
+  color-scheme: light;
 
   /* Per-group entity palette — one token pair per popup category group.
    * Used by the highlighted spans in the review overlay and by the
@@ -93,6 +192,162 @@
   --color-group-low-signal-fg: #475569;
 }
 
+/*
+ * Dark theme: chosen explicitly (data-theme="dark"), or following the system
+ * while the preference is "system". IDE webviews take their colors from the
+ * IDE (src/ide/theme), so they are left out.
+ */
+:root[data-theme="dark"] {
+  --color-header: #0b0f1a;
+  --color-surface: #0b0e17;
+  --color-card: #131826;
+  --color-elevated: #1a2032;
+  --color-input: #0f1320;
+  --color-muted-bg: #1c2234;
+  --color-hover: rgb(255 255 255 / 5%);
+  --color-chrome: rgb(19 24 38 / 82%);
+  --color-border: rgb(255 255 255 / 8%);
+  --color-border-strong: rgb(255 255 255 / 14%);
+
+  --color-ink: #e7eaf3;
+  --color-muted: #9aa3b8;
+  --color-subtle: #6c7590;
+
+  --color-accent: #8b85ff;
+  --color-accent-hover: #a29dff;
+  --color-accent-soft: rgb(139 133 255 / 14%);
+  --color-on-accent: #0b0e17;
+  --color-glow: #8b85ff;
+  --color-focus: rgb(139 133 255 / 45%);
+
+  --color-success: #4ade80;
+  --color-danger: #fb7185;
+  --color-danger-soft: rgb(251 113 133 / 12%);
+  --color-toggle-off: #3a4258;
+  --color-toast-bg: #e7eaf3;
+  --color-toast-fg: #0b0e17;
+
+  --tone-warning-border: rgb(251 191 36 / 35%);
+  --tone-warning-bg: rgb(251 191 36 / 10%);
+  --tone-warning-fg: #fcd9a0;
+  --tone-warning-strong: #fbbf24;
+  --tone-critical-border: rgb(251 113 133 / 40%);
+  --tone-critical-bg: rgb(251 113 133 / 10%);
+  --tone-critical-fg: #fecdd3;
+  --tone-critical-strong: #fb7185;
+  --tone-info-border: rgb(139 133 255 / 40%);
+  --tone-info-bg: rgb(139 133 255 / 10%);
+  --tone-info-fg: #d4d2ff;
+  --tone-info-strong: #a29dff;
+  --tone-ok-border: rgb(74 222 128 / 35%);
+  --tone-ok-bg: rgb(74 222 128 / 9%);
+  --tone-ok-fg: #bbf7d0;
+  --tone-ok-strong: #4ade80;
+  --tone-muted-border: rgb(148 163 184 / 30%);
+  --tone-muted-bg: rgb(148 163 184 / 8%);
+  --tone-muted-fg: #cbd5e1;
+  --tone-muted-strong: #e2e8f0;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+  --shadow-lg: 0 12px 34px rgb(0 0 0 / 45%);
+
+  color-scheme: dark;
+
+  --color-group-identity-bg: rgb(167 139 250 / 22%);
+  --color-group-identity-fg: #c4b5fd;
+  --color-group-contact-bg: rgb(96 165 250 / 20%);
+  --color-group-contact-fg: #93c5fd;
+  --color-group-financial-bg: rgb(232 121 249 / 20%);
+  --color-group-financial-fg: #f0abfc;
+  --color-group-network-bg: rgb(45 212 191 / 18%);
+  --color-group-network-fg: #5eead4;
+  --color-group-location-bg: rgb(74 222 128 / 18%);
+  --color-group-location-fg: #86efac;
+  --color-group-password-bg: rgb(251 113 133 / 20%);
+  --color-group-password-fg: #fda4af;
+  --color-group-organization-bg: rgb(251 146 60 / 20%);
+  --color-group-organization-fg: #fdba74;
+  --color-group-low-signal-bg: rgb(148 163 184 / 18%);
+  --color-group-low-signal-fg: #cbd5e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-ide-host]) {
+    --color-header: #0b0f1a;
+    --color-surface: #0b0e17;
+    --color-card: #131826;
+    --color-elevated: #1a2032;
+    --color-input: #0f1320;
+    --color-muted-bg: #1c2234;
+    --color-hover: rgb(255 255 255 / 5%);
+    --color-chrome: rgb(19 24 38 / 82%);
+    --color-border: rgb(255 255 255 / 8%);
+    --color-border-strong: rgb(255 255 255 / 14%);
+
+    --color-ink: #e7eaf3;
+    --color-muted: #9aa3b8;
+    --color-subtle: #6c7590;
+
+    --color-accent: #8b85ff;
+    --color-accent-hover: #a29dff;
+    --color-accent-soft: rgb(139 133 255 / 14%);
+    --color-on-accent: #0b0e17;
+    --color-glow: #8b85ff;
+    --color-focus: rgb(139 133 255 / 45%);
+
+    --color-success: #4ade80;
+    --color-danger: #fb7185;
+    --color-danger-soft: rgb(251 113 133 / 12%);
+    --color-toggle-off: #3a4258;
+    --color-toast-bg: #e7eaf3;
+    --color-toast-fg: #0b0e17;
+
+    --tone-warning-border: rgb(251 191 36 / 35%);
+    --tone-warning-bg: rgb(251 191 36 / 10%);
+    --tone-warning-fg: #fcd9a0;
+    --tone-warning-strong: #fbbf24;
+    --tone-critical-border: rgb(251 113 133 / 40%);
+    --tone-critical-bg: rgb(251 113 133 / 10%);
+    --tone-critical-fg: #fecdd3;
+    --tone-critical-strong: #fb7185;
+    --tone-info-border: rgb(139 133 255 / 40%);
+    --tone-info-bg: rgb(139 133 255 / 10%);
+    --tone-info-fg: #d4d2ff;
+    --tone-info-strong: #a29dff;
+    --tone-ok-border: rgb(74 222 128 / 35%);
+    --tone-ok-bg: rgb(74 222 128 / 9%);
+    --tone-ok-fg: #bbf7d0;
+    --tone-ok-strong: #4ade80;
+    --tone-muted-border: rgb(148 163 184 / 30%);
+    --tone-muted-bg: rgb(148 163 184 / 8%);
+    --tone-muted-fg: #cbd5e1;
+    --tone-muted-strong: #e2e8f0;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+    --shadow-lg: 0 12px 34px rgb(0 0 0 / 45%);
+
+    color-scheme: dark;
+
+    --color-group-identity-bg: rgb(167 139 250 / 22%);
+    --color-group-identity-fg: #c4b5fd;
+    --color-group-contact-bg: rgb(96 165 250 / 20%);
+    --color-group-contact-fg: #93c5fd;
+    --color-group-financial-bg: rgb(232 121 249 / 20%);
+    --color-group-financial-fg: #f0abfc;
+    --color-group-network-bg: rgb(45 212 191 / 18%);
+    --color-group-network-fg: #5eead4;
+    --color-group-location-bg: rgb(74 222 128 / 18%);
+    --color-group-location-fg: #86efac;
+    --color-group-password-bg: rgb(251 113 133 / 20%);
+    --color-group-password-fg: #fda4af;
+    --color-group-organization-bg: rgb(251 146 60 / 20%);
+    --color-group-organization-fg: #fdba74;
+    --color-group-low-signal-bg: rgb(148 163 184 / 18%);
+    --color-group-low-signal-fg: #cbd5e1;
+  }
+}
+
 button,
 input,
 select,
@@ -101,4 +356,8 @@ textarea {
 }
 button {
   font: inherit;
+}
+
+::selection {
+  background: var(--color-accent-soft);
 }

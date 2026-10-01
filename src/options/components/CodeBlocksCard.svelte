@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { CodeAnonymizationMode, Settings } from '../../shared/message-types';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -21,55 +22,43 @@
 </script>
 
 <article class="card" id="code-blocks-section">
-	<CardHeading title="Code blocks" hint="Secrets in code and code-region handling" />
+	<CardHeading title={t('code.title')} hint={t('code.hint')} />
 	<div class="row">
 		<div class="info">
-			<span class="row-label">Detect secrets in code</span>
+			<span class="row-label">{t('code.secrets')}</span>
 			<p class="hint">
-				Flags API keys and tokens (AWS, GitHub, OpenAI, Stripe, Slack, Google, JWT),
-				private key blocks, credentials in assignments and connection strings,
-				internal hostnames such as <code>db.acme.internal</code>, and usernames in
-				home-directory paths.
+				{t('code.secrets.hintBefore')}<code>db.acme.internal</code>{t('code.secrets.hintAfter')}
 			</p>
 		</div>
-		<Toggle size="sm" checked={codeSecrets} label="Detect secrets in code" onchange={(checked) => setCodeAnonymization(checked ? 'secrets' : 'off')} />
+		<Toggle size="sm" checked={codeSecrets} label={t('code.secrets')} onchange={(checked) => setCodeAnonymization(checked ? 'secrets' : 'off')} />
 	</div>
 	<div class="row">
 		<div class="info">
-			<span class="row-label">Rename code identifiers</span>
+			<span class="row-label">{t('code.rename')}</span>
 			<p class="hint">
-				Renames the classes, functions, variables, fields and parameters that pasted
-				code declares, the same way everywhere: <code>alma</code> becomes
-				<code>var1</code> and <code>alma.nev</code> becomes <code>var1.field2</code>.
-				Imported and library names stay. Names in which Local AI finds personal data
-				keep a typed placeholder instead (<code>getPERSON_1Invoice</code>). Copying
-				code back from a reply restores the original names. Turning this on also
-				turns on secret detection.
+				{t('code.rename.hint1')}<code>alma</code>{t('code.rename.hint2')}<code>var1</code>{t('code.rename.hint3')}<code>alma.nev</code>{t('code.rename.hint4')}<code>var1.field2</code>{t('code.rename.hint5')}<code>getPERSON_1Invoice</code>{t('code.rename.hint6')}
 			</p>
 		</div>
 		<Toggle
 			size="sm"
 			checked={renameIdentifiers}
-			label="Rename code identifiers"
+			label={t('code.rename')}
 			onchange={(checked) => setCodeAnonymization(checked ? 'full' : 'secrets')}
 		/>
 	</div>
 	<div class="row">
 		<div class="info">
-			<span class="row-label">Skip code blocks</span>
+			<span class="row-label">{t('code.skip')}</span>
 			<p class="hint">
-				When on, detections inside fenced markdown blocks and
-				<code>&lt;code&gt;</code>/<code>&lt;pre&gt;</code> regions move to a
-				collapsed disclosure in the overlay instead of appearing at the top level.
-				Inline backticks are always scanned.
+				{t('code.skip.hintBefore')}<code>&lt;code&gt;</code>/<code>&lt;pre&gt;</code>{t('code.skip.hintAfter')}
 			</p>
 		</div>
-		<Toggle size="sm" checked={value} label="Skip code blocks" onchange={(checked) => setValue(checked)} />
+		<Toggle size="sm" checked={value} label={t('code.skip')} onchange={(checked) => setValue(checked)} />
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.row + .row { border-top: var(--border-hairline); }
 	.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px; }
 	.info { flex: 1; }

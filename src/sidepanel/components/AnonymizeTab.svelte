@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, tp } from '../../shared/i18n/reactive';
 	import { EntityMap } from '../../shared/entity-map';
 	import type { IdentityVaultData } from '../../shared/identity-vault';
 	import type { PiiSpan, Settings } from '../../shared/message-types';
@@ -104,7 +105,7 @@
 		if (detectedFor !== request.text || error) return;
 		try {
 			const saved = await commit();
-			if (saved !== null) flash('Saved to History');
+			if (saved !== null) flash(t('anonymize.savedToHistory'));
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -150,7 +151,7 @@
 			const saved = await commit();
 			// The vault may have changed since the preview; copy what was saved.
 			if (saved !== null && saved !== preview.text) await copyText(saved);
-			flash(changed ? 'Copied · saved to History' : 'Copied');
+			flash(changed ? t('anonymize.copiedSaved') : t('anonymize.copied'));
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -175,17 +176,17 @@
 
 <div class="stack">
 	<article class="card">
-		<CardHeading title="Anonymize text" hint="stays on this device" />
+		<CardHeading title={t('anonymize.title')} hint={t('anonymize.hint')} />
 		<div class="body">
 			<textarea
 				bind:value={input}
 				onkeydown={onKeydown}
 				onpaste={onPaste}
-				aria-label="Text to anonymize"
-				placeholder="Paste text or code to anonymize…"
+				aria-label={t('anonymize.inputAria')}
+				placeholder={t('anonymize.placeholder')}
 			></textarea>
 			<button type="button" class="primary" disabled={running || !input.trim() || !settings} onclick={run}>
-				{running ? 'Detecting…' : stale ? 'Text changed — anonymize again' : 'Anonymize'}
+				{running ? t('common.detecting') : stale ? t('anonymize.again') : t('anonymize.run')}
 			</button>
 			{#if error}
 				<p class="error" role="alert">{error}</p>
@@ -195,21 +196,19 @@
 
 	{#if detection?.alreadyAnonymized && !stale}
 		<article class="card">
-			<CardHeading title="Already anonymized" />
+			<CardHeading title={t('anonymize.already.title')} />
 			<div class="body">
 				<p class="hint">
-					This is the anonymized text from
-					<strong>{detection.alreadyAnonymized.site ?? 'the side panel'}</strong>, so it is left as it is — anonymizing
-					it again would replace its replacements. Paste it wherever you need it; the reply can be restored in
-					History &amp; restore.
+					{t('anonymize.already.before')}
+					<strong>{detection.alreadyAnonymized.site ?? t('anonymize.already.sidePanel')}</strong>{t('anonymize.already.after')}
 				</p>
 			</div>
 		</article>
 	{:else if detection && !stale}
 		{#if items.length > 0}
 			<article class="card">
-				<CardHeading title="Detected" badge={`${approved.length}/${detection.spans.length}`} />
-				<ul class="items" aria-label="Detected items">
+				<CardHeading title={t('common.detected')} badge={`${approved.length}/${detection.spans.length}`} />
+				<ul class="items" aria-label={t('anonymize.itemsAria')}>
 					{#each items as item (item.key)}
 						<li>
 							<label>
@@ -230,8 +229,8 @@
 
 		<article class="card">
 			<CardHeading
-				title="Anonymized"
-				hint={preview && preview.renamedIdentifiers > 0 ? `${preview.renamedIdentifiers} identifiers renamed` : undefined}
+				title={t('anonymize.result.title')}
+				hint={preview && preview.renamedIdentifiers > 0 ? tp('anonymize.renamed', preview.renamedIdentifiers) : undefined}
 			/>
 			<div class="body">
 				{#if detection.classifierStatus === 'model' || detection.classifierStatus === 'fallback'}
@@ -240,19 +239,19 @@
 						class:status-model={detection.classifierStatus === 'model'}
 						class:status-fallback={detection.classifierStatus === 'fallback'}
 						title={detection.classifierStatus === 'model'
-							? 'The identifier-classifier ONNX model ran locally and decided which names to rename.'
-							: 'The identifier-classifier model was unavailable, so the hardcoded library-name list decided which names to rename.'}
+							? t('anonymize.classifier.model.title')
+							: t('anonymize.classifier.fallback.title')}
 					>
 						<span class="dot" aria-hidden="true"></span>
-						{detection.classifierStatus === 'model' ? 'Identifier classifier: AI model' : 'Identifier classifier: regex fallback'}
+						{detection.classifierStatus === 'model' ? t('anonymize.classifier.model') : t('anonymize.classifier.fallback')}
 					</p>
 				{/if}
 				{#if preview && changed}
-					<MarkedText segments={previewSegments} label="Anonymized text" oncopy={onManualCopy} />
-					<button type="button" class="primary" onclick={copy}>Copy anonymized text</button>
-					<p class="hint">Copying saves the replacements to History, so you can restore the AI's reply there.</p>
+					<MarkedText segments={previewSegments} label={t('anonymize.result.aria')} oncopy={onManualCopy} />
+					<button type="button" class="primary" onclick={copy}>{t('anonymize.copy')}</button>
+					<p class="hint">{t('anonymize.copyHint')}</p>
 				{:else}
-					<p class="hint">No personal data found — nothing to replace.</p>
+					<p class="hint">{t('anonymize.nothingFound')}</p>
 				{/if}
 			</div>
 		</article>
@@ -265,17 +264,17 @@
 
 <style>
 	.stack { display: flex; flex-direction: column; gap: 8px; }
-	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: white; }
+	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
 	textarea {
 		box-sizing: border-box; width: 100%; min-height: 150px; padding: 10px; resize: vertical;
-		border: 1px solid var(--color-border-strong); border-radius: 6px; outline: none;
-		background: #f8fafc; color: var(--color-ink); font: 11px/1.5 var(--font-mono);
+		border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); outline: none;
+		background: var(--color-input); color: var(--color-ink); font: 11px/1.5 var(--font-mono);
 	}
-	textarea:focus { border-color: var(--color-accent); }
+	textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-focus); }
 	.primary {
-		width: 100%; padding: 9px; border: 0; border-radius: 6px; background: var(--color-accent);
-		color: white; font-size: 12px; font-weight: 600; cursor: pointer;
+		width: 100%; padding: 9px; border: 0; border-radius: var(--radius-sm); background: var(--color-accent);
+		color: var(--color-on-accent); font-size: 12px; font-weight: 600; cursor: pointer;
 	}
 	.primary:disabled { cursor: not-allowed; opacity: 0.55; }
 	.error { margin: 0; color: var(--color-danger); font-size: 11px; line-height: 1.45; }
@@ -293,7 +292,7 @@
 
 	.items { max-height: 30vh; margin: 0; padding: 4px 0; overflow-y: auto; list-style: none; }
 	.items label { display: flex; align-items: center; gap: 8px; padding: 5px 12px; cursor: pointer; }
-	.items label:hover { background: #f8fafc; }
+	.items label:hover { background: var(--color-input); }
 	.items input { margin: 0; accent-color: var(--color-accent); }
 	.pill {
 		flex-shrink: 0; padding: 1px 6px; border-radius: 4px; font: 600 9.5px/1.5 var(--font-mono);
@@ -314,7 +313,7 @@
 
 	.toast {
 		position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
-		padding: 7px 12px; border-radius: var(--radius-pill); background: var(--color-header);
-		color: white; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+		padding: 7px 12px; border-radius: var(--radius-pill); background: var(--color-toast-bg);
+		color: var(--color-toast-fg); font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
 	}
 </style>

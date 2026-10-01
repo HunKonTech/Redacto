@@ -29,18 +29,18 @@
 		flex: 0 0 var(--toggle-width);
 		width: var(--toggle-width);
 		height: var(--toggle-height);
-		padding: 2px;
+		padding: 3px;
 		border: 0;
 		border-radius: var(--radius-pill);
-		background: #334155;
+		background: var(--color-toggle-off);
 		cursor: pointer;
-		transition: background 140ms ease;
+		transition: background 160ms ease, box-shadow 160ms ease;
 	}
 
 	.toggle.sm {
-		--toggle-width: 34px;
-		--toggle-height: 20px;
-		--toggle-knob: 16px;
+		--toggle-width: 36px;
+		--toggle-height: 21px;
+		--toggle-knob: 15px;
 	}
 
 	.toggle span {
@@ -48,16 +48,21 @@
 		width: var(--toggle-knob);
 		height: var(--toggle-knob);
 		border-radius: 50%;
-		background: white;
-		box-shadow: 0 1px 3px rgb(0 0 0 / 28%);
-		transition: transform 140ms ease;
+		background: #ffffff;
+		box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+		transition: transform 180ms cubic-bezier(0.3, 0.7, 0.4, 1);
 	}
 
 	.toggle.checked {
-		background: #2563eb;
+		background: var(--color-accent);
 	}
 
 	.toggle.checked span {
-		transform: translateX(calc(var(--toggle-width) - var(--toggle-knob) - 4px));
+		transform: translateX(calc(var(--toggle-width) - var(--toggle-knob) - 6px));
+	}
+
+	.toggle:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px var(--color-focus);
 	}
 </style>

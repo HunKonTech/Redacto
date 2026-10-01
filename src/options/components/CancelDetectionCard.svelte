@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { CancelDetectionBehavior, Settings } from '../../shared/message-types';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -15,29 +16,28 @@
 </script>
 
 <article class="card" id="cancel-detection-section">
-	<CardHeading title="Paste scan cancellation" hint="Canceled paste behavior" />
+	<CardHeading title={t('cancel.title')} hint={t('cancel.hint')} />
 	<div class="row">
 		<div class="info">
-			<span class="row-label">When canceling a scan</span>
+			<span class="row-label">{t('cancel.label')}</span>
 			<p class="hint">
-				Choose what Redacto does with the pending paste after you explicitly cancel a running scan.
-				“Paste without checking” bypasses personal-data detection for that paste.
+				{t('cancel.body')}
 			</p>
 		</div>
 		<select
-			aria-label="When canceling a scan"
+			aria-label={t('cancel.label')}
 			value={value}
 			onchange={(event) => setValue(event.currentTarget.value as CancelDetectionBehavior)}
 		>
-			<option value="ask">Ask every time</option>
-			<option value="paste-original">Paste without checking</option>
-			<option value="drop">Don’t paste</option>
+			<option value="ask">{t('cancel.ask')}</option>
+			<option value="paste-original">{t('cancel.paste')}</option>
+			<option value="drop">{t('cancel.drop')}</option>
 		</select>
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px; }
 	.info { flex: 1; }
 	.row-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; }

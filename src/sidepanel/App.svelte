@@ -13,6 +13,9 @@
 	import { loadSettings } from '../shared/storage';
 	import ModelDownloadStatus from '../popup/components/ModelDownloadStatus.svelte';
 	import PGLogo from '../popup/components/PGLogo.svelte';
+	import PrefsControls from '../popup/components/PrefsControls.svelte';
+	import { t } from '../shared/i18n/reactive';
+	import type { MessageKey } from '../shared/i18n';
 	import AnonymizeTab from './components/AnonymizeTab.svelte';
 	import HistoryTab from './components/HistoryTab.svelte';
 	import SettingsTab from './components/SettingsTab.svelte';
@@ -22,10 +25,10 @@
 	let { settingsTab }: { settingsTab?: 'web' | 'ide' } = $props();
 
 	type TabId = 'history' | 'anonymize' | 'settings';
-	const tabs: Array<{ id: TabId; label: string }> = $derived([
-		{ id: 'history', label: 'History & restore' },
-		{ id: 'anonymize', label: 'Anonymize' },
-		...(settingsTab ? [{ id: 'settings' as const, label: 'Settings' }] : []),
+	const tabs: Array<{ id: TabId; label: MessageKey }> = $derived([
+		{ id: 'history', label: 'panel.tab.history' },
+		{ id: 'anonymize', label: 'panel.tab.anonymize' },
+		...(settingsTab ? [{ id: 'settings' as const, label: 'panel.tab.settings' as const }] : []),
 	]);
 
 	let activeTab = $state<TabId>('history');
@@ -111,13 +114,17 @@
 	});
 </script>
 
-<main class="panel" aria-label="Redacto side panel">
+<main class="panel" class:web={settingsTab === 'web'} aria-label={t('panel.aria')}>
 	<header class="panel-header">
 		<div class="brand-row">
-			<PGLogo size={22} gradId="pg-sidepanel-logo" />
-			<h1>Redacto</h1>
+			<div class="logo"><PGLogo size={settingsTab === 'web' ? 34 : 26} gradId="pg-sidepanel-logo" /></div>
+			<div class="brand-copy">
+				<h1>Redacto</h1>
+				{#if settingsTab === 'web'}<p>{t('web.tagline')}</p>{/if}
+			</div>
+			<PrefsControls showTheme={settingsTab !== 'ide'} />
 		</div>
-		<nav class="tab-nav" aria-label="Side panel sections">
+		<nav class="tab-nav" aria-label={t('panel.tabs.aria')}>
 			{#each tabs as tab (tab.id)}
 				<button
 					type="button"
@@ -125,7 +132,7 @@
 					aria-current={activeTab === tab.id ? 'page' : undefined}
 					onclick={() => (activeTab = tab.id)}
 				>
-					{tab.label}
+					{t(tab.label)}
 				</button>
 			{/each}
 		</nav>
@@ -170,6 +177,7 @@
 		font-family: var(--font-sans);
 		background: var(--color-surface);
 		color: var(--color-ink);
+		-webkit-font-smoothing: antialiased;
 	}
 
 	.panel {
@@ -179,55 +187,115 @@
 		min-width: 0;
 	}
 	.panel-header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
 		flex-shrink: 0;
-		background: var(--color-header);
-		color: white;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 12px 12px 10px;
+		border-bottom: 1px solid var(--color-border);
+		background: var(--color-chrome);
+		backdrop-filter: saturate(160%) blur(12px);
+		color: var(--color-ink);
 	}
 	.brand-row {
 		display: flex;
 		align-items: center;
-		gap: 9px;
-		padding: 10px 14px;
+		gap: 10px;
+	}
+	.logo {
+		display: grid;
+		flex-shrink: 0;
+		filter: drop-shadow(0 4px 10px rgb(79 70 229 / 25%));
+	}
+	.brand-copy {
+		flex: 1;
+		min-width: 0;
 	}
 	h1 {
 		margin: 0;
-		font-size: 15px;
-		font-weight: 400;
-		letter-spacing: -0.1px;
+		font-size: 16px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+		white-space: nowrap;
+	}
+	.brand-copy p {
+		margin: 1px 0 0;
+		overflow: hidden;
+		color: var(--color-muted);
+		font-size: 12px;
+		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 	.tab-nav {
 		display: flex;
-		border-top: 1px solid rgb(255 255 255 / 6%);
+		gap: 2px;
+		padding: 3px;
+		border-radius: var(--radius-pill);
+		background: var(--color-muted-bg);
 	}
 	.tab-nav button {
 		flex: 1;
-		padding: 10px 8px 11px;
+		padding: 6px 8px;
 		border: 0;
-		border-bottom: 2px solid transparent;
+		border-radius: var(--radius-pill);
 		background: transparent;
-		color: rgb(255 255 255 / 55%);
+		color: var(--color-muted);
 		font-size: 12px;
 		font-weight: 500;
+		white-space: nowrap;
 		cursor: pointer;
+		transition: color 120ms ease, background 120ms ease;
+	}
+	.tab-nav button:hover {
+		color: var(--color-ink);
 	}
 	.tab-nav button.active {
-		border-bottom-color: var(--color-glow);
-		box-shadow: inset 0 -14px 28px -11px var(--color-glow);
-		color: white;
+		background: var(--color-elevated);
+		color: var(--color-ink);
 		font-weight: 600;
+		box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
 	}
 	.tab-nav button:focus-visible {
-		outline: 2px solid var(--color-glow);
-		outline-offset: -2px;
+		outline: none;
+		box-shadow: 0 0 0 3px var(--color-focus);
 	}
 	.panel-body {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
-		padding: 10px 10px 16px;
+		padding: 12px 12px 18px;
 	}
 	.panel-body[hidden] {
 		display: none;
+	}
+
+	/* The web page: a wider, roomier layout. */
+	.panel.web .panel-header {
+		gap: 14px;
+		padding: 18px 20px 14px;
+	}
+	.panel.web h1 {
+		font-size: 20px;
+	}
+	.panel.web .tab-nav {
+		align-self: flex-start;
+		max-width: 100%;
+	}
+	.panel.web .tab-nav button {
+		flex: 0 1 auto;
+		padding: 7px 18px;
+	}
+	.panel.web .panel-body {
+		padding: 16px 20px 24px;
+	}
+	@media (max-width: 520px) {
+		.panel.web .panel-header { padding: 14px 16px 12px; }
+		.panel.web .panel-body { padding: 12px 16px 20px; }
+		.panel.web .brand-copy p { display: none; }
+		.panel.web .tab-nav { align-self: stretch; }
+		.panel.web .tab-nav button { flex: 1; padding: 6px 8px; }
 	}
 </style>

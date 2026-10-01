@@ -15,36 +15,44 @@
   <link rel="icon" href="icon128.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#f4f5fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b0e17" media="(prefers-color-scheme: dark)">
 </head>
 <body>
   <div id="app"></div>
-  <section class="pg-web-note pg-web-get" aria-labelledby="pg-get-title">
-    <h2 id="pg-get-title">Also available as</h2>
-    <ul>
-      <li>
-        <strong>Browser extension</strong> — checks text as you paste it into ChatGPT, Claude and Gemini (Chrome):
-        <a href="https://github.com/HunKonTech/Redacto/releases" rel="noopener noreferrer">Download</a>
-      </li>
-      <li>
-        <strong>IDE plugins</strong> — right-click a selection → <em>Anonymize with Redacto</em>:
-        <a href="https://marketplace.visualstudio.com/items?itemName=benkoncsik.redacto-vscode" rel="noopener noreferrer">VS Code</a> ·
-        <a href="https://plugins.jetbrains.com/search?search=Redacto" rel="noopener noreferrer">JetBrains IDEs</a> ·
-        <a href="https://marketplace.visualstudio.com/items?itemName=benkoncsik.Redacto" rel="noopener noreferrer">Visual Studio 2022</a>
-      </li>
-    </ul>
-  </section>
-  <p class="pg-web-note">
-    Runs entirely in this browser: detection uses WebAssembly and a local AI model downloaded from this site,
-    and History is kept in this browser's local storage — nothing is uploaded or stored on a server.
-    Clear it any time from <em>History &amp; restore</em>.
-    <a href="https://github.com/HunKonTech/Redacto" rel="noopener noreferrer">Source code</a>
-  </p>
-  <p class="pg-web-note pg-web-offline">
-    <span id="pg-offline-status"></span>
-    <button type="button" id="pg-offline-model" hidden>Save the local AI model for offline use</button>
-    <button type="button" id="pg-update" hidden>New version available — reload</button>
-    <span class="pg-web-version" id="pg-version">v<%= webVersion %></span>
-  </p>
+  <footer class="pg-web-footer">
+    <section class="pg-web-get" aria-labelledby="pg-get-title">
+      <h2 id="pg-get-title" data-i18n="web.alsoAvailable">Also available as</h2>
+      <div class="pg-web-tiles">
+        <a class="pg-web-tile" href="https://github.com/HunKonTech/Redacto/releases" rel="noopener noreferrer">
+          <strong data-i18n="web.extension.title">Browser extension</strong>
+          <span data-i18n="web.extension.body">Checks text as you paste it into ChatGPT, Claude and Gemini (Chrome).</span>
+          <span class="pg-web-cta" data-i18n="web.download">Download →</span>
+        </a>
+        <div class="pg-web-tile">
+          <strong data-i18n="web.ide.title">IDE plugins</strong>
+          <span data-i18n="web.ide.body">Right-click a selection → Anonymize with Redacto.</span>
+          <span class="pg-web-links">
+            <a href="https://marketplace.visualstudio.com/items?itemName=benkoncsik.redacto-vscode" rel="noopener noreferrer">VS Code</a>
+            <a href="https://plugins.jetbrains.com/search?search=Redacto" rel="noopener noreferrer">JetBrains</a>
+            <a href="https://marketplace.visualstudio.com/items?itemName=benkoncsik.Redacto" rel="noopener noreferrer">Visual Studio 2022</a>
+          </span>
+        </div>
+      </div>
+    </section>
+    <p class="pg-web-note">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5 3.8 5v4.6c0 3.7 2.6 6.6 6.2 7.9 3.6-1.3 6.2-4.2 6.2-7.9V5L10 2.5Z" /></svg>
+      <span>
+        <span data-i18n="web.privacy">Runs entirely in this browser: detection uses WebAssembly and a local AI model downloaded from this site, and History is kept in this browser's local storage — nothing is uploaded or stored on a server. Clear it any time from History &amp; restore.</span>
+        <a href="https://github.com/HunKonTech/Redacto" rel="noopener noreferrer" data-i18n="web.source">Source code</a>
+      </span>
+    </p>
+    <p class="pg-web-note pg-web-offline">
+      <span id="pg-offline-status"></span>
+      <button type="button" id="pg-offline-model" hidden data-i18n="web.offline.save">Save the local AI model for offline use</button>
+      <button type="button" id="pg-update" hidden data-i18n="web.update">New version available — reload</button>
+      <span class="pg-web-version" id="pg-version">v<%= webVersion %></span>
+    </p>
+  </footer>
 </body>
 </html>

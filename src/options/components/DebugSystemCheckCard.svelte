@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { Settings, SystemCompatibilityStatus } from '../../shared/message-types';
 	import type { DebugSystemCheckScenario } from '../options-model.svelte';
@@ -33,13 +34,13 @@
 </script>
 
 <article class="card" id="debug-system-check-section" aria-labelledby="debug-system-check-heading">
-	<CardHeading title="Debug: system compatibility" hint="For local testing only" />
+	<CardHeading title={t('debugCard.title')} hint={t('debugCard.hint')} />
 
 	<div class="body">
 		<label class="toggle-row" for="debug-mode-toggle">
 			<div>
-				<span>Debug mode</span>
-				<p>Turns on browser console logging (<code>[PG:…]</code>) and reveals testing controls that simulate compatibility states without restarting the browser.</p>
+				<span>{t('popup.settings.debug')}</span>
+				<p>{t('debugCard.debug.hintBefore')}<code>[PG:…]</code>{t('debugCard.debug.hintAfter')}</p>
 			</div>
 			<input
 				id="debug-mode-toggle"
@@ -51,9 +52,7 @@
 
 		{#if debugEnabled}
 			<p class="warning" role="note">
-				These buttons write directly to <code>pg_system_check</code> and the Local AI
-				setting. Use only when testing — to return to the real passive check, click
-				<strong>Clear &amp; re-run passive check</strong>.
+				{t('debugCard.warning')}
 			</p>
 
 			<div class="current" data-tier={$status?.tier ?? 'unknown'}>
@@ -93,21 +92,20 @@
 			</div>
 
 			<button type="button" class="reset" onclick={clearOverride}>
-				Clear &amp; re-run passive check
+				{t('debugCard.reset')}
 			</button>
 		{/if}
 	</div>
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { padding: 14px; }
 	.toggle-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
 	.toggle-row span { font-size: 13px; font-weight: 600; }
 	.toggle-row p { margin: 4px 0 0; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 	input[type='checkbox'] { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--color-accent); }
 	.warning { margin: 12px 0; padding: 10px 12px; border: 1px solid rgb(245 158 11 / 42%); background: rgb(245 158 11 / 10%); color: #92400e; border-radius: var(--radius-md); font-size: 12px; line-height: 1.45; }
-	.warning code { background: rgb(0 0 0 / 6%); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 11px; }
 	.current { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; padding: 12px; border: var(--border-hairline); border-radius: var(--radius-md); background: var(--color-surface); }
 	.current[data-tier='critical'] { border-color: rgb(239 68 68 / 55%); }
 	.current[data-tier='warning'], .current[data-tier='unknown'] { border-color: rgb(245 158 11 / 55%); }

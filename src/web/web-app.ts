@@ -19,8 +19,18 @@
 import '../shared/styles/tokens.css';
 import './web.css';
 import { createChromeShim, installChromeShim } from '../ide/chrome-shim';
+import { onLocaleChange, translate, type MessageKey } from '../shared/i18n';
+import { initUiPrefs } from '../shared/ui-prefs';
 import { persist, readArea } from './browser-storage';
 import { setUpOffline } from './offline';
+
+/** The page's own text outside the panel (web.html), marked with `data-i18n`. */
+function translateStaticText(): void {
+  document.title = translate('web.title');
+  for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
+    element.textContent = translate(element.dataset.i18n as MessageKey);
+  }
+}
 
 async function start(): Promise<void> {
   // Everything below reads `chrome.*` when it loads, so it is imported only
@@ -48,5 +58,8 @@ async function start(): Promise<void> {
   mount(App, { target, props: { settingsTab: 'web' } });
 }
 
+initUiPrefs();
+translateStaticText();
+onLocaleChange(translateStaticText);
 setUpOffline();
 void start();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../shared/i18n/reactive';
 	import type { Writable } from 'svelte/store';
 	import type { Settings } from '../../shared/message-types';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
@@ -28,27 +29,24 @@
 </script>
 
 <article class="card" id="public-domains-section">
-	<CardHeading title="Public domains" hint="Links to these sites are kept" />
+	<CardHeading title={t('domains.title')} hint={t('domains.hint')} />
 
 	<div class="body">
 		<p class="note">
-			Links are replaced unless they point to a well-known public site (documentation, code hosting,
-			package registries, Wikipedia, large platforms, government sites). Add the sites you want to keep,
-			including their subdomains. Links that carry credentials, tokens or personal identifiers are still
-			replaced.
+			{t('domains.note')}
 		</p>
 
 		<form class="add-form" autocomplete="off" onsubmit={handleSubmit}>
 			<input
 				type="text"
 				class="input"
-				placeholder="Domain (e.g. partner.com)"
-				aria-label="Public domain"
+				placeholder={t('domains.placeholder')}
+				aria-label={t('domains.inputAria')}
 				aria-invalid={$error !== null}
 				bind:value={inputValue}
 				oninput={clearError}
 			/>
-			<button type="submit" class="add-btn">Add</button>
+			<button type="submit" class="add-btn">{t('common.add')}</button>
 		</form>
 
 		{#if $error}
@@ -56,16 +54,16 @@
 		{/if}
 
 		{#if domains.length === 0}
-			<p class="empty">Only the built-in list.</p>
+			<p class="empty">{t('domains.empty')}</p>
 		{:else}
-			<ul class="list" aria-label="Public domains">
+			<ul class="list" aria-label={t('domains.title')}>
 				{#each domains as domain (domain)}
 					<li>
 						<span class="domain">{domain}</span>
 						<button
 							type="button"
 							class="delete-btn"
-							aria-label={`Remove ${domain}`}
+							aria-label={t('common.removeItem', { item: domain })}
 							onclick={() => removeDomain(domain)}
 						>×</button>
 					</li>
@@ -76,7 +74,7 @@
 </article>
 
 <style>
-	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); }
+	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 	.note { margin: 0; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 	.add-form { display: flex; gap: 8px; }
@@ -99,12 +97,12 @@
 		border: 0;
 		border-radius: var(--radius-md);
 		background: var(--color-accent);
-		color: white;
+		color: var(--color-on-accent);
 		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
 	}
-	.add-btn:hover { background: #1e40af; }
+	.add-btn:hover { background: var(--color-accent-hover); }
 	.error { margin: 0; color: var(--color-danger); font-size: 12px; }
 	.empty { margin: 0; color: var(--color-subtle); font-size: 13px; font-style: italic; }
 
@@ -123,5 +121,5 @@
 		cursor: pointer;
 		transition: color 120ms ease, background 120ms ease;
 	}
-	.delete-btn:hover { color: var(--color-danger); background: rgb(239 68 68 / 8%); }
+	.delete-btn:hover { color: var(--color-danger); background: var(--color-danger-soft); }
 </style>

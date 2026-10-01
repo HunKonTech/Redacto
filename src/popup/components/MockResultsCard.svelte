@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { groupLabelKey } from '../../shared/i18n';
+	import { t, tp } from '../../shared/i18n/reactive';
 	import type { CategoriesModel, DetectionCategoryId } from '../popup-model.svelte';
 	import CardHeading from './CardHeading.svelte';
 
@@ -13,11 +15,11 @@
 </script>
 
 <article class="card">
-	<CardHeading title="Detected" badge="3 spans" />
-	<div class="list" aria-label="Mock detection results">
+	<CardHeading title={t('common.detected')} badge={tp('common.spans', 3)} />
+	<div class="list" aria-label={t('popup.mockResults.aria')}>
 		{#each mockResults as result, index (result.id)}
 			<div class={['row', !categoryEnabled(result.categoryId) && 'muted']}>
-				<span class="tag">{result.label}</span><span class="val">{result.value}</span><span class="conf">{result.confidence}</span>
+				<span class="tag">{t(groupLabelKey(result.categoryId))}</span><span class="val">{result.value}</span><span class="conf">{result.confidence}</span>
 			</div>
 			{#if index < mockResults.length - 1}<div class="divider"></div>{/if}
 		{/each}
@@ -25,7 +27,7 @@
 </article>
 
 <style>
-	.card { margin-bottom: 8px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: white; }
+	.card { margin-bottom: 8px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
 	.row.muted { opacity: .55; }
 	.tag { padding: 2px 7px; border-radius: 4px; background: var(--color-accent-soft); color: var(--color-accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .2px; }
