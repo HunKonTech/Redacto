@@ -581,6 +581,9 @@ jobs:
     needs: [prepare-models-and-package]
     if: ${{ !cancelled() && needs.prepare-models-and-package.result == 'success' }}
     runs-on: [self-hosted, linux]
+    # Store submission is best effort: nothing here may turn the run red (the
+    # submit step also turns its own errors into warnings).
+    continue-on-error: true
     env:
       AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
       AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
