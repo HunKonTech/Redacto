@@ -162,7 +162,7 @@ Chrome Web Store upload is manual for the first public beta. Upload the same rev
 
 ## Firefox
 
-The Firefox package (`redacto-firefox-<version>.zip`) is built from the same sources and attached to every GitHub release. It is not submitted to addons.mozilla.org automatically; see `docs/developer/firefox.md` for the build and the manual AMO steps.
+The Firefox package (`redacto-firefox-<version>.zip`) is built from the same sources and attached to every GitHub release. The `firefox-publish` job submits it to addons.mozilla.org on every run when the `AMO_JWT_ISSUER` / `AMO_JWT_SECRET` secrets are set; see `docs/developer/firefox.md`.
 
 ## Microsoft Edge Add-ons Publishing
 
