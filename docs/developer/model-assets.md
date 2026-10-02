@@ -159,7 +159,9 @@ hf upload koncsik/code-identifier-classifier \
   --exclude "onnx/model.onnx"
 ```
 
-Only the int8 `onnx/model_quantized.onnx` is used at runtime; the 330 MB float export is left out.
+Only the int8 `onnx/model_quantized.onnx` is used at runtime; the float export is left out.
+
+When the int8 model is larger than 80 MiB, the prep script moves its weights into external data chunks of at most 80 MiB (`onnx/model_quantized.onnx_data`, `onnx/model_quantized.onnx_data_1`, …) and records the chunk count in `config.json` (`transformers.js_config.use_external_data_format`), which transformers.js reads to load them. addons.mozilla.org (and `web-ext lint`) rejects any package file over 100 MiB, so without the split the Firefox build fails. The split is a plain protobuf rewrite (`scripts/split-onnx-external-data.js`, no Python needed) and leaves the model's outputs unchanged.
 
 On another machine or in CI, just run:
 

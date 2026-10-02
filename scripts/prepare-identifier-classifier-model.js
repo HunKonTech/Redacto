@@ -4,9 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
+  collectOutputFiles,
   prepareLocalNerModel,
   verifyOutput,
 } = require('./prepare-ai4privacy-model');
+const { recordExternalDataChunks, splitOnnxFileIfLarge } = require('./split-onnx-external-data');
 
 const DEFAULT_MODEL_ID = 'identifier-classifier';
 const DEFAULT_OUTPUT_DIR = path.join('generated', 'models', 'identifier-classifier');
@@ -192,6 +194,8 @@ async function main(argv = process.argv.slice(2)) {
 
   if (!options.sourceDir) {
     if (!options.force && isAlreadyPrepared(outputDir)) {
+      // An output prepared before splitting existed may still hold one oversized file.
+      splitLargeModel(outputDir, readManifest(outputDir));
       console.log(`${outputDir} is already prepared; nothing to do. Rerun with --force to refresh it from Hugging Face.`);
       return;
     }
@@ -199,7 +203,35 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   const manifest = prepareLocalNerModel(options);
+  splitLargeModel(outputDir, manifest);
   printManifest(manifest);
+}
+
+function readManifest(outputDir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(outputDir, 'manifest.json'), 'utf8'));
+  } catch {
+    return { modelId: DEFAULT_MODEL_ID };
+  }
+}
+
+/**
+ * addons.mozilla.org rejects package files over 100 MiB, so a larger model
+ * is split into external data chunks (onnx/model_quantized.onnx_data, _1, …)
+ * and config.json tells transformers.js how many to load.
+ */
+function splitLargeModel(outputDir, manifest) {
+  const outputRoot = path.resolve(outputDir);
+  const modelPath = path.join(outputRoot, 'onnx', 'model_quantized.onnx');
+  const chunkCount = splitOnnxFileIfLarge(modelPath);
+  if (chunkCount === 0) return;
+
+  recordExternalDataChunks(path.join(outputRoot, 'config.json'), path.basename(modelPath), chunkCount);
+  manifest.externalDataChunks = chunkCount;
+  manifest.files = collectOutputFiles(outputRoot)
+    .filter((file) => file.path !== 'manifest.json')
+    .sort((a, b) => a.path.localeCompare(b.path));
+  fs.writeFileSync(path.join(outputRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 if (require.main === module) {

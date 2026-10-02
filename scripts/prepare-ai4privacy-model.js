@@ -367,6 +367,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  collectOutputFiles,
   DEFAULT_MODEL_ID,
   DEFAULT_OUTPUT_DIR,
   REQUIRED_OUTPUT_FILES,

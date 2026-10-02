@@ -29,13 +29,14 @@ export type IdentifierVerdict = 'OWN' | 'LIB';
 
 /**
  * `P(LIB) / (P(OWN) + P(LIB))` threshold above which a name is treated as a
- * library/framework name. Chosen (training run 2026-09-24, see
+ * library/framework name. Chosen (training run uploaded 2026-10-01, the
+ * `metrics.json` in the Hugging Face model repo; see
  * `tools/identifier-classifier/README.md`) as the 98th percentile of that
- * ratio over gold-OWN validation tokens, i.e. the highest bar that still
- * renames 98% of the user's own names (`own_recall` ≈ 95.6% on held-out
- * repos, `lib_recall_at_own98` ≈ 93%). Re-run `train.py` and update this
+ * ratio over gold-OWN test tokens, i.e. the highest bar that still renames
+ * 98% of the user's own names (`own_recall` ≈ 96.2% on held-out repos,
+ * `lib_recall_at_own98` ≈ 97.5%). Re-run `train.py` and update this
  * constant (`test_lib_threshold_own98` in its printed metrics) after
  * retraining — it is specific to that model's calibration, not an
  * architectural constant.
  */
-export const DEFAULT_LIB_THRESHOLD = 0.9552237391471863;
+export const DEFAULT_LIB_THRESHOLD = 0.8212717771530151;
