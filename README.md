@@ -5,6 +5,8 @@
 
 # Redacto
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-BenKoncsik-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/BenKoncsik)
+
 Redacto is a Manifest V3 Chrome extension that detects personally identifiable information (PII) before text is pasted into supported LLM chat apps. Detection runs **entirely on your device**: deterministic recognizers compiled from Rust to WebAssembly, plus optional transformer NER through ONNX Runtime Web. No pasted text leaves the browser, and the project has no telemetry.
 
 Redacto is an independent, non-commercial fork of [Privacy Guardrail](https://github.com/dfki-dsa/pii-guardrail-browser-extension), developed at the German Research Center for Artificial Intelligence (DFKI). It is **not affiliated with or endorsed by DFKI**. See [Fork and license](#fork-and-license).
@@ -23,6 +25,7 @@ Redacto is an independent, non-commercial fork of [Privacy Guardrail](https://gi
 - [Roadmap](#roadmap)
 - [Fork and license](#fork-and-license)
 - [Acknowledgements](#acknowledgements)
+- [Sponsor](#sponsor)
 
 ## Supported chat apps
 
@@ -161,3 +164,7 @@ Redacto builds on Privacy Guardrail, developed in the Data Science and its Appli
 - Islam Mesabah
 - Kai Spriestersbach
 - Andrea Sipka
+
+## Sponsor
+
+Redacto is free and non-commercial. If it is useful to you, you can support its development through [GitHub Sponsors](https://github.com/sponsors/BenKoncsik).
