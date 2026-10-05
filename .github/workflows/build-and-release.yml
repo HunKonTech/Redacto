@@ -515,6 +515,13 @@ jobs:
       EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
       VERSION: ${{ needs.prepare-models-and-package.outputs.version }}
     steps:
+      # The submit step parses the API's JSON responses with node.
+      - name: Set up Node.js
+        if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download Edge package
         if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
         uses: actions/download-artifact@v4
@@ -526,7 +533,8 @@ jobs:
         if: ${{ env.EDGE_PRODUCT_ID != '' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' }}
         shell: bash
         run: |
-          set -euo pipefail
+          # -E: the ERR trap below must also fire inside wait_for/post.
+          set -Eeuo pipefail
           api="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions"
           auth=(-H "Authorization: ApiKey ${EDGE_API_KEY}" -H "X-ClientID: ${EDGE_CLIENT_ID}")
           zip=$(ls edge-package/redacto-edge-*.zip | head -n 1)
