@@ -527,7 +527,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.addons.microsoftedge.microsoft.com/v1.1/products/${EDGE_PRODUCT_ID}/submissions"
+          api="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions"
           auth=(-H "Authorization: ApiKey ${EDGE_API_KEY}" -H "X-ClientID: ${EDGE_CLIENT_ID}")
           zip=$(ls edge-package/redacto-edge-*.zip | head -n 1)
           # A rejected submission (e.g. an earlier one still in review) must not
