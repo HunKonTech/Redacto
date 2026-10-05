@@ -95,3 +95,10 @@ jobs:
           done
           echo "::error::Could not push the translated dictionaries."
           exit 1
+
+      # The self-hosted runner reuses this checkout for Build and Release,
+      # whose checkout neither updates nor cleans submodules: anything left
+      # in KO_language_translator fails package:release's clean-tree check.
+      - name: Clean KO_language_translator
+        if: always()
+        run: git -C KO_language_translator clean -ffdx

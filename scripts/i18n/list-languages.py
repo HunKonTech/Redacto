@@ -11,6 +11,9 @@ Output: [{"code": "<Google code>", "name": "<English name>"}, ...]
 import json
 import sys
 
+# Importing main.py would leave a __pycache__ inside the submodule, which
+# makes the self-hosted runner's shared checkout dirty for Build and Release.
+sys.dont_write_bytecode = True
 sys.path.insert(0, sys.argv[1])
 
 from deep_translator import GoogleTranslator  # noqa: E402
