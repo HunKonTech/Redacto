@@ -1,0 +1,4 @@
+[submodule "KO_language_translator"]
+	path = KO_language_translator
+	url = https://github.com/HunKonTech/KO_language_translator.git
+	branch = main

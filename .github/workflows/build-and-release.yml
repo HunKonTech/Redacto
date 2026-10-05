@@ -11,9 +11,14 @@ on:
         description: 'Submit the Edge package to Microsoft Edge Add-ons'
         type: boolean
         default: false
+  # A push to main runs I18N first (.github/workflows/i18n.yml): it commits
+  # the machine-translated dictionaries, and its completion starts this
+  # workflow on the latest main, so every build ships the current translations.
+  workflow_run:
+    workflows: [I18N]
+    types: [completed]
+    branches: [main]
   push:
-    branches:
-      - main
     # Only hand-pushed x.y.z release tags. The v<x.y.z>.<run> tags that the
     # release job creates on every run (with RELEASE_TOKEN, so they do fire
     # workflows) must not start another run: that loops, and their version
@@ -40,6 +45,8 @@ env:
 jobs:
   validate:
     name: Validate (${{ matrix.os_label }})
+    # After I18N only when it succeeded; every other job follows via `needs`.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -500,14 +507,14 @@ jobs:
             release-artifacts/*.vsix
 
   # Submits the Edge package to Microsoft Edge Add-ons through the Add-ons API
-  # (v1.1). Runs on every push (main or `v*` tag) and on manual runs with
+  # (v1.1). Runs on every push (main via I18N, or `v*` tag) and on manual runs with
   # `publish_edge`, and is skipped without the three EDGE_* secrets. The first version of the
   # extension has to be submitted by hand in Partner Center (see
   # docs/developer/releasing.md); this job uploads updates to that product.
   edge-publish:
     name: Publish to Microsoft Edge Add-ons
     needs: [prepare-models-and-package]
-    if: ${{ github.event_name == 'push' || inputs.publish_edge }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || inputs.publish_edge }}
     runs-on: [self-hosted, linux]
     env:
       EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
@@ -668,7 +675,7 @@ jobs:
     needs:
       - prepare-models-and-package
       - github-release
-    if: ${{ needs.github-release.result == 'success' && github.event_name == 'push' }}
+    if: ${{ needs.github-release.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_run') }}
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v5

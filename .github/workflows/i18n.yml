@@ -1,0 +1,97 @@
+name: I18N
+
+# Machine-translates the UI into every language Google Translate offers
+# (except English, the source, and Hungarian, written by hand) with
+# KO_language_translator, the git submodule of the same name, always at the
+# latest commit of its main branch. Changed dictionaries are committed to
+# src/shared/i18n/generated/. When this workflow finishes, Build and Release
+# starts (its `workflow_run` trigger) and builds the commit it left.
+# See docs/developer/i18n.md.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Translate every key of every language again'
+        type: boolean
+        default: false
+      time_budget_minutes:
+        description: 'Minutes to translate for (at most ~300); the remaining languages follow on the next run'
+        type: string
+        default: '60'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: redacto-i18n
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    name: Machine-translate UI strings
+    runs-on: [self-hosted, linux]
+    # A safety net only: the script stops (and kills a running batch) once
+    # the time budget is used, so keep the budget well below this.
+    timeout-minutes: 360
+    env:
+      TIME_BUDGET: ${{ inputs.time_budget_minutes || '60' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      # The submodule pointer only records a known-good commit for local use;
+      # CI always runs the translator's latest main.
+      - name: Update KO_language_translator to its latest main
+        run: |
+          git submodule update --init --remote KO_language_translator
+          echo "KO_language_translator at $(git -C KO_language_translator rev-parse --short HEAD)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python with deep-translator
+        id: python
+        run: |
+          uv venv "$RUNNER_TEMP/i18n-venv" --python 3.12
+          uv pip install --python "$RUNNER_TEMP/i18n-venv/bin/python" deep-translator
+          echo "path=$RUNNER_TEMP/i18n-venv/bin/python" >> "$GITHUB_OUTPUT"
+
+      # Rate limits or failed requests never fail the run: untranslated keys
+      # fall back to English and are tried again on the next run.
+      - name: Translate
+        run: |
+          args=(--python "${{ steps.python.outputs.path }}" --time-budget "$TIME_BUDGET")
+          if [ "${{ inputs.force }}" = "true" ]; then args+=(--force); fi
+          node scripts/i18n/machine-translate.js "${args[@]}"
+
+      # Pushed with GITHUB_TOKEN, which starts no new workflow run, so this
+      # commit does not trigger I18N again; Build and Release builds it.
+      # A manual run on another branch translates but commits nothing.
+      - name: Commit changed dictionaries
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git add src/shared/i18n/generated
+          if git diff --cached --quiet; then
+            echo "No dictionary changed."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'i18n: machine-translate UI strings' -m "KO_language_translator $(git -C KO_language_translator rev-parse --short HEAD)"
+          for _ in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+          done
+          echo "::error::Could not push the translated dictionaries."
+          exit 1

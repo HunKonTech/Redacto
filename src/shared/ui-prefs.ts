@@ -1,8 +1,8 @@
 /**
  * Redacto — appearance and language preferences
  *
- * The theme (system / light / dark) and the UI language (auto / en / hu) the
- * popup, side panel, options page and web page share. Kept in
+ * The theme (system / light / dark) and the UI language (auto or a code from
+ * SUPPORTED_LOCALES) the popup, side panel, options page and web page share. Kept in
  * `chrome.storage.local` so every open view follows a change, and mirrored to
  * `localStorage` so a page can paint in the right theme before the async
  * storage read finishes.

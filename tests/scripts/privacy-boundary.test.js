@@ -52,6 +52,11 @@ describe('privacy boundary check', () => {
         reason: expect.stringContaining('packaged model/runtime files'),
       }),
       expect.objectContaining({
+        file: 'src/shared/i18n/index.ts',
+        id: 'fetch',
+        reason: expect.stringContaining('packaged i18n/<code>.json dictionary'),
+      }),
+      expect.objectContaining({
         file: 'src/shared/local-ai-model-download.ts',
         id: 'fetch',
         reason: expect.stringContaining('packaged model/runtime files'),

@@ -190,6 +190,8 @@ module.exports = (_env = {}) => {
           { from: 'src/assets', to: 'assets', globOptions: { ignore: ['**/.DS_Store'] } },
           { from: 'src/assets/fonts', to: 'fonts' },
           { from: 'src/ui/banner/de-anon-banner.css', to: 'ui/banner/' },
+          // Machine-translated UI languages, fetched when picked (src/shared/i18n).
+          { from: 'src/shared/i18n/generated/locales/*.json', to: 'i18n/[name][ext]', noErrorOnMissing: true },
           // Copy the generated wasm-bindgen binary asset for runtime loading.
           {
             from: 'crate/pkg/privacy_guardrail_wasm_bg.wasm',

@@ -51,6 +51,12 @@ const ALLOWED_RUNTIME_FINDINGS = [
     reason: 'IDE plugins: model loader fetch of the downloaded model files the IDE host serves locally',
   },
   {
+    file: 'src/shared/i18n/index.ts',
+    id: 'fetch',
+    snippet: 'fetch(dictionaryUrl(locale))',
+    reason: 'UI translations: the packaged i18n/<code>.json dictionary next to the page (no user data)',
+  },
+  {
     file: 'src/web/sw.js',
     id: 'fetch',
     snippet: 'await fetch(request)',

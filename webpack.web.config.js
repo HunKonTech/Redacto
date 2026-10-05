@@ -67,10 +67,21 @@ class ServiceWorkerPlugin {
             return digest.digest('hex').slice(0, 16);
           };
           const models = names.filter((name) => name.startsWith('models/'));
-          const shell = names.filter((name) => !name.startsWith('models/'));
+          // ~130 machine-translated dictionaries: cached when used, not on install.
+          const locales = names.filter((name) => name.startsWith('i18n/'));
+          const shell = names.filter((name) => !name.startsWith('models/') && !name.startsWith('i18n/'));
           // Sizes let the page show the model's download progress and the space it takes.
           const modelSizes = Object.fromEntries(models.map((name) => [name, compilation.getAsset(name).source.size()]));
-          const precache = { version: this.version, shellHash: hash(shell), modelHash: hash(models), shell, models, modelSizes };
+          const precache = {
+            version: this.version,
+            // The dictionaries live in the shell cache, so a changed one replaces it too.
+            shellHash: hash([...shell, ...locales]),
+            modelHash: hash(models),
+            shell,
+            locales,
+            models,
+            modelSizes,
+          };
           const source = fs.readFileSync(SERVICE_WORKER_SOURCE, 'utf8');
           compilation.emitAsset(
             'sw.js',

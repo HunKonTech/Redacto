@@ -9,6 +9,8 @@ dist-firefox/
 .build-number
 coverage/
 generated/
+# Machine-translated UI dictionaries (scripts/i18n/machine-translate.js) are committed.
+!src/shared/i18n/generated/
 .model-sources/
 .venv/
 # One-shot scratch dirs (e.g. optimum-cli ONNX exports staged for the prep script)

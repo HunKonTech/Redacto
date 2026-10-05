@@ -9,6 +9,8 @@
  *   loads it, or all at once when the page asks (`cache-models`). The page
  *   can also drop it (`delete-models`) or fetch it again from this site,
  *   bypassing the browser's HTTP cache (`refresh-models`).
+ * - The machine-translated UI dictionaries (`i18n/*.json`, ~130 of them) are
+ *   cached the first time the page loads one.
  *
  * Only this site's own files pass through here; the text typed into the page
  * never does. The build (webpack.web.config.js) prepends `PRECACHE`: the file
@@ -20,6 +22,8 @@ const SHELL_CACHE = `pg-shell-${PRECACHE.shellHash}`;
 const MODEL_CACHE = `pg-models-${PRECACHE.modelHash}`;
 const scopeUrl = (path) => new URL(path, self.registration.scope).href;
 const MODEL_URLS = new Set(PRECACHE.models.map(scopeUrl));
+/** Machine-translated dictionaries: cached the first time the page loads one. */
+const LOCALE_URLS = new Set((PRECACHE.locales ?? []).map(scopeUrl));
 const MODEL_SIZES = new Map(PRECACHE.models.map((path) => [scopeUrl(path), PRECACHE.modelSizes?.[path] ?? 0]));
 /** Not a site file: when the model cache last got a file. */
 const MODEL_META_URL = scopeUrl('__redacto-model-cache.json');
@@ -82,6 +86,10 @@ async function respond(event) {
     // Stored alongside, so the (large) file reaches the page as it downloads.
     const copy = response.clone();
     event.waitUntil(caches.open(MODEL_CACHE).then((cache) => putModelFile(cache, url, copy)));
+  }
+  if (request.method === 'GET' && response.status === 200 && LOCALE_URLS.has(url)) {
+    const copy = response.clone();
+    event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.put(url, copy)));
   }
   return response;
 }

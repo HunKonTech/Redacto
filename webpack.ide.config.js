@@ -75,6 +75,7 @@ module.exports = (env = {}) => {
           { from: 'src/assets/fonts', to: 'fonts' },
           { from: 'src/assets/icons/icon128.png', to: 'icon128.png' },
           { from: 'crate/pkg/privacy_guardrail_wasm_bg.wasm', to: 'wasm/[name][ext]' },
+          { from: 'src/shared/i18n/generated/locales/*.json', to: 'i18n/[name][ext]', noErrorOnMissing: true },
           ...getNerAssetCopyPatterns(__dirname, { includeNerModel: modelSource === 'bundled' }),
         ],
       }),
