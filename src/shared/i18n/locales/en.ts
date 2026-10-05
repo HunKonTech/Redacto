@@ -158,6 +158,17 @@ const en = {
   'popup.settings.corrections_one': '{count} correction',
   'popup.settings.corrections_other': '{count} corrections',
 
+  // About
+  'about.title': 'About Redacto',
+  'about.summary':
+    'Redacto catches personal data (names, emails, IDs, secrets in code) before you paste it into ChatGPT, Claude or Gemini, and swaps it for placeholders you can restore later.',
+  'about.local':
+    'Detection runs entirely on your device. Nothing you paste leaves the browser, and there is no telemetry.',
+  'about.fork':
+    'Redacto is a free, non-commercial fork of Privacy Guardrail from DFKI. It is not affiliated with or endorsed by DFKI.',
+  'about.source': 'Source code',
+  'about.sponsor': 'Sponsor',
+
   // Support and legal
   'support.title': 'Support',
   'support.cardTitle': 'Privacy and support',

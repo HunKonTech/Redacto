@@ -162,6 +162,17 @@ const hu: Record<keyof typeof en, string> = {
   'popup.settings.corrections_one': '{count} javítás',
   'popup.settings.corrections_other': '{count} javítás',
 
+  // Névjegy
+  'about.title': 'A Redactóról',
+  'about.summary':
+    'A Redacto még azelőtt kiszűri a személyes adatokat (neveket, e-mail-címeket, azonosítókat, kódban lévő titkokat), hogy beillesztenéd őket a ChatGPT-be, a Claude-ba vagy a Geminibe, és helyettesítőkre cseréli őket, amelyeket később visszaállíthatsz.',
+  'about.local':
+    'A felismerés teljes egészében az eszközödön fut. A beillesztett szöveg nem hagyja el a böngészőt, és nincs telemetria.',
+  'about.fork':
+    'A Redacto a DFKI Privacy Guardrail projektjének ingyenes, nem kereskedelmi forkja. Nem áll kapcsolatban a DFKI-vel, és nem is támogatja azt.',
+  'about.source': 'Forráskód',
+  'about.sponsor': 'Támogatás',
+
   // Támogatás és jogi információk
   'support.title': 'Támogatás',
   'support.cardTitle': 'Adatvédelem és támogatás',

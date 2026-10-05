@@ -8,6 +8,16 @@ public beta. Do not run account automation or scripts to create labels, change
 branch protection, enable vulnerability reporting, or publish releases as part
 of the issue-template slice.
 
+## About Sidebar
+
+Set these in the repository's **About** panel (gear icon). The description is
+already set; the topics are not.
+
+- **Description:** `Redacto: A local-first Chrome extension that detects and anonymizes PII before text is pasted into ChatGPT, Claude, or Gemini, using Rust/WASM recognizers and optional in-browser transformer NER.`
+- **Website:** `https://hunkontech.github.io/Redacto/`
+- **Topics:** `pii`, `privacy`, `anonymization`, `redaction`, `chrome-extension`, `manifest-v3`, `local-first`, `on-device-ai`, `webassembly`, `rust`, `onnx`, `ner`, `chatgpt`, `claude`, `gemini`
+- **Include in the home page:** untick Packages and Deployments; keep Releases.
+
 ## Issue Templates
 
 The public repository should include issue forms for:

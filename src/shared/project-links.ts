@@ -9,6 +9,7 @@ export const PUBLIC_PROJECT_LINKS = {
   support: `${PUBLIC_PROJECT_REPO_URL}/blob/main/SUPPORT.md`,
   impressum: `${PUBLIC_PROJECT_REPO_URL}/blob/main/IMPRESSUM.md`,
   terms: `${PUBLIC_PROJECT_REPO_URL}/blob/main/TERMS.md`,
+  sponsor: 'https://github.com/sponsors/BenKoncsik',
 } as const;
 
 export const PACKAGED_TERMS_PATH = 'TERMS.html';

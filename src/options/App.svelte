@@ -13,6 +13,7 @@
 	import DebugSystemCheckCard from './components/DebugSystemCheckCard.svelte';
 	import LocalAiModelCard from './components/LocalAiModelCard.svelte';
 	import { MODEL_SOURCE } from '../shared/local-ai-model-download';
+	import AboutCard from '../popup/components/AboutCard.svelte';
 	import PublicSupportCard from './components/PublicSupportCard.svelte';
 	import SensitivityCard from './components/SensitivityCard.svelte';
 	import SystemCompatibilityCard from './components/SystemCompatibilityCard.svelte';
@@ -126,6 +127,8 @@
 		<SearchProtectionCard settings={model.settings} setValue={model.setSearchProtectionEnabled} />
 
 		<PublicSupportCard />
+
+		<AboutCard />
 
 		<DebugSystemCheckCard
 			settings={model.settings}

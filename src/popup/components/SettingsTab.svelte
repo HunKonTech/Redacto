@@ -5,6 +5,7 @@
 	import type { NerModelKey, Settings } from '../../shared/message-types';
 	import type { NerModelChoice } from '../../shared/constants';
 	import Toggle from './Toggle.svelte';
+	import AboutCard from './AboutCard.svelte';
 	import LegalCard from './LegalCard.svelte';
 	import { MODEL_SOURCE } from '../../shared/local-ai-model-download';
 	import { modelDownloadState } from '../../shared/model-download-store';
@@ -129,6 +130,7 @@
 		<button type="button" class="link-row" onclick={openPrivacySupport}><span class="row-label">{t('support.support')}</span><span class="right">›</span></button>
 	</article>
 
+	<AboutCard />
 	<LegalCard {openPrivacyPolicy} {openTermsOfUse} {openImpressum} />
 	<div class="version-note">Redacto · {$nerModel}</div>
 </div>
