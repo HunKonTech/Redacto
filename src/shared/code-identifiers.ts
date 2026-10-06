@@ -15,7 +15,14 @@ import { byteOffsetToStringIndex, stringIndexToByteOffset } from './text-offsets
 const CODE_LINE_KEYWORD_RE =
   /^(?:import|from|export|package|using|#include|def|class|interface|enum|struct|impl|fn|func|function|const|let|var|val|public|private|protected|static|return|if|elif|else|for|while|switch|case|try|catch|except|finally|async|await|raise|throw)\b/;
 const CODE_LINE_END_RE = /(?:[;{}]|\)\s*:|=>|\(\s*)$/;
-const CODE_LINE_OPERATOR_RE = /=>|->|::|\(\);|!==|===|&&|\|\||^[A-Za-z_$][\w$]*(?:\.[\w$]+)*\s*(?:=|\+=|:=)\s*[^=\s]/;
+const CODE_LINE_OPERATOR_RE =
+  /=>|->|::|\(\);|!==|===|&&|\|\||\{\s*(?:get|set|init)\s*;|^[A-Za-z_$][\w$]*(?:\.[\w$]+)*\s*(?:=|\+=|:=)\s*[^=\s]/;
+/**
+ * An indented member declared by annotation: `first_name: str`,
+ * `age?: number = 0`. Counts only inside a run of code — at the start of a
+ * line of prose it is a label (`Name: Anna`).
+ */
+const MEMBER_LINE_RE = /^\s+[A-Za-z_$][\w$]*[?!]?\s*:\s*[A-Za-z_$][\w$.]*(?:[[<].*[\]>])?\??\s*(?:=\s*\S.*)?[;,]?\s*$/;
 /** A line that is nothing but a call: `print(x)`, `app.run(debug=True);`. */
 const CODE_LINE_CALL_RE = /^[A-Za-z_$][\w$]*(?:\.[\w$]+)*\(.*\)\s*;?$/;
 
@@ -104,7 +111,8 @@ function isCommentLine(line: string): boolean {
  * Fenced / `<pre>` regions plus runs of unfenced lines that look like code.
  * A run needs at least two code-looking lines — or one line holding several
  * statements, or one unmistakable code line; blank lines, comment lines and indented continuation lines inside a run do
- * not break it. Prose leading into code on the same line is left out.
+ * not break it, and indented member lines (`first_name: str`) inside a run
+ * count as code. Prose leading into code on the same line is left out.
  */
 export function findCodeLikeRegions(text: string): CodeRegion[] {
   const regions = [...findCodeRegions(text)];
@@ -124,7 +132,7 @@ export function findCodeLikeRegions(text: string): CodeRegion[] {
     const lead = proseLeadLength(fullLine);
     const line = fullLine.slice(lead);
     if (lead > 0) closeRun();
-    if (isCodeLine(line)) {
+    if (isCodeLine(line) || (runStart !== -1 && MEMBER_LINE_RE.test(line))) {
       if (runStart === -1) runStart = offset + lead;
       runEnd = lineEnd;
       runCodeLines += isMultiStatementLine(line) || isStrongCodeLine(line) ? 2 : 1;

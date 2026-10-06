@@ -126,7 +126,8 @@ const LIBRARY_NAMES = new Set(
     'System Integer Long Short Byte Character Float Optional ArrayList LinkedList HashMap TreeMap ' +
     'Collections Arrays Objects Stream Collectors Override Deprecated FunctionalInterface Thread Runnable ' +
     'RuntimeException IllegalArgumentException IllegalStateException NullPointerException IOException ' +
-    'println listOf mutableListOf mapOf mutableMapOf setOf arrayOf lazy require check ' +
+    'println listOf mutableListOf mapOf mutableMapOf setOf arrayOf lazy require check Int UInt ULong Unit Any ' +
+    'Nothing ' +
     // Go / Rust
     'fmt make append cap copy panic recover error errors strings strconv context time ' +
     'Some Ok Err Option Result Vec Box Rc Arc RefCell Cell HashMap BTreeMap HashSet Default Clone Debug ' +
@@ -167,8 +168,12 @@ const ROLE_PRIORITY: Record<IdentifierRole, number> = {
 };
 
 const MODIFIERS = new Set(
-  'public private protected internal static readonly const final volatile transient abstract sealed virtual override async unsafe extern partial required lateinit open'.split(' '),
+  'public private protected internal static readonly const final volatile transient abstract sealed virtual override async unsafe extern partial required lateinit open pub declare'.split(' '),
 );
+
+/** Soft keywords that only modify a type or function declaration: Kotlin `data class`, `companion object`. */
+const TYPE_MODIFIERS = new Set('data sealed inner value annotation companion open inline'.split(' '));
+const TYPE_DECLARING = new Set(['class', 'object', 'interface', 'fun']);
 
 const IDENT_START_RE = /[\p{L}_$]/u;
 const IDENT_PART_RE = /[\p{L}\p{N}_$]/u;
@@ -388,7 +393,11 @@ class Analyzer {
   private readonly overrides = new Set<string>();
   private readonly classifications?: ReadonlyMap<string, IdentifierVerdict>;
 
-  constructor(tokens: readonly Token[], classifications?: ReadonlyMap<string, IdentifierVerdict>) {
+  constructor(
+    tokens: readonly Token[],
+    classifications?: ReadonlyMap<string, IdentifierVerdict>,
+    private readonly text?: string,
+  ) {
     this.code = significant(tokens);
     this.classifications = classifications;
   }
@@ -473,6 +482,17 @@ class Analyzer {
       }
       if (before && ['.', '?.', '->', '::'].includes(before.text)) continue;
 
+      // Go struct fields: `FirstName string`, `ID, Name string \`json:"id"\``.
+      // Before the typed rule, which would read the previous line's type as
+      // this name's.
+      if (this.startsStatement(i) && this.inClassBody(i)) {
+        const fields = this.goFieldNames(i);
+        if (fields) {
+          for (const name of fields) this.declare(name, 'field');
+          continue;
+        }
+      }
+
       // Typed declaration: `Type name =|;|,|)|{|=>|:`, `Type name(` (method).
       if (this.typeLikeBefore(i) && after) {
         const typeToken = before!;
@@ -498,18 +518,31 @@ class Analyzer {
         }
       }
 
-      // Members declared by annotation inside a type body: `customerId: string;`
-      // (TypeScript, Kotlin, Swift).
-      if (this.startsStatement(i) && after && [':', '?:', '?'].includes(after.text) && this.inClassBody(i)) {
+      // Members declared inside a type body, after any modifiers and
+      // decorators: `customerId: string;`, `private name?: string`,
+      // `pub id: u32,` (TypeScript, Kotlin, Swift, Rust, Python dataclasses),
+      // and untyped `private $name;` / `static count;` (PHP, JS).
+      const memberStart = this.startsMemberDeclaration(i);
+      if (memberStart && after && [':', '?', '!'].includes(after.text) && this.inTypeBody(i)) {
         this.declare(token.text, 'field');
         continue;
       }
+      if (memberStart && after && [';', ','].includes(after.text) && this.inClassBody(i)) {
+        if (after.text === ';' || this.hasAnyModifier(i)) {
+          this.declare(token.text, 'field');
+          continue;
+        }
+      }
 
       // Python / JS / Go statement-level assignment: `name = …`, `name := …`,
-      // and `for name in …`.
-      if (this.startsStatement(i) && after && ['=', ':='].includes(after.text)) {
-        this.declare(token.text, isScreamingCase(token.text) ? 'constant' : 'variable');
-        continue;
+      // class attributes (`debug = False`, `static count = 0;`), and
+      // `for name in …`.
+      if (memberStart && after && ['=', ':='].includes(after.text)) {
+        const role = isScreamingCase(token.text) ? 'constant' : this.inTypeBody(i) ? 'field' : 'variable';
+        if (role === 'field' || this.startsStatement(i)) {
+          this.declare(token.text, role);
+          continue;
+        }
       }
       if (before?.text === 'for' && after && ['in', 'of', ',', ':'].includes(after.text)) {
         this.declare(token.text, 'variable');
@@ -610,6 +643,124 @@ class Analyzer {
     return 'statement';
   }
 
+  /**
+   * Whether token i starts a statement once the modifiers and decorators
+   * before it are skipped: `private readonly name`, `@Input() name`.
+   */
+  private startsMemberDeclaration(i: number): boolean {
+    let j = i - 1;
+    while (j >= 0) {
+      const token = this.code[j];
+      if (token.kind === 'ident' && MODIFIERS.has(token.text)) {
+        j -= 1;
+        continue;
+      }
+      // `@Input()` / `@Input` on the member's own line.
+      let k = j;
+      if (token.text === ')') {
+        let depth = 0;
+        for (; k >= 0; k -= 1) {
+          if (this.code[k].text === ')') depth += 1;
+          if (this.code[k].text === '(' && --depth === 0) break;
+        }
+        k -= 1;
+      }
+      if (this.code[k]?.kind === 'ident' && this.code[k - 1]?.text === '@') {
+        j = k - 2;
+        continue;
+      }
+      break;
+    }
+    return this.startsStatement(j + 1);
+  }
+
+  /**
+   * The names a Go struct field line declares: `Name Type`, `A, B Type`,
+   * optionally followed by a tag. A line with `;`, `=`, `:` or a call is not
+   * one — C-family fields end in `;`.
+   */
+  private goFieldNames(i: number): string[] | null {
+    const names = [this.code[i].text];
+    let j = i + 1;
+    while (this.code[j]?.text === ',' && isName(this.code[j + 1])) {
+      names.push(this.code[j + 1].text);
+      j += 2;
+    }
+    const type = this.code[j];
+    if (!type || type.kind === 'newline') return null;
+    const typeStart =
+      ['*', '['].includes(type.text) ||
+      (type.kind === 'ident' && (isName(type) || TYPE_KEYWORDS.has(type.text) || ['func', 'interface', 'struct'].includes(type.text)));
+    if (!typeStart) return null;
+    for (let k = j; k < this.code.length && this.code[k].kind !== 'newline'; k += 1) {
+      const text = this.code[k].text;
+      if ([';', '=', ':=', ':', '=>', '->'].includes(text)) return null;
+      if (text === '(' && type.text !== 'func') return null;
+      // Only an empty `interface{}` / `struct{}`; a nested body is not a one-line field.
+      if (text === '{' && this.code[k + 1]?.text !== '}') return null;
+    }
+    return names;
+  }
+
+  /** Whether token i is in a type body: braces, or a Python `class X:` block. */
+  private inTypeBody(i: number): boolean {
+    return this.inClassBody(i) || this.inIndentedClassBody(i);
+  }
+
+  /** Whether the nearest less-indented line above token i's line starts with `class`. */
+  private inIndentedClassBody(i: number): boolean {
+    const text = this.text;
+    if (text === undefined) return false;
+    const column = (index: number) => {
+      const start = this.code[index].start;
+      return start - (text.lastIndexOf('\n', start - 1) + 1);
+    };
+    const lineStart = (index: number) => {
+      let j = index;
+      while (j > 0 && this.code[j - 1].kind !== 'newline') j -= 1;
+      return j;
+    };
+    const first = lineStart(i);
+    const indent = column(first);
+    if (indent === 0) return false;
+    for (let j = first - 1; j >= 0; j -= 1) {
+      if (this.code[j].kind === 'newline' || (j > 0 && this.code[j - 1].kind !== 'newline')) continue;
+      if (column(j) < indent) return this.code[j].text === 'class';
+    }
+    return false;
+  }
+
+  /**
+   * Whether token i is a modifier, not a name: `data class`, `open fun`,
+   * `required string Name`.
+   */
+  private isModifierUse(i: number): boolean {
+    const token = this.code[i];
+    const after = this.next(i);
+    if (TYPE_MODIFIERS.has(token.text) && TYPE_DECLARING.has(after?.text ?? '')) return true;
+    return MODIFIERS.has(token.text) && after?.kind === 'ident' && (isName(after) || TYPE_KEYWORDS.has(after.text));
+  }
+
+  /** Whether token i names an argument of an annotation: `@Column(name = "x")`. */
+  private inAnnotationArgs(i: number): boolean {
+    if (this.next(i)?.text !== '=') return false;
+    let depth = 0;
+    for (let j = i - 1; j >= 0; j -= 1) {
+      const text = this.code[j].text;
+      if (text === ')') depth += 1;
+      else if (text === '(') {
+        if (depth === 0) {
+          const name = this.code[j - 1];
+          return name?.kind === 'ident' && this.code[j - 2]?.text === '@';
+        }
+        depth -= 1;
+      } else if (depth === 0 && [';', '{', '}'].includes(text)) {
+        return false;
+      }
+    }
+    return false;
+  }
+
   private hasModifier(i: number, modifier: string): boolean {
     let j = this.prevIndex(i);
     while (j >= 0 && this.code[j].kind === 'ident') {
@@ -640,9 +791,12 @@ class Analyzer {
         continue;
       }
       for (let k = j - 1; k >= 0 && ![';', '{', '}'].includes(this.code[k].text); k -= 1) {
-        if (['class', 'struct', 'interface', 'record', 'enum', 'object', 'trait', 'impl'].includes(this.code[k].text)) {
+        const text = this.code[k].text;
+        if (['class', 'struct', 'interface', 'record', 'enum', 'object', 'trait', 'impl'].includes(text)) {
           return true;
         }
+        // `type Customer = {` (TypeScript object type).
+        if (text === 'type' && isName(this.code[k + 1]) && this.startsStatement(k)) return true;
       }
       return false;
     }
@@ -670,6 +824,7 @@ class Analyzer {
       if (!candidate(token)) continue;
       const before = this.prev(i);
       if (before?.text === '@') continue;
+      if (this.isModifierUse(i) || this.inAnnotationArgs(i)) continue;
       if (before && ['.', '?.', '->', '::'].includes(before.text)) {
         const receiver = this.prev(this.prevIndex(i));
         if (receiver?.kind === 'ident' && used.has(receiver.text)) {
@@ -717,6 +872,7 @@ class Analyzer {
     for (let i = 0; i < code.length; i += 1) {
       const token = code[i];
       if (token.kind !== 'ident' || !renamed.has(token.text)) continue;
+      if (TYPE_MODIFIERS.has(token.text) && TYPE_DECLARING.has(this.next(i)?.text ?? '')) continue;
       const before = this.prev(i);
       if (before && ['.', '?.', '->', '::'].includes(before.text)) {
         // Member access follows the receiver: `alma.nev` and `self.nev` are
@@ -884,7 +1040,7 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
     echoLexer.tokens.push({ kind: 'newline', start: slot.end, end: slot.end, text: '\n' });
   }
 
-  const analyzer = new Analyzer(lexer.tokens, options.classifications);
+  const analyzer = new Analyzer(lexer.tokens, options.classifications, text);
   analyzer.analyze();
 
   const roles = new Map<string, IdentifierRole>();

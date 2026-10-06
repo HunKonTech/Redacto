@@ -146,6 +146,56 @@ describe('planIdentifierRenames — TypeScript', () => {
   });
 });
 
+describe('planIdentifierRenames — field-only types', () => {
+  const FIELD_ONLY: Record<string, [string, string[]]> = {
+    'Python dataclass': ['@dataclass\nclass Customer:\n    first_name: str\n    age: int = 0', ['first_name', 'age']],
+    'Python class attributes': ['class Settings:\n    debug = False\n    db_host = "localhost"', ['debug', 'db_host']],
+    'TypeScript class with modifiers': [
+      'export class Customer {\n  private lastName: string;\n  readonly age: number = 0;\n  @Input() owner!: string;\n}',
+      ['lastName', 'age', 'owner'],
+    ],
+    'TypeScript object type': ['type Customer = {\n  firstName: string\n  lastName: string\n}', ['firstName', 'lastName']],
+    'Go struct': [
+      'type Customer struct {\n    FirstName string `json:"first_name"`\n    ID, Code  int\n    Data      interface{}\n}',
+      ['FirstName', 'ID', 'Code', 'Data'],
+    ],
+    'Rust struct': ['pub struct Customer {\n    pub first_name: String,\n    last_name: String,\n}', ['first_name', 'last_name']],
+    'PHP class': ['class Customer {\n    public $firstName;\n    private $lastName = "x";\n}', ['$firstName', '$lastName']],
+    'JavaScript class': ['class Counter {\n  static count = 0;\n  total;\n}', ['count', 'total']],
+    'C# one-line class': [
+      'public class Customer { public string FirstName { get; set; } public string LastName { get; set; } }',
+      ['FirstName', 'LastName'],
+    ],
+  };
+
+  test.each(Object.entries(FIELD_ONLY))('%s: declares its fields', (_label, [code, fields]) => {
+    const names = renamedNames(code);
+    for (const field of fields) expect(names[field]).toBe('field');
+  });
+
+  test.each(Object.entries(FIELD_ONLY))('%s: fields stay renamed when the classifier calls them LIB', (_label, [code, fields]) => {
+    const classifications = new Map<string, IdentifierVerdict>(fields.map((field) => [field, 'LIB']));
+    const plan = planIdentifierRenames(code, { classifications });
+    const renamed = new Set(plan.occurrences.map((occurrence) => occurrence.name));
+    for (const field of fields) expect(renamed).toContain(field);
+  });
+
+  test('modifiers and annotation arguments are not names', () => {
+    expect(renamedNames('data class Customer(\n    val firstName: String,\n    var age: Int\n)')).toEqual({
+      Customer: 'class',
+      firstName: 'variable',
+      age: 'variable',
+    });
+    expect(renamedNames('public record Customer\n{\n    public required string FirstName { get; init; }\n}')).toEqual({
+      Customer: 'class',
+      FirstName: 'field',
+    });
+    const entity = renamedNames('@Entity\npublic class Customer {\n    @Column(name = "first_name")\n    private String firstName;\n}');
+    expect(entity).not.toHaveProperty('name');
+    expect(entity.firstName).toBe('field');
+  });
+});
+
 describe('planIdentifierRenames — prose', () => {
   test('text that is not code renames nothing', () => {
     expect(renamedOccurrences('Anna asked whether alma = apple in Hungarian.')).toEqual([]);

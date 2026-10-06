@@ -42,6 +42,17 @@ describe('findCodeLikeRegions', () => {
     expect(findCodeLikeRegions('My name is Ada Lovelace.\nI live in London.')).toEqual([]);
   });
 
+  test('finds a type that only declares fields', () => {
+    const dataclass = 'class Customer:\n    first_name: str\n    age: int = 0';
+    expect(findCodeLikeRegions(`My model:\n${dataclass}`)).toEqual([{ start: 10, end: 10 + dataclass.length }]);
+    const oneLine = 'public class Customer { public string FirstName { get; set; } }';
+    expect(findCodeLikeRegions(oneLine)).toEqual([{ start: 0, end: oneLine.length }]);
+  });
+
+  test('a label line is not a field outside code', () => {
+    expect(findCodeLikeRegions('Order details\n    Name: Anna Mueller\n    City: Berlin')).toEqual([]);
+  });
+
   test('keeps a comment line inside the code run', () => {
     const text =
       'const modal = document.querySelector("dialog");\n\n// Feliratkozás a bezárás eseményre\nmodal.addEventListener("close", () => {\n    console.log("A modal bezárult.");\n});';
