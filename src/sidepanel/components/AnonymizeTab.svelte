@@ -15,6 +15,7 @@
 	import type { ExternalAnonymizeRequest } from '../external-input';
 	import { segmentsOf, toneFor } from '../segments';
 	import MarkedText from './MarkedText.svelte';
+	import DevDetectionPanel from '../../ui/dev/DevDetectionPanel.svelte';
 
 	let {
 		settings,
@@ -255,6 +256,10 @@
 				{/if}
 			</div>
 		</article>
+
+		{#if settings?.developerMode && detection.devDiagnostics}
+			<DevDetectionPanel diagnostics={detection.devDiagnostics} spans={detection.spans} copy={copyText} />
+		{/if}
 	{/if}
 
 	{#if note}

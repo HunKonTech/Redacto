@@ -81,6 +81,8 @@ export interface PipelineConfig {
   code_mode: CodeAnonymizationMode;
   /** Domains whose links stay as they are, on top of the built-in public list. */
   public_domains?: string[];
+  /** Pattern recognizers (regex, code secrets, links, paths). Off only in developer mode. */
+  regex_enabled?: boolean;
 }
 
 /**
@@ -133,6 +135,51 @@ export interface DetectionOptions extends Partial<PipelineConfig> {
   ner_model?: NerModelKey;
   /** WebGPU precision preference — ignored on the wasm fallback path. */
   ner_webgpu_dtype?: NerWebGpuDtype;
+  /** Developer mode: return the raw model output and runtime details with the result. */
+  dev_capture?: boolean;
+}
+
+/** One model call: the token-classification items for one chunk of the text. */
+export interface NerRawChunk {
+  /** UTF-16 offset of the chunk in the text the model read. */
+  offset: number;
+  length: number;
+  /** Token-level labels ('none') or grouped entities ('simple'). */
+  aggregation: 'none' | 'simple';
+  items: NerRawItem[];
+}
+
+export interface NerRawItem {
+  word: string;
+  score: number;
+  entity?: string;
+  entity_group?: string;
+  index?: number;
+  start?: number;
+  end?: number;
+}
+
+/** What developer mode shows next to a detection. */
+export interface DevDiagnostics {
+  nerEnabled: boolean;
+  regexEnabled: boolean;
+  model?: {
+    key?: NerModelKey;
+    label?: string;
+    device?: NerInferenceDevice;
+    dtype?: string;
+    threads?: number;
+  };
+  timings?: NerTimingInfo;
+  /** JS heap of the document running the model; Chrome only. */
+  memory?: { usedBytes: number; totalBytes: number; limitBytes: number };
+  /** The model's raw answer, chunk by chunk. */
+  rawNerOutput?: NerRawChunk[];
+  /** Set when code regions were read with identifiers split into words. */
+  nerInputView?: 'identifier-split';
+  /** Pipeline spans per source, before the review filters. */
+  spanCountsBySource: Partial<Record<DetectionSource, number>>;
+  error?: string;
 }
 
 /** Feedback entry logged when a user corrects a detection. */
@@ -178,6 +225,8 @@ export interface PiiResultResponse {
       totalMs: number;
       nerMs?: number;
     };
+    /** Only when the request asked for `dev_capture`. */
+    devDiagnostics?: DevDiagnostics;
   };
 }
 
@@ -368,6 +417,12 @@ export type LocalAiUnloadTimeoutMs = 60_000 | 300_000 | 600_000 | 1_800_000 | nu
 export interface Settings {
   enabled: boolean;
   debug: boolean;
+  /** Shows the raw model output and runtime details while anonymizing. */
+  developerMode: boolean;
+  /** Developer mode only: run the Local AI model. */
+  devUseNer: boolean;
+  /** Developer mode only: run the pattern recognizers. */
+  devUseRegex: boolean;
   minConfidence: number;
   sensitivityMode: 'global' | 'individual';
   groupThresholds: Partial<Record<GroupName, number>>;

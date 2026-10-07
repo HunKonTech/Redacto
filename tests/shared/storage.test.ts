@@ -46,6 +46,17 @@ describe('settings storage', () => {
     });
   });
 
+  test('developer mode is off by default and invalid stored switches fall back to the defaults', async () => {
+    const { developerMode: _unused, ...withoutDeveloperMode } = DEFAULT_SETTINGS;
+    (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      pg_settings: { ...withoutDeveloperMode, devUseNer: 'yes', devUseRegex: false },
+    });
+
+    await expect(loadSettings()).resolves.toEqual(
+      expect.objectContaining({ developerMode: false, devUseNer: true, devUseRegex: false })
+    );
+  });
+
   test('normalizes invalid stored NER provider modes to the default', async () => {
     (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
       pg_settings: { ...DEFAULT_SETTINGS, nerProvider: 'banana' },

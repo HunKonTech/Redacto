@@ -115,12 +115,17 @@ export function handleOffscreenMessage(
   activeDetections.set(requestId, abortController);
 
   detectWithExternalNer(text, config, abortController.signal)
-    .then(({ spans, nerMs }) => {
+    .then(({ spans, nerMs, devDiagnostics }) => {
       activeDetections.delete(requestId);
       const totalMs = Math.round(performance.now() - startTime);
       const response: PiiResultResponse = {
         type: 'PII_RESULT',
-        payload: { requestId, spans, timings: { totalMs, nerMs } },
+        payload: {
+          requestId,
+          spans,
+          timings: { totalMs, nerMs },
+          ...(devDiagnostics ? { devDiagnostics } : {}),
+        },
       };
       sendResponse(response);
     })

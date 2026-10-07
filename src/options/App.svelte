@@ -11,6 +11,7 @@
 	import CodeBlocksCard from './components/CodeBlocksCard.svelte';
 	import SearchProtectionCard from './components/SearchProtectionCard.svelte';
 	import DebugSystemCheckCard from './components/DebugSystemCheckCard.svelte';
+	import DeveloperModeCard from './components/DeveloperModeCard.svelte';
 	import LocalAiModelCard from './components/LocalAiModelCard.svelte';
 	import { MODEL_SOURCE } from '../shared/local-ai-model-download';
 	import AboutCard from '../popup/components/AboutCard.svelte';
@@ -137,6 +138,8 @@
 			applyScenario={model.applyDebugSystemCheckScenario}
 			clearOverride={model.clearDebugSystemCheck}
 		/>
+
+		<DeveloperModeCard settings={model.settings} setDeveloper={model.setDeveloper} />
 	</main>
 </div>
 

@@ -35,6 +35,7 @@ import {
 import type {
   ClassifyIdentifiersResponse,
   DetectPiiRequest,
+  DevDiagnostics,
   PiiResultResponse,
   PiiSpan,
   Settings,
@@ -70,6 +71,8 @@ export interface PanelDetection {
   knownReplacements: string[];
   /** Set when the text is, whole, the anonymized text of this entry. */
   alreadyAnonymized?: HistoryEntry;
+  /** Developer mode only: raw model output and runtime details. */
+  devDiagnostics?: DevDiagnostics;
 }
 
 /** Where text handed to the panel from outside came from, e.g. an IDE selection. */
@@ -124,7 +127,8 @@ export async function detectForPanel(text: string, settings: Settings): Promise<
   if (settings.codeAnonymization === 'full') {
     ({ classifications, status: classifierStatus } = await classifyCodeIdentifiers(text));
   }
-  return { spans, classifications, classifierStatus, knownReplacements };
+  const { devDiagnostics } = response.payload;
+  return { spans, classifications, classifierStatus, knownReplacements, ...(devDiagnostics ? { devDiagnostics } : {}) };
 }
 
 /**

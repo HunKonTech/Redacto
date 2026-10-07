@@ -8,6 +8,7 @@
   import ConfidenceSlider from './components/ConfidenceSlider.svelte';
   import MarkOverlay from './components/MarkOverlay.svelte';
   import DismissMenu from './components/DismissMenu.svelte';
+  import DevSection from './components/DevSection.svelte';
 
   let {
     model,
@@ -94,6 +95,10 @@
         />
       {/if}
     </div>
+
+    {#if model.devDiagnostics}
+      <DevSection diagnostics={model.devDiagnostics} spans={model.originalSpans} />
+    {/if}
 
     <p class="pg-disclaimer">{LIMITS_DISCLAIMER}</p>
 

@@ -956,3 +956,66 @@ details[open] > .pg-code-disclosure-summary::before {
 .pg-mark-add:hover {
   background: #1e3a8a;
 }
+
+/* ------------------------------------------------------------------ */
+/* Developer mode strip                                               */
+/* ------------------------------------------------------------------ */
+
+.pg-dev {
+  flex-shrink: 0;
+  padding: 0 20px;
+  background: var(--color-card);
+  border-top: var(--border-hairline);
+}
+.pg-dev summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.pg-dev summary::-webkit-details-marker { display: none; }
+.pg-dev summary::before {
+  content: "›";
+  color: var(--color-muted);
+  transition: transform 120ms ease;
+}
+.pg-dev[open] summary::before { transform: rotate(90deg); }
+.pg-dev-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-muted-bg);
+  color: var(--color-accent);
+  font: 600 10px/1.5 var(--font-mono);
+}
+.pg-dev-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font: 11.5px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-dev-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.pg-dev-actions .pg-btn-link { font-size: 12px; }
+.pg-dev-note {
+  margin: 0 0 6px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.pg-dev-error { color: var(--color-danger); }
+.pg-dev-raw {
+  max-height: 160px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  overflow: auto;
+  border: var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-input);
+  color: var(--color-ink);
+  font: 11px/1.5 var(--font-mono);
+  white-space: pre;
+  user-select: text;
+}

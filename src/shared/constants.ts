@@ -250,6 +250,9 @@ export const DEFAULT_SETTINGS: Settings = {
   // or threshold-filter issues without asking the tester to flip a toggle.
   // Flip back to false once the model is proven stable across supported browsers.
   debug: true,
+  developerMode: false,
+  devUseNer: true,
+  devUseRegex: true,
   minConfidence: 0.5,
   sensitivityMode: 'global',
   groupThresholds: {},

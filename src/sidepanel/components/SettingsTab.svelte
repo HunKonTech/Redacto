@@ -12,6 +12,7 @@
 	import VaultCard from '../../options/components/VaultCard.svelte';
 	import { createOptionsModel } from '../../options/options-model.svelte';
 	import { saveSettings } from '../../shared/storage';
+	import DeveloperModeSetting from '../../ui/dev/DeveloperModeSetting.svelte';
 
 	/**
 	 * The settings the web page (GitHub Pages) and the IDE panels use, reusing
@@ -71,6 +72,15 @@
 			</div>
 			<Toggle size="sm" checked={debug} label={t('settings.debugLogging')} onchange={(checked) => saveSettings({ debug: checked })} />
 		</div>
+		<div class="dev-row">
+			<DeveloperModeSetting
+				developerMode={$settings?.developerMode ?? false}
+				devUseNer={$settings?.devUseNer ?? true}
+				devUseRegex={$settings?.devUseRegex ?? true}
+				save={(partial) => saveSettings(partial)}
+				spacious
+			/>
+		</div>
 	</article>
 
 	{#if host === 'web'}
@@ -128,7 +138,7 @@
 <style>
 	.stack { display: flex; flex-direction: column; }
 	.card { margin-bottom: 12px; overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
-	.row + .row { border-top: var(--border-hairline); }
+	.row + .row, .dev-row { border-top: var(--border-hairline); }
 	.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px; }
 	.info { flex: 1; }
 	.row-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; }

@@ -90,7 +90,7 @@ import {
 import { prepareReviewSpans } from './review-spans';
 import { resolveThreshold } from '../shared/sensitivity-resolver';
 import { CONVERSATION_URL_POLL_MS, LOCAL_AI_ACTIVITY_HEARTBEAT_MS, NO_PII_INDICATOR_MS, RESPONSE_DEBOUNCE_MS, CHIP_FADE_MS } from '../shared/constants';
-import type { PiiSpan, FeedbackEntry, Settings, AllowlistEntry, CancelDetectionBehavior, NerStatus, NerStatusResponse, SystemCompatibilityStatus, SystemCompatibilityStatusResponse } from '../shared/message-types';
+import type { DevDiagnostics, PiiSpan, FeedbackEntry, Settings, AllowlistEntry, CancelDetectionBehavior, NerStatus, NerStatusResponse, SystemCompatibilityStatus, SystemCompatibilityStatusResponse } from '../shared/message-types';
 import { debugError, debugLog, debugTrace, debugWarn } from '../shared/debug-log';
 
 // --- Adapter selection ---
@@ -953,6 +953,7 @@ async function showReviewOverlay(
   originalText: string,
   rawSpans: PiiSpan[],
   timings?: { totalMs: number },
+  devDiagnostics?: DevDiagnostics,
 ): Promise<void> {
   // A replacement token in the paste — part of an earlier anonymized text —
   // is not personal data and is not offered for replacing again.
@@ -1057,6 +1058,7 @@ async function showReviewOverlay(
             knownReplacements: historyTokens(),
           })
       : undefined,
+    devDiagnostics,
   );
 
   overlay.show();
@@ -1114,10 +1116,10 @@ const interceptor = new PasteInterceptor(adapter, {
     })();
   },
 
-  onPiiDetected: (text, spans, timings) => {
+  onPiiDetected: (text, spans, timings, devDiagnostics) => {
     scanningIndicator?.stop();
     scanningIndicator = null;
-    void showReviewOverlay(text, spans, timings);
+    void showReviewOverlay(text, spans, timings, settings.developerMode ? devDiagnostics : undefined);
   },
 
   onError: (error) => {

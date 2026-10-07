@@ -416,4 +416,88 @@ describe('offscreen detection flow', () => {
     });
     expect(detectPii).not.toHaveBeenCalled();
   });
+
+  describe('developer mode capture', () => {
+    const text = 'Ada Lovelace wrote to ada@example.com.';
+    const nerSpan = {
+      start: 0,
+      end: 12,
+      entity_type: 'PERSON' as const,
+      score: 0.97,
+      text: 'Ada Lovelace',
+      source: 'ner' as const,
+    };
+    const rawChunks = [{ offset: 0, length: text.length, aggregation: 'none' as const, items: [{ word: '▁Ada', score: 0.97, entity: 'B-PER', index: 1 }] }];
+
+    function capturingProvider(): NerProvider {
+      return {
+        mode: 'transformers',
+        model: 'bardsai',
+        modelLabel: 'BardsAI EU multilingual',
+        detect: jest.fn().mockResolvedValue([nerSpan]),
+        getLastTiming: jest.fn().mockReturnValue({ totalMs: 40, inferenceMs: 30, chunkCount: 1 }),
+        getDevice: jest.fn().mockReturnValue('webgpu'),
+        getLastDevCapture: jest.fn().mockReturnValue({ dtype: 'q4f16', threads: 1, chunks: rawChunks }),
+      };
+    }
+
+    test('returns no diagnostics and does not ask the provider to capture without dev_capture', async () => {
+      const provider = capturingProvider();
+      setNerProviderFactoryForTests(() => provider);
+
+      const result = await detectWithExternalNer(text, { ner_provider: 'transformers', ner_enabled: true });
+
+      expect(result.devDiagnostics).toBeUndefined();
+      expect(provider.detect).toHaveBeenCalledWith(text);
+    });
+
+    test('returns the raw model output, runtime details and span counts with dev_capture', async () => {
+      const provider = capturingProvider();
+      setNerProviderFactoryForTests(() => provider);
+      (detectPii as jest.Mock).mockResolvedValueOnce([
+        nerSpan,
+        { start: 21, end: 36, entity_type: 'EMAIL', score: 0.9, text: 'ada@example.com', source: 'regex' },
+      ]);
+
+      const result = await detectWithExternalNer(text, {
+        ner_provider: 'transformers',
+        ner_enabled: true,
+        regex_enabled: true,
+        dev_capture: true,
+      });
+
+      expect(provider.detect).toHaveBeenCalledWith(text, undefined, { capture: true });
+      expect(result.devDiagnostics).toEqual(expect.objectContaining({
+        nerEnabled: true,
+        regexEnabled: true,
+        model: {
+          key: 'bardsai',
+          label: 'BardsAI EU multilingual',
+          device: 'webgpu',
+          dtype: 'q4f16',
+          threads: 1,
+        },
+        timings: { totalMs: 40, inferenceMs: 30, chunkCount: 1 },
+        rawNerOutput: rawChunks,
+        spanCountsBySource: { ner: 1, regex: 1 },
+      }));
+    });
+
+    test('reports the model as off when the provider is turned off', async () => {
+      const result = await detectWithExternalNer(text, {
+        ner_provider: 'off',
+        ner_enabled: false,
+        regex_enabled: false,
+        dev_capture: true,
+      });
+
+      expect(result.devDiagnostics).toEqual(expect.objectContaining({
+        nerEnabled: false,
+        regexEnabled: false,
+        spanCountsBySource: {},
+      }));
+      expect(result.devDiagnostics?.rawNerOutput).toBeUndefined();
+      expect(detectPii).toHaveBeenCalledWith(text, expect.objectContaining({ regex_enabled: false }), []);
+    });
+  });
 });

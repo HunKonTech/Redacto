@@ -123,6 +123,14 @@ pub struct PipelineConfig {
     /// Extra domains whose links stay as they are, on top of the built-in public list.
     #[serde(default)]
     pub public_domains: Vec<String>,
+    /// Whether the pattern recognizers (regex, code secrets, links and paths) run.
+    /// Only switched off from the extension's developer mode.
+    #[serde(default = "default_true")]
+    pub regex_enabled: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// How much of the source-code stage runs.
@@ -148,6 +156,7 @@ impl Default for PipelineConfig {
             ner_enabled: false,
             code_mode: CodeMode::Off,
             public_domains: Vec::new(),
+            regex_enabled: true,
         }
     }
 }
@@ -160,6 +169,7 @@ pub struct PipelineConfigOverrides {
     pub ner_enabled: Option<bool>,
     pub code_mode: Option<CodeMode>,
     pub public_domains: Option<Vec<String>>,
+    pub regex_enabled: Option<bool>,
 }
 
 impl PipelineConfig {
@@ -191,6 +201,9 @@ impl PipelineConfig {
         }
         if let Some(public_domains) = overrides.public_domains {
             config.public_domains = public_domains;
+        }
+        if let Some(regex_enabled) = overrides.regex_enabled {
+            config.regex_enabled = regex_enabled;
         }
         config
     }
@@ -286,5 +299,12 @@ mod tests {
 
         assert_eq!(config.public_domains, vec!["acme.hu".to_string()]);
         assert!(PipelineConfig::default().public_domains.is_empty());
+    }
+
+    #[test]
+    fn pipeline_config_regex_enabled_defaults_on() {
+        assert!(PipelineConfig::default().regex_enabled);
+        assert!(PipelineConfig::from_json_or_default(r#"{"ner_enabled":true}"#).regex_enabled);
+        assert!(!PipelineConfig::from_json_or_default(r#"{"regex_enabled":false}"#).regex_enabled);
     }
 }

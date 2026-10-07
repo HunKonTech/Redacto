@@ -14,6 +14,7 @@ import type {
   NerInferenceDevice,
   NerModelKey,
   NerProviderMode,
+  NerRawChunk,
   NerTimingInfo,
   NerWebGpuDtype,
   PiiSpan,
@@ -32,13 +33,26 @@ import {
   type TokenCharRange,
 } from './token-offsets';
 
+export interface NerDetectOptions {
+  /** Developer mode: keep the model's raw output for `getLastDevCapture`. */
+  capture?: boolean;
+}
+
+/** The raw model output and runtime details of the last captured call. */
+export interface NerDevCapture {
+  dtype?: string;
+  threads?: number;
+  chunks: NerRawChunk[];
+}
+
 export interface NerProvider {
   readonly mode: NerProviderMode;
   readonly model?: NerModelKey;
   readonly modelLabel?: string;
-  detect(text: string, signal?: AbortSignal): Promise<PiiSpan[]>;
+  detect(text: string, signal?: AbortSignal, options?: NerDetectOptions): Promise<PiiSpan[]>;
   getLastTiming?(): NerTimingInfo | undefined;
   getDevice?(): NerInferenceDevice | undefined;
+  getLastDevCapture?(): NerDevCapture | undefined;
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -1379,6 +1393,9 @@ export function createTransformersNerProvider(
   let lastLoadMs: number | undefined;
   let lastTiming: NerTimingInfo | undefined;
   let selectedDevice: NerInferenceDevice | undefined;
+  let selectedDtype: string | undefined;
+  let selectedThreads: number | undefined;
+  let lastDevCapture: NerDevCapture | undefined;
 
   async function buildPipeline(
     transformers: TransformersModule,
@@ -1423,6 +1440,9 @@ export function createTransformersNerProvider(
         // webgpuInit). Pick once based on detection — runtime fallback is
         // unsafe because the wasm module is cached after first instantiation.
         configureTransformersEnvironment(transformers, getExtensionUrl, device);
+        selectedDtype = dtype;
+        // Threads only matter on the CPU path; WebGPU runs the model on the GPU.
+        selectedThreads = device === 'webgpu' ? undefined : transformers.env.backends.onnx.wasm?.numThreads;
         debugLog('[PG:ner] pipeline init: building token-classification pipeline', {
           model: model.modelId,
           device,
@@ -1480,7 +1500,8 @@ export function createTransformersNerProvider(
   async function detectChunked(
     text: string,
     classifier: TokenClassificationPipeline,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    capture?: NerRawChunk[]
   ): Promise<{ spans: PiiSpan[]; chunkCount: number }> {
     throwIfAborted(signal);
     const tokenizer = classifier.tokenizer;
@@ -1511,6 +1532,12 @@ export function createTransformersNerProvider(
       );
       throwIfAborted(signal);
       const inferenceMs = Math.round(performance.now() - chunkStartedAt);
+      capture?.push({
+        offset: chunk.startChar,
+        length: chunk.text.length,
+        aggregation: useOffsets ? 'none' : 'simple',
+        items: output.map((item) => ({ ...item })),
+      });
 
       const converted = (
         useOffsets
@@ -1550,7 +1577,7 @@ export function createTransformersNerProvider(
     mode: 'transformers',
     model: model.key,
     modelLabel: model.label,
-    async detect(text: string, signal?: AbortSignal): Promise<PiiSpan[]> {
+    async detect(text: string, signal?: AbortSignal, options?: NerDetectOptions): Promise<PiiSpan[]> {
       throwIfAborted(signal);
       const startedAt = performance.now();
       const wasCold = !pipelineReady;
@@ -1562,7 +1589,11 @@ export function createTransformersNerProvider(
       const classifier = await ensurePipeline();
       throwIfAborted(signal);
       const inferenceStartedAt = performance.now();
-      const { spans, chunkCount } = await detectChunked(text, classifier, signal);
+      const capture: NerRawChunk[] | undefined = options?.capture ? [] : undefined;
+      const { spans, chunkCount } = await detectChunked(text, classifier, signal, capture);
+      lastDevCapture = capture
+        ? { dtype: selectedDtype, threads: selectedThreads, chunks: capture }
+        : undefined;
       throwIfAborted(signal);
       const inferenceMs = Math.round(performance.now() - inferenceStartedAt);
       const totalMs = Math.round(performance.now() - startedAt);
@@ -1599,6 +1630,9 @@ export function createTransformersNerProvider(
     },
     getDevice(): NerInferenceDevice | undefined {
       return selectedDevice;
+    },
+    getLastDevCapture(): NerDevCapture | undefined {
+      return lastDevCapture;
     },
   };
 }

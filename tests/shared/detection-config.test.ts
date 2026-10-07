@@ -3,6 +3,30 @@ import { DEFAULT_SETTINGS } from '../../src/shared/constants';
 import { minResolvedThreshold } from '../../src/shared/sensitivity-resolver';
 
 describe('detection config from settings', () => {
+  test('developer mode switches apply only while developer mode is on', () => {
+    const switchedOff = { ...DEFAULT_SETTINGS, devUseNer: false, devUseRegex: false };
+    const normal = detectionOptionsFromSettings(switchedOff);
+    expect(normal.dev_capture).toBeUndefined();
+    expect(normal.regex_enabled).toBeUndefined();
+    expect(normal.ner_provider).toBe('transformers');
+
+    const dev = detectionOptionsFromSettings({ ...switchedOff, developerMode: true });
+    expect(dev).toEqual(expect.objectContaining({
+      dev_capture: true,
+      regex_enabled: false,
+      ner_provider: 'off',
+      ner_enabled: false,
+    }));
+  });
+
+  test('developer mode wins over a request config that asks for the model', () => {
+    const settings = { ...DEFAULT_SETTINGS, developerMode: true, devUseNer: false };
+    const config = detectionOptionsFromSettings(settings, { ner_provider: 'transformers', ner_enabled: true });
+    expect(config.ner_provider).toBe('off');
+    expect(config.ner_enabled).toBe(false);
+    expect(config.regex_enabled).toBe(true);
+  });
+
   test('maps persisted NER provider and detector thresholds into request config', () => {
     const overrides = {
       ...DEFAULT_SETTINGS,

@@ -92,6 +92,7 @@ export type OptionsModel = {
   setSearchProtectionEnabled: (value: boolean) => Promise<boolean>;
 
   setDebug: (value: boolean) => Promise<void>;
+  setDeveloper: (partial: Partial<Pick<Settings, 'developerMode' | 'devUseNer' | 'devUseRegex'>>) => Promise<void>;
   applyDebugSystemCheckScenario: (scenario: DebugSystemCheckScenario) => Promise<void>;
   clearDebugSystemCheck: () => Promise<void>;
 };
@@ -437,6 +438,7 @@ export function createOptionsModel(): OptionsModel {
     },
 
     setDebug: (value) => saveAndBroadcast({ debug: value }),
+    setDeveloper: (partial) => saveAndBroadcast(partial),
     applyDebugSystemCheckScenario: async (scenario) => {
       const result = buildDebugSystemCheckResult(scenario, await loadSystemCheckResult());
       await saveSystemCheckResult(result);

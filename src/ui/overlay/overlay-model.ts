@@ -10,7 +10,7 @@
 
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
 import type { IdentifierRename } from '../../shared/anonymizer';
-import type { EntityType, FeedbackEntry, PiiSpan } from '../../shared/message-types';
+import type { DevDiagnostics, EntityType, FeedbackEntry, PiiSpan } from '../../shared/message-types';
 import {
   byteOffsetToStringIndex,
   stringIndexToByteOffset,
@@ -59,6 +59,10 @@ export type IdentifierRenamer = (approvedSpans: PiiSpan[]) => IdentifierRename[]
 export class OverlayModel {
   readonly originalText: string;
   readonly timings?: { totalMs: number };
+  /** Developer mode only: the raw model output and runtime details. */
+  readonly devDiagnostics?: DevDiagnostics;
+  /** The spans detection returned, before any review edits. */
+  readonly originalSpans: readonly PiiSpan[];
   private readonly thresholdFn: ThresholdResolver | null;
   private readonly callbacks: OverlayCallbacks;
   private destroyed = false;
@@ -89,7 +93,10 @@ export class OverlayModel {
     timings?: { totalMs: number },
     previewResolverFactory?: PreviewResolverFactory,
     identifierRenamer?: IdentifierRenamer,
+    devDiagnostics?: DevDiagnostics,
   ) {
+    this.devDiagnostics = devDiagnostics;
+    this.originalSpans = spans;
     this.previewResolverFactory = previewResolverFactory ?? null;
     this.identifierRenamer = identifierRenamer ?? null;
     this.originalText = originalText;

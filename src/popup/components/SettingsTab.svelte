@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { t, tp } from '../../shared/i18n/reactive';
 	import type { Readable, Writable } from 'svelte/store';
-	import type { FeedbackCounts } from '../popup-model.svelte';
+	import type { DeveloperSettings, FeedbackCounts } from '../popup-model.svelte';
 	import type { NerModelKey, Settings } from '../../shared/message-types';
 	import type { NerModelChoice } from '../../shared/constants';
 	import Toggle from './Toggle.svelte';
 	import AboutCard from './AboutCard.svelte';
 	import LegalCard from './LegalCard.svelte';
+	import DeveloperModeSetting from '../../ui/dev/DeveloperModeSetting.svelte';
 	import { MODEL_SOURCE } from '../../shared/local-ai-model-download';
 	import { modelDownloadState } from '../../shared/model-download-store';
 	import { modelDownloadedAt, modelDownloadText, modelSize } from './model-download-text';
@@ -14,6 +15,7 @@
 	let {
 		minConfidence,
 		debug,
+		developer,
 		clipboardInterceptEnabled,
 		nerModel,
 		nerModelChoice,
@@ -23,6 +25,7 @@
 		mappingCount,
 		setMinConfidence,
 		setDebug,
+		setDeveloper,
 		setClipboardInterceptEnabled,
 		setNerModelChoice,
 		openOptions,
@@ -37,6 +40,7 @@
 	}: {
 		minConfidence: Writable<number>;
 		debug: Writable<boolean>;
+		developer: Writable<DeveloperSettings>;
 		clipboardInterceptEnabled: Writable<boolean>;
 		nerModel: Writable<NerModelKey>;
 		nerModelChoice: Writable<string>;
@@ -46,6 +50,7 @@
 		mappingCount: Writable<number>;
 		setMinConfidence: (value: number) => Promise<void>;
 		setDebug: (enabled: boolean) => Promise<void>;
+		setDeveloper: (partial: Partial<DeveloperSettings>) => Promise<void>;
 		setClipboardInterceptEnabled: (enabled: boolean) => Promise<void>;
 		setNerModelChoice: (value: string) => Promise<void>;
 		openOptions: () => void;
@@ -112,6 +117,8 @@
 		<div class="row"><div><div class="row-label">{t('popup.settings.interceptCopy')}</div><div class="row-meta">{t('popup.settings.interceptCopy.hint')}</div></div><Toggle size="sm" checked={$clipboardInterceptEnabled} onchange={(checked) => setClipboardInterceptEnabled(checked)} label={t('popup.settings.interceptCopy')} /></div>
 		<div class="divider"></div>
 		<div class="row"><div><div class="row-label">{t('popup.settings.debug')}</div><div class="row-meta">{t('popup.settings.debug.hint')}</div></div><Toggle size="sm" checked={$debug} onchange={(checked) => setDebug(checked)} label={t('popup.settings.debug')} /></div>
+		<div class="divider"></div>
+		<DeveloperModeSetting {...$developer} save={setDeveloper} />
 	</article>
 
 	<article class="card">

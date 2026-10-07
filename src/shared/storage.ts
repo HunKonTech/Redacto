@@ -117,6 +117,9 @@ function normalizeSettings(raw: unknown): Settings {
   if (settings.theme !== 'dark' && settings.theme !== 'light') {
     settings.theme = DEFAULT_SETTINGS.theme;
   }
+  for (const key of ['developerMode', 'devUseNer', 'devUseRegex'] as const) {
+    if (typeof settings[key] !== 'boolean') settings[key] = DEFAULT_SETTINGS[key];
+  }
   if (typeof settings.clipboardInterceptEnabled !== 'boolean') {
     settings.clipboardInterceptEnabled = DEFAULT_SETTINGS.clipboardInterceptEnabled;
   }

@@ -10,7 +10,7 @@
  */
 
 import { mount, unmount } from 'svelte';
-import { ENTITY_TYPES, type PiiSpan } from '../../shared/message-types';
+import { ENTITY_TYPES, type DevDiagnostics, type PiiSpan } from '../../shared/message-types';
 import overlayCss from './overlay-styles.css';
 import ReviewOverlayComponent from './ReviewOverlay.svelte';
 import {
@@ -52,6 +52,7 @@ export class ReviewOverlay {
     _theme: 'dark' | 'light' = 'dark',
     previewResolverFactory?: PreviewResolverFactory,
     identifierRenamer?: IdentifierRenamer,
+    devDiagnostics?: DevDiagnostics,
   ) {
     void _theme; // intentionally unused — single-style overlay.
 
@@ -83,6 +84,7 @@ export class ReviewOverlay {
       timings,
       previewResolverFactory,
       identifierRenamer,
+      devDiagnostics,
     );
 
     this.host = document.createElement('div');

@@ -105,9 +105,11 @@ export type TestModel = {
   runDetection: () => Promise<void>;
   clearFeedback: () => Promise<void>;
 };
+export type DeveloperSettings = Pick<Settings, 'developerMode' | 'devUseNer' | 'devUseRegex'>;
 export type SettingsModel = {
   minConfidence: Writable<number>;
   debug: Writable<boolean>;
+  developer: Writable<DeveloperSettings>;
   clipboardInterceptEnabled: Writable<boolean>;
   nerModel: Writable<NerModelKey>;
   nerModelChoice: Writable<string>;
@@ -121,6 +123,7 @@ export type SettingsModel = {
   openImpressum: () => void;
   setMinConfidence: (value: number) => Promise<void>;
   setDebug: (enabled: boolean) => Promise<void>;
+  setDeveloper: (partial: Partial<DeveloperSettings>) => Promise<void>;
   setClipboardInterceptEnabled: (enabled: boolean) => Promise<void>;
   setNerModelChoice: (value: string) => Promise<void>;
 };
@@ -220,6 +223,7 @@ export function createAppModels(): AppModels {
 
   const minConfidence = writable(0.5);
   const debug = writable(false);
+  const developer = writable<DeveloperSettings>({ developerMode: false, devUseNer: true, devUseRegex: true });
   const clipboardInterceptEnabled = writable(true);
   const nerModel = writable<NerModelKey>('bardsai');
   const nerModelChoice = writable<string>(nerModelChoiceValue('bardsai', undefined));
@@ -234,6 +238,7 @@ export function createAppModels(): AppModels {
     consistentReplacementMode.set(settings.defaultReplacementMode === 'placeholder');
     minConfidence.set(settings.minConfidence);
     debug.set(settings.debug);
+    developer.set({ developerMode: settings.developerMode, devUseNer: settings.devUseNer, devUseRegex: settings.devUseRegex });
     clipboardInterceptEnabled.set(settings.clipboardInterceptEnabled);
     const normalizedModel = runtimeNerModelKey(settings.nerModel);
     nerModel.set(normalizedModel);
@@ -548,6 +553,7 @@ export function createAppModels(): AppModels {
     settings: {
       minConfidence,
       debug,
+      developer,
       clipboardInterceptEnabled,
       nerModel,
       nerModelChoice,
@@ -561,6 +567,7 @@ export function createAppModels(): AppModels {
       openImpressum: () => openExternalUrl(PUBLIC_PROJECT_LINKS.impressum),
       setMinConfidence: (value) => saveAndBroadcast({ minConfidence: value }),
       setDebug: async (value) => { await saveSettings({ debug: value }); debug.set(value); },
+      setDeveloper: (partial) => saveAndBroadcast(partial),
       setClipboardInterceptEnabled: (value) => saveAndBroadcast({ clipboardInterceptEnabled: value }),
       setNerModelChoice: async (value) => {
         const parsed = parseNerModelChoice(value);

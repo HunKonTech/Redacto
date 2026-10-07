@@ -5,6 +5,7 @@ import type {
   ComposerMatchState,
   DetectPiiRequest,
   DetectionCanceledResponse,
+  DevDiagnostics,
   PiiResultResponse,
   PiiSpan,
 } from '../shared/message-types';
@@ -46,7 +47,12 @@ export type ComposerMatch = ComposerMatchState;
 export interface PasteInterceptorCallbacks {
   onAnalyzing: () => void;
   onNoPii: (text: string) => void;
-  onPiiDetected: (text: string, spans: PiiSpan[], timings?: { totalMs: number }) => void;
+  onPiiDetected: (
+    text: string,
+    spans: PiiSpan[],
+    timings?: { totalMs: number },
+    devDiagnostics?: DevDiagnostics,
+  ) => void;
   onError: (error: string) => void;
   onCanceled: (explicitUserCancel?: boolean) => void;
   onExplicitCancelDecision?: (text: string) => Promise<CanceledPasteDecision> | CanceledPasteDecision;
@@ -283,12 +289,12 @@ export class PasteInterceptor {
         return;
       }
 
-      const { spans, timings } = response.payload;
+      const { spans, timings, devDiagnostics } = response.payload;
 
       if (spans.length === 0) {
         this.callbacks.onNoPii(text);
       } else {
-        this.callbacks.onPiiDetected(text, spans, timings);
+        this.callbacks.onPiiDetected(text, spans, timings, devDiagnostics);
       }
     } catch (err) {
       if (this.canceledRequestIds.delete(requestId)) {

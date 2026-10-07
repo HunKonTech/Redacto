@@ -31,12 +31,15 @@ pub fn detect_with_external_spans(
     }
 
     // Stage 1: Regex recognizers (plus source-code recognizers when enabled)
-    let mut regex_spans = regex_recognizers::detect_regex(text);
-    if config.code_mode != CodeMode::Off {
-        regex_spans = code::combine_with_regex(regex_spans, code::detect_code_secrets(text));
+    let mut regex_spans = Vec::new();
+    if config.regex_enabled {
+        regex_spans = regex_recognizers::detect_regex(text);
+        if config.code_mode != CodeMode::Off {
+            regex_spans = code::combine_with_regex(regex_spans, code::detect_code_secrets(text));
+        }
+        let link_spans = url_path::detect_links_and_paths(text, &config.public_domains);
+        regex_spans = url_path::combine_with_regex(regex_spans, link_spans);
     }
-    let link_spans = url_path::detect_links_and_paths(text, &config.public_domains);
-    regex_spans = url_path::combine_with_regex(regex_spans, link_spans);
 
     // Stage 2: NER (if enabled and model is loaded)
     let mut ner_spans = if config.ner_enabled && ner::is_model_loaded() {
@@ -796,5 +799,25 @@ mod tests {
             .map(|span| span.text.as_str())
             .collect();
         assert_eq!(urls, vec!["https://wiki.acme.internal/HR"]);
+    }
+
+    #[test]
+    fn regex_disabled_keeps_only_external_ner_spans() {
+        let text = "Mail anna@acme.hu, Anna Kovacs";
+        let config = PipelineConfig {
+            regex_enabled: false,
+            code_mode: CodeMode::Secrets,
+            ..default_config()
+        };
+
+        assert!(detect(text, &config).is_empty());
+        let result = detect_with_external_spans(
+            text,
+            &config,
+            vec![external_span(text, "Anna Kovacs", EntityType::Person, 0.95)],
+        );
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].source, DetectionSource::Ner);
+        assert_eq!(result[0].text, "Anna Kovacs");
     }
 }

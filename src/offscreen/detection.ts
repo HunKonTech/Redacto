@@ -1,5 +1,6 @@
 import type {
   DetectionOptions,
+  DevDiagnostics,
   NerProviderMode,
   NerStatus,
   NerStatusChangedBroadcast,
@@ -130,6 +131,8 @@ export function getNerStatus(config?: DetectionOptions): NerStatus {
 interface ExternalNerResult {
   spans: PiiSpan[];
   nerMs?: number;
+  /** Developer mode only: the provider's runtime details and raw output. */
+  dev?: Pick<DevDiagnostics, 'model' | 'timings' | 'rawNerOutput' | 'nerInputView' | 'error'>;
 }
 
 async function externalNerSpansFor(
@@ -199,7 +202,9 @@ async function externalNerSpansFor(
     });
 
     try {
-      const spans = signal ? await provider.detect(text, signal) : await provider.detect(text);
+      const spans = config?.dev_capture
+        ? await provider.detect(text, signal, { capture: true })
+        : signal ? await provider.detect(text, signal) : await provider.detect(text);
       throwIfAborted(signal);
       const nerMs = Math.round(performance.now() - startedAt);
       const timings = provider.getLastTiming?.();
@@ -224,7 +229,23 @@ async function externalNerSpansFor(
             : `${provider.modelLabel ?? candidateDefinition.label} is ready.`,
         timings,
       });
-      return { spans, nerMs };
+      if (!config?.dev_capture) return { spans, nerMs };
+      const capture = provider.getLastDevCapture?.();
+      return {
+        spans,
+        nerMs,
+        dev: {
+          model: {
+            key: provider.model ?? candidateDefinition.key,
+            label: provider.modelLabel ?? candidateDefinition.label,
+            device,
+            dtype: capture?.dtype,
+            threads: capture?.threads,
+          },
+          timings,
+          rawNerOutput: capture?.chunks ?? [],
+        },
+      };
     } catch (err) {
       if (signal?.aborted || err instanceof DOMException && err.name === 'AbortError') {
         throw err;
@@ -250,12 +271,40 @@ async function externalNerSpansFor(
     modelLabel: reportedProvider?.modelLabel ?? definition.label,
     message,
   });
-  return { spans: [], nerMs };
+  return {
+    spans: [],
+    nerMs,
+    ...(config?.dev_capture
+      ? { dev: { model: { key: reportedProvider?.model ?? definition.key, label: reportedProvider?.modelLabel ?? definition.label }, error: message } }
+      : {}),
+  };
 }
 
 export interface DetectionResult {
   spans: PiiSpan[];
   nerMs?: number;
+  /** Only when the config asked for `dev_capture`. */
+  devDiagnostics?: DevDiagnostics;
+}
+
+/** The JS heap of this document; `performance.memory` is Chrome-only and non-standard. */
+function readJsHeap(): DevDiagnostics['memory'] {
+  const memory = (performance as Performance & {
+    memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
+  }).memory;
+  if (!memory || typeof memory.usedJSHeapSize !== 'number') return undefined;
+  return {
+    usedBytes: memory.usedJSHeapSize,
+    totalBytes: memory.totalJSHeapSize,
+    limitBytes: memory.jsHeapSizeLimit,
+  };
+}
+
+function countBySource(spans: PiiSpan[]): Partial<Record<PiiSpan['source'], number>> {
+  return spans.reduce<Partial<Record<PiiSpan['source'], number>>>((acc, span) => {
+    acc[span.source] = (acc[span.source] ?? 0) + 1;
+    return acc;
+  }, {});
 }
 
 export async function detectWithExternalNer(
@@ -264,7 +313,7 @@ export async function detectWithExternalNer(
   signal?: AbortSignal
 ): Promise<DetectionResult> {
   throwIfAborted(signal);
-  const { spans: externalNerSpans, nerMs } = await codeAwareNerSpansFor(text, config, signal);
+  const { spans: externalNerSpans, nerMs, dev } = await codeAwareNerSpansFor(text, config, signal);
   throwIfAborted(signal);
   const detectConfig = externalNerSpans.length > 0 ? config : regexOnlyConfig(config);
   debugLog('[PG:offscreen] handing off to WASM', {
@@ -274,14 +323,23 @@ export async function detectWithExternalNer(
   const spans = await detectPii(text, detectConfig, externalNerSpans);
   reattachNerRawLabels(spans, externalNerSpans);
   throwIfAborted(signal);
+  const bySource = countBySource(spans);
   debugLog('[PG:offscreen] WASM pipeline result', {
     finalSpanCount: spans.length,
-    bySource: spans.reduce<Record<string, number>>((acc, s) => {
-      acc[s.source] = (acc[s.source] ?? 0) + 1;
-      return acc;
-    }, {}),
+    bySource,
   });
-  return { spans, nerMs };
+  if (!config?.dev_capture) return { spans, nerMs };
+  return {
+    spans,
+    nerMs,
+    devDiagnostics: {
+      nerEnabled: providerMode(config) !== 'off',
+      regexEnabled: config.regex_enabled !== false,
+      ...dev,
+      memory: readJsHeap(),
+      spanCountsBySource: bySource,
+    },
+  };
 }
 
 /**
@@ -302,6 +360,7 @@ async function codeAwareNerSpansFor(
   const result = await externalNerSpansFor(view.text, config, signal);
   const mapped = view.text === text ? result.spans : mapViewSpansToOriginal(result.spans, view, text);
   const spans = propagateIdentifierSpans(text, regions, mapped);
+  if (result.dev && view.text !== text) result.dev.nerInputView = 'identifier-split';
   debugLog('[PG:offscreen] code-aware NER', {
     regionCount: regions.length,
     viewLengthDelta: view.text.length - text.length,

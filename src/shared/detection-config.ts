@@ -19,6 +19,17 @@ export function detectionOptionsFromSettings(
     ner_webgpu_dtype: overrides?.ner_webgpu_dtype ?? settings.nerWebGpuDtype,
     ...overrides,
     ...(provider === 'off' ? { ner_enabled: false } : {}),
+    ...developerOverrides(settings),
+  };
+}
+
+/** Developer mode's switches win over everything else; without it nothing changes. */
+function developerOverrides(settings: Settings): DetectionOptions {
+  if (!settings.developerMode) return {};
+  return {
+    regex_enabled: settings.devUseRegex,
+    dev_capture: true,
+    ...(settings.devUseNer ? {} : { ner_provider: 'off', ner_enabled: false }),
   };
 }
 

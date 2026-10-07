@@ -168,6 +168,28 @@ describe('transformers NER provider', () => {
     }
   });
 
+  test('keeps the raw model output only when asked to capture', async () => {
+    const onnxWasm: any = {};
+    const env: any = { backends: { onnx: { wasm: onnxWasm } } };
+    const rawItems = [{ entity_group: 'PERSON_NAME', score: 0.93, word: 'Ada Lovelace', start: 11, end: 23 }];
+    const classifier = jest.fn().mockResolvedValue(rawItems);
+    const provider = createTransformersNerProvider({
+      getExtensionUrl: extensionUrl,
+      assetExists: jest.fn().mockResolvedValue(true),
+      detectWebGpu: jest.fn().mockResolvedValue(false),
+      loadTransformers: jest.fn().mockResolvedValue({ env, pipeline: jest.fn().mockResolvedValue(classifier) }),
+    });
+
+    await provider.detect('My name is Ada Lovelace.');
+    expect(provider.getLastDevCapture?.()).toBeUndefined();
+
+    await provider.detect('My name is Ada Lovelace.', undefined, { capture: true });
+    const capture = provider.getLastDevCapture?.();
+    expect(capture).toEqual(expect.objectContaining({ dtype: 'q4f16', threads: 1 }));
+    expect(capture?.chunks).toHaveLength(1);
+    expect(capture?.chunks[0]).toEqual(expect.objectContaining({ offset: 0, items: rawItems }));
+  });
+
   test('configures Transformers.js for local-only extension assets and q4f16 WASM fallback', async () => {
     const onnxWasm: any = { wasmPaths: { mjs: 'cdn://stale.mjs', wasm: 'cdn://stale.wasm' } };
     const env: any = {

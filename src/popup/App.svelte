@@ -96,6 +96,7 @@
         <SettingsTab
           minConfidence={settings.minConfidence}
           debug={settings.debug}
+          developer={settings.developer}
           clipboardInterceptEnabled={settings.clipboardInterceptEnabled}
           nerModel={settings.nerModel}
           nerModelChoice={settings.nerModelChoice}
@@ -105,6 +106,7 @@
           mappingCount={vault.mappingCount}
           setMinConfidence={settings.setMinConfidence}
           setDebug={settings.setDebug}
+          setDeveloper={settings.setDeveloper}
           setClipboardInterceptEnabled={settings.setClipboardInterceptEnabled}
           setNerModelChoice={settings.setNerModelChoice}
           openOptions={settings.openOptions}
