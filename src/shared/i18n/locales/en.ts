@@ -523,6 +523,7 @@ const en = {
   'web.privacy':
     "Runs entirely in this browser: detection uses WebAssembly and a local AI model downloaded from this site, and History is kept in this browser's local storage — nothing is uploaded or stored on a server. Clear it any time from History & restore.",
   'web.source': 'Source code',
+  'web.sponsor': 'Sponsor',
   'web.update': 'New version available — reload',
   'web.offline.save': 'Save the local AI model for offline use',
   'web.offline.preparing': 'Preparing offline use…',

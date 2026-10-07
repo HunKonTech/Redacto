@@ -530,6 +530,7 @@ const hu: Record<keyof typeof en, string> = {
   'web.privacy':
     'Teljesen ebben a böngészőben fut: az észlelés WebAssemblyt és erről az oldalról letöltött helyi MI-modellt használ, az Előzmények pedig a böngésző helyi tárolójában maradnak — semmi nem kerül feltöltésre vagy szerveren tárolásra. Bármikor törölheted az Előzmények és visszaállítás lapon.',
   'web.source': 'Forráskód',
+  'web.sponsor': 'Támogatás',
   'web.update': 'Új verzió érhető el — újratöltés',
   'web.offline.save': 'Helyi MI-modell mentése offline használatra',
   'web.offline.preparing': 'Offline használat előkészítése…',
