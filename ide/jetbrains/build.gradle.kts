@@ -36,6 +36,10 @@ intellijPlatform {
     instrumentCode = false
     pluginConfiguration {
         version = providers.gradleProperty("pluginVersion")
+        // The root README as HTML, written by scripts/ide/build-jetbrains.js.
+        description = providers.fileContents(
+            layout.projectDirectory.file("build-generated/description.html")
+        ).asText
         ideaVersion {
             sinceBuild = "242"
             untilBuild = provider { null }

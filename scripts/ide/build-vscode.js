@@ -3,13 +3,14 @@
 // CI publishes this same file to the VS Code Marketplace.
 const fs = require('fs');
 const path = require('path');
-const { ROOT, OUT_DIR, version, semverVersion, copyWebview, run } = require('./common');
+const { ROOT, OUT_DIR, version, semverVersion, copyWebview, run, writeReadme } = require('./common');
 
 const dir = path.join(ROOT, 'ide', 'vscode');
 const ver = version();
 
 copyWebview(path.join(dir, 'webview'));
 fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(dir, 'LICENSE'));
+writeReadme(path.join(dir, 'README.ide.md'), path.join(dir, 'README.md'));
 fs.copyFileSync(path.join(ROOT, 'src', 'assets', 'icons', 'icon128.png'), path.join(dir, 'icon.png'));
 
 run('npm ci --no-audit --no-fund', dir);

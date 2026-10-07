@@ -6,13 +6,14 @@
 // workload (VSSDK) on PATH.
 const fs = require('fs');
 const path = require('path');
-const { ROOT, OUT_DIR, version, copyWebview, run } = require('./common');
+const { ROOT, OUT_DIR, version, copyWebview, run, writeReadme } = require('./common');
 
 const dir = path.join(ROOT, 'ide', 'visualstudio', 'PrivacyGuardrail.VisualStudio');
 const ver = version();
 
 copyWebview(path.join(dir, 'webview'));
 fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(dir, 'LICENSE'));
+writeReadme(path.join(dir, 'overview.ide.md'), path.join(dir, 'overview.md'));
 fs.copyFileSync(path.join(ROOT, 'src', 'assets', 'icons', 'icon128.png'), path.join(dir, 'icon.png'));
 
 const manifestPath = path.join(dir, 'source.extension.vsixmanifest');

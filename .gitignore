@@ -81,3 +81,8 @@ release/ide/
 dist-web/
 __pycache__/
 .venv-i18n/
+
+# Generated plugin READMEs (root README + IDE intro)
+ide/vscode/README.md
+ide/visualstudio/PrivacyGuardrail.VisualStudio/overview.md
+ide/jetbrains/build-generated/

@@ -4,11 +4,16 @@
 // Needs JDK 21 (the Gradle wrapper fetches Gradle and the IntelliJ Platform).
 const fs = require('fs');
 const path = require('path');
-const { ROOT, OUT_DIR, version, run } = require('./common');
+const { ROOT, OUT_DIR, version, run, readmeHtml } = require('./common');
 
 const dir = path.join(ROOT, 'ide', 'jetbrains');
 const ver = version();
 const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+
+// plugin.xml carries no description: Gradle patches this one in (README as HTML).
+const generated = path.join(dir, 'build-generated');
+fs.mkdirSync(generated, { recursive: true });
+fs.writeFileSync(path.join(generated, 'description.html'), readmeHtml());
 
 run(`${gradlew} --no-daemon buildPlugin -PpluginVersion=${ver}`, dir);
 

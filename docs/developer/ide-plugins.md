@@ -83,6 +83,15 @@ In CI (`.github/workflows/build-and-release.yml`) the panel is built in
 GitHub pre-release (a failed IDE job only leaves its installer out). The Visual Studio job needs a Windows runner with the "Visual Studio
 extension development" workload.
 
+## Marketplace README
+
+The root `README.md` is the plugins' marketplace page and is shipped in the
+packages (images and links rewritten to absolute GitHub URLs by
+`scripts/ide/common.js`). VS Code and Visual Studio get the IDE-specific intro
+(`README.ide.md`, `overview.ide.md`) followed by the root README (generated
+`README.md` / `overview.md`, git-ignored); JetBrains gets the README as HTML,
+patched into `plugin.xml`'s description by Gradle.
+
 ## Publishing
 
 Each IDE job publishes the installer it built, after uploading it as an

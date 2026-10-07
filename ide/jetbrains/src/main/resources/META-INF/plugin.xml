@@ -2,16 +2,6 @@
     <id>com.hunkontech.privacyguardrail</id>
     <name>Redacto</name>
     <vendor url="https://github.com/HunKonTech/Redacto">HunKonTech</vendor>
-    <description><![CDATA[
-    Anonymize selected code or console output on this device, and restore the
-    original values in an AI reply. Select text in an editor or a Run/Debug
-    console, right-click → <b>Anonymize with Redacto</b>: the
-    Redacto tool window shows the original next to the anonymized
-    text and saves it to History. Your code is never changed. Detection
-    (rules + a local AI model) runs on this device; the local AI model is
-    downloaded once, on first use, from Redacto's Hugging Face repository.
-    ]]></description>
-
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
