@@ -54,6 +54,26 @@
         "title": "Redacto: Anonymize terminal selection"
       },
       {
+        "command": "privacyGuardrail.anonymizeDebugConsoleSelection",
+        "title": "Redacto: Anonymize Debug Console selection"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeProblems",
+        "title": "Redacto: Anonymize selected problems"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeVariable",
+        "title": "Redacto: Anonymize value"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeTestMessage",
+        "title": "Redacto: Anonymize test message"
+      },
+      {
+        "command": "privacyGuardrail.anonymizeFocusedSelection",
+        "title": "Redacto: Anonymize selection in the focused view"
+      },
+      {
         "command": "privacyGuardrail.anonymizeClipboard",
         "title": "Redacto: Anonymize clipboard (e.g. copied from the Debug Console)"
       },
@@ -77,6 +97,24 @@
           "group": "1_edit@9"
         }
       ],
+      "debug/variables/context": [
+        {
+          "command": "privacyGuardrail.anonymizeVariable",
+          "group": "3_modification@9"
+        }
+      ],
+      "debug/watch/context": [
+        {
+          "command": "privacyGuardrail.anonymizeVariable",
+          "group": "3_modification@9"
+        }
+      ],
+      "testing/message/context": [
+        {
+          "command": "privacyGuardrail.anonymizeTestMessage",
+          "group": "z_redacto"
+        }
+      ],
       "commandPalette": [
         {
           "command": "privacyGuardrail.anonymizeSelection",
@@ -85,9 +123,63 @@
         {
           "command": "privacyGuardrail.anonymizeTerminalSelection",
           "when": "terminalTextSelected"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeDebugConsoleSelection",
+          "when": "inDebugRepl"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeProblems",
+          "when": "problemFocus"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeVariable",
+          "when": "false"
+        },
+        {
+          "command": "privacyGuardrail.anonymizeTestMessage",
+          "when": "false"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeSelection",
+        "when": "editorTextFocus && !inDebugRepl"
+      },
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeTerminalSelection",
+        "when": "terminalFocus"
+      },
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeDebugConsoleSelection",
+        "when": "inDebugRepl"
+      },
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeProblems",
+        "when": "problemFocus"
+      },
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeVariable",
+        "when": "variablesFocused || watchExpressionsFocused"
+      },
+      {
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "command": "privacyGuardrail.anonymizeFocusedSelection",
+        "when": "!editorTextFocus && !terminalFocus && !inDebugRepl && !problemFocus && !variablesFocused && !watchExpressionsFocused"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ."

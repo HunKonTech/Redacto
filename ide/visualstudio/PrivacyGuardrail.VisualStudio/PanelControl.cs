@@ -96,6 +96,16 @@ namespace PrivacyGuardrail.VisualStudio
             Flush();
         }
 
+        /// <summary>Run an editing key Visual Studio took as a command (PanelToolWindow) in the page.</summary>
+        public void Edit(string command, string clipboardText)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!ready) return;
+            var message = new JObject { ["type"] = "edit", ["command"] = command };
+            if (clipboardText != null) message["text"] = clipboardText;
+            Send(message);
+        }
+
         private void Flush()
         {
             if (!ready) return;

@@ -11,7 +11,25 @@ export type StorageAreaName = 'local' | 'session';
 export type StorageSnapshot = Record<string, unknown>;
 
 /** Where in the IDE a selection was taken from. */
-export type SelectionSource = 'editor' | 'console' | 'terminal' | 'output';
+export type SelectionSource =
+  | 'editor'
+  | 'console'
+  | 'terminal'
+  | 'output'
+  /** Error List, Problems. */
+  | 'errors'
+  /** Variables, Watch. */
+  | 'debug'
+  | 'tests'
+  /** Any other view or tool window. */
+  | 'view';
+
+/**
+ * An editing key the IDE turned into one of its own commands before the
+ * webview saw it (Visual Studio: Delete, Ctrl+A, Ctrl+C/X/V, Ctrl+Z/Y); the
+ * host hands it back as an `edit` message (src/ide/edit-commands.ts).
+ */
+export type EditCommand = 'selectAll' | 'delete' | 'copy' | 'cut' | 'paste' | 'undo' | 'redo';
 
 /** The IDE a panel runs in; picks the look (`src/ide/theme/`). */
 export type IdeHostKind = 'vscode' | 'visualstudio' | 'jetbrains';
@@ -81,5 +99,7 @@ export type HostToWebview =
   | { type: 'model'; state: HostModelState }
   /** The IDE theme changed. */
   | { type: 'theme'; theme: IdeTheme }
-  | { type: 'anonymize'; text: string; source: SelectionSource };
+  | { type: 'anonymize'; text: string; source: SelectionSource }
+  /** Run an editing key on the panel's focused field; `text` is the clipboard, for `paste`. */
+  | { type: 'edit'; command: EditCommand; text?: string };
 

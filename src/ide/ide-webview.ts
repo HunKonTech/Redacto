@@ -19,6 +19,7 @@ import { createChromeShim, installChromeShim } from './chrome-shim';
 import { createHostBridge } from './host-bridge';
 import { withIdeDefaults } from './ide-defaults';
 import { applyIdeHost, applyIdeTheme, watchVsCodeTheme } from './ide-theme';
+import { runEditCommand } from './edit-commands';
 import { MODEL_DOWNLOAD_STATE_KEY } from '../shared/local-ai-model-download';
 import type { HostModelState, HostToWebview } from './protocol';
 
@@ -36,6 +37,9 @@ const init = new Promise<InitMessage>((resolve) => {
     if (message.type === 'init') resolve(message);
     if (message.type === 'theme') applyIdeTheme(root, message.theme);
     if (message.type === 'model') onModelState(message.state);
+    if (message.type === 'edit') {
+      runEditCommand(document, message.command, { text: message.text, copy: (text) => bridge.post({ type: 'copy', text }) });
+    }
   });
 });
 bridge.post({ type: 'ready' });

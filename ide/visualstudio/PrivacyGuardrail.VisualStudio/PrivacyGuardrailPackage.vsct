@@ -8,8 +8,15 @@
       <Group guid="guidCommandSet" id="grpCodeWindow" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
       </Group>
+      <!-- The Output window's context menu. -->
       <Group guid="guidCommandSet" id="grpOutputWindow" priority="0x0600">
-        <Parent guid="guidOutputWindowCommandSet" id="OutputWindowContextMenu" />
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_RESULTSLIST" />
+      </Group>
+      <Group guid="guidCommandSet" id="grpErrorList" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ERRORLIST" />
+      </Group>
+      <Group guid="guidCommandSet" id="grpCommandWindow" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_COMMANDWINDOW" />
       </Group>
     </Groups>
 
@@ -41,23 +48,32 @@
     <CommandPlacement guid="guidCommandSet" id="cmdAnonymizeSelection" priority="0x0100">
       <Parent guid="guidCommandSet" id="grpOutputWindow" />
     </CommandPlacement>
+    <CommandPlacement guid="guidCommandSet" id="cmdAnonymizeSelection" priority="0x0100">
+      <Parent guid="guidCommandSet" id="grpErrorList" />
+    </CommandPlacement>
+    <CommandPlacement guid="guidCommandSet" id="cmdAnonymizeSelection" priority="0x0100">
+      <Parent guid="guidCommandSet" id="grpCommandWindow" />
+    </CommandPlacement>
   </CommandPlacements>
+
+  <!-- The same key in every window text can be selected in, also where no
+       context menu takes extension commands (Locals, Watch, ...). -->
+  <KeyBindings>
+    <KeyBinding guid="guidCommandSet" id="cmdAnonymizeSelection" editor="guidVSStd97" key1="A" mod1="Control Shift Alt" />
+  </KeyBindings>
 
   <Symbols>
     <GuidSymbol name="guidPackage" value="{882984f8-e76d-469c-930c-cf547dc5e836}" />
     <GuidSymbol name="guidCommandSet" value="{0ec4a041-9151-4737-9c2f-24dceca7d1a9}">
       <IDSymbol name="grpCodeWindow" value="0x1020" />
       <IDSymbol name="grpOutputWindow" value="0x1021" />
+      <IDSymbol name="grpErrorList" value="0x1022" />
+      <IDSymbol name="grpCommandWindow" value="0x1023" />
       <IDSymbol name="cmdAnonymizeSelection" value="0x0100" />
       <IDSymbol name="cmdOpenPanel" value="0x0101" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{24e50b74-fbc4-4f57-9b60-3338c7ce42c4}">
       <IDSymbol name="bmpLogo" value="1" />
-    </GuidSymbol>
-    <!-- vsshlids.h has no Output window context menu symbol; these are the
-         values Command Explorer reports for it. -->
-    <GuidSymbol name="guidOutputWindowCommandSet" value="{C9DD4A59-47FB-11D2-83E7-00C04F9902C1}">
-      <IDSymbol name="OutputWindowContextMenu" value="0x0155" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

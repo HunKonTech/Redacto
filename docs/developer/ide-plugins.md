@@ -24,6 +24,15 @@ WebView2), so they run one shared page, `dist-ide/webview/`:
 - `src/ide/host-bridge.ts` and `src/ide/protocol.ts` define the messages the
   page exchanges with the host (`ready`/`init`, `anonymize`, `storage.*`, `copy`,
   and `model.download` / `model` for the Local AI model download, `src/ide/host-model.ts`).
+- **Ctrl+Shift+Alt+A** (macOS: **Cmd+Shift+Alt+A**) anonymizes the selection
+  wherever text can be selected, also where an IDE takes no context menu items
+  from extensions (VS Code: Debug Console, Problems; Visual Studio: Locals,
+  Watch, ...). Where there is no API for a selection, the host runs the IDE's
+  own Copy and reads the clipboard, then puts the clipboard back.
+- `src/ide/edit-commands.ts` runs the `edit` messages: Visual Studio turns
+  Delete, Ctrl+A, Ctrl+C/X/V and Ctrl+Z/Y into its Edit.* commands before
+  WebView2 sees the key, so `PanelToolWindow.cs` takes those commands while the
+  panel is active and hands them to the page, which edits the focused field.
 
 - `src/ide/ide-theme.ts` and `src/ide/theme/` give the panel each IDE's look
   (only in the IDE build; the extension and the web page keep their design).
@@ -38,9 +47,9 @@ The hosts are thin:
 
 | IDE | Folder | Panel | Context menus | Storage (`local`) |
 | --- | --- | --- | --- | --- |
-| VS Code | `ide/vscode` | Activity Bar view | editor, Output, terminal (+ "Anonymize clipboard" command) | `globalState` |
+| VS Code | `ide/vscode` | Activity Bar view | editor, Output, terminal, Variables, Watch, Test Results; the key also in the Debug Console, Problems and any other view (+ "Anonymize clipboard" command) | `globalState` |
 | JetBrains | `ide/jetbrains` | "Redacto" tool window (JCEF, served as `https://pg.local/`) | editor, Run/Debug console (+ Tools → Anonymize Clipboard) | `<config>/privacy-guardrail/storage.json` |
-| Visual Studio 2022 | `ide/visualstudio` | tool window (WebView2, `https://pg.local/`) | code editor, Output window | `%LOCALAPPDATA%\PrivacyGuardrail\storage.json` |
+| Visual Studio 2022 | `ide/visualstudio` | tool window (WebView2, `https://pg.local/`) | code editor, Output window, Error List, Command Window; the key in any other window (Locals, Watch, Find Results, ...) | `%LOCALAPPDATA%\PrivacyGuardrail\storage.json` |
 
 `session` storage lives in memory for as long as the IDE runs, like
 `chrome.storage.session`. The panel has a **Settings** tab (the web page's:

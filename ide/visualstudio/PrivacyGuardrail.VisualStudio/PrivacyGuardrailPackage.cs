@@ -11,8 +11,8 @@ namespace PrivacyGuardrail.VisualStudio
 {
     /// <summary>
     /// Redacto for Visual Studio: the shared side panel in a tool
-    /// window, and "Anonymize with Redacto" on the code editor's and
-    /// the Output window's context menus. The panel shows the original next to
+    /// window, and "Anonymize with Redacto" on the code editor's, the
+    /// Output window's and the Error List's context menus. The panel shows the original next to
     /// the anonymized text; the selection itself is never changed.
     /// </summary>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
@@ -41,7 +41,7 @@ namespace PrivacyGuardrail.VisualStudio
             anonymize.BeforeQueryStatus += (sender, args) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                anonymize.Visible = anonymize.Enabled = SelectionReader.Read(dte) != null;
+                anonymize.Visible = anonymize.Enabled = SelectionReader.IsAvailable(dte);
             };
             commands.AddCommand(anonymize);
 

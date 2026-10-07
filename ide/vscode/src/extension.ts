@@ -18,7 +18,7 @@ import { panelHtml } from './webview-html';
 
 type StorageAreaName = 'local' | 'session';
 type Snapshot = Record<string, unknown>;
-type SelectionSource = 'editor' | 'console' | 'terminal' | 'output';
+type SelectionSource = 'editor' | 'console' | 'terminal' | 'output' | 'errors' | 'debug' | 'tests' | 'view';
 
 type FromWebview =
   | { type: 'ready' }
@@ -161,19 +161,68 @@ function editorSelection(editor: vscode.TextEditor): string {
 }
 
 /**
- * The integrated terminal's selection. There is no stable API for it, so it is
- * copied through the clipboard, and the clipboard is put back afterwards.
+ * What VS Code's own copy command `command` copies, for the places that have
+ * no API for their selection (terminal, Debug Console, Problems, other views).
+ * The clipboard is emptied first, so nothing selected reads as nothing rather
+ * than the old clipboard, and put back afterwards.
  */
-async function terminalSelection(): Promise<string> {
-  const terminal = vscode.window.activeTerminal as (vscode.Terminal & { selection?: string }) | undefined;
-  if (typeof terminal?.selection === 'string') return terminal.selection;
+async function copiedBy(command: string, ...args: unknown[]): Promise<string> {
   const saved = await vscode.env.clipboard.readText();
   try {
-    await vscode.commands.executeCommand('workbench.action.terminal.copySelection');
+    await vscode.env.clipboard.writeText('');
+    await vscode.commands.executeCommand(command, ...args);
     return await vscode.env.clipboard.readText();
   } finally {
     await vscode.env.clipboard.writeText(saved);
   }
+}
+
+/** The selection of the editor the command was run on (code, or an Output channel). */
+async function selectionOf(uri: unknown): Promise<{ text: string; source: SelectionSource }> {
+  const editor = vscode.window.activeTextEditor;
+  if (editor && (!(uri instanceof vscode.Uri) || uri.toString() === editor.document.uri.toString())) {
+    return { text: editorSelection(editor), source: editorSource(editor) };
+  }
+  // An editor extensions do not see (e.g. a large Output channel): copy what is selected there.
+  return { text: await copiedBy('editor.action.clipboardCopyAction'), source: 'output' };
+}
+
+/** The integrated terminal's selection. */
+async function terminalSelection(): Promise<string> {
+  const terminal = vscode.window.activeTerminal as (vscode.Terminal & { selection?: string }) | undefined;
+  if (typeof terminal?.selection === 'string') return terminal.selection;
+  return copiedBy('workbench.action.terminal.copySelection');
+}
+
+/** What the Variables and Watch views' context menus pass a command. */
+interface VariableContext {
+  variable?: { name?: string; value?: string };
+}
+
+/**
+ * The value of a variable or watch expression: the one right-clicked, or, from
+ * the key, the selected one, as "Copy Value" gives it.
+ */
+async function variableValue(context: VariableContext | undefined): Promise<string> {
+  return context?.variable?.value ?? copiedBy('workbench.debug.viewlet.action.copyValue');
+}
+
+/** What the Test Results context menu passes a command. */
+interface TestMessageContext {
+  message?: vscode.TestMessage;
+}
+
+function testMessageText(context: TestMessageContext | undefined): string {
+  const message = context?.message;
+  if (!message) return '';
+  const text = typeof message.message === 'string' ? message.message : message.message.value;
+  return [
+    text,
+    message.expectedOutput !== undefined ? `Expected:\n${message.expectedOutput}` : '',
+    message.actualOutput !== undefined ? `Actual:\n${message.actualOutput}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /**
@@ -244,13 +293,30 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('privacyGuardrail.openPanel', () =>
       vscode.commands.executeCommand(`${VIEW_ID}.focus`),
     ),
-    vscode.commands.registerCommand('privacyGuardrail.anonymizeSelection', async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) return;
-      await provider.anonymize(editorSelection(editor), editorSource(editor));
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeSelection', async (uri?: unknown) => {
+      const { text, source } = await selectionOf(uri);
+      await provider.anonymize(text, source);
     }),
     vscode.commands.registerCommand('privacyGuardrail.anonymizeTerminalSelection', async () => {
       await provider.anonymize(await terminalSelection(), 'terminal');
+    }),
+    // The Debug Console and Problems views take no context menu items from
+    // extensions; these run from the "Anonymize selection" key there.
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeDebugConsoleSelection', async () => {
+      await provider.anonymize(await copiedBy('debug.replCopy'), 'console');
+    }),
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeProblems', async () => {
+      await provider.anonymize(await copiedBy('problems.action.copy'), 'errors');
+    }),
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeVariable', async (context?: VariableContext) => {
+      await provider.anonymize(await variableValue(context), 'debug');
+    }),
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeTestMessage', async (context?: TestMessageContext) => {
+      await provider.anonymize(testMessageText(context), 'tests');
+    }),
+    // Anywhere else text can be selected (hovers, other views, ...).
+    vscode.commands.registerCommand('privacyGuardrail.anonymizeFocusedSelection', async () => {
+      await provider.anonymize(await copiedBy('editor.action.clipboardCopyAction'), 'view');
     }),
     vscode.commands.registerCommand('privacyGuardrail.anonymizeClipboard', async () => {
       await provider.anonymize(await vscode.env.clipboard.readText(), 'console');
