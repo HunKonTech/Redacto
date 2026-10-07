@@ -1,11 +1,37 @@
 <script lang="ts">
   import type { DevDiagnostics, PiiSpan } from '../../../shared/message-types';
   import { deviceText, heapText, rawItemCount, rawOutputJson, sourceSummary, spansJson } from '../../dev/format-dev-diagnostics';
+  import { downloadDebugLog } from '../../dev/debug-log';
 
-  let { diagnostics, spans }: { diagnostics: DevDiagnostics; spans: readonly PiiSpan[] } = $props();
+  let {
+    diagnostics,
+    spans,
+    originalText,
+    previewText,
+  }: {
+    diagnostics: DevDiagnostics;
+    spans: readonly PiiSpan[];
+    originalText: string;
+    /** The paste as the current review would send it. */
+    previewText: string;
+  } = $props();
 
   let rawEl: HTMLPreElement | undefined = $state();
   let copied = $state<'raw' | 'spans' | null>(null);
+  let open = $state(false);
+  let confirmingLog = $state(false);
+
+  function askForLog(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    open = true;
+    confirmingLog = true;
+  }
+
+  function downloadLog(): void {
+    confirmingLog = false;
+    downloadDebugLog({ surface: 'overlay', originalText, anonymizedText: previewText, spans, diagnostics });
+  }
 
   const rawJson = $derived(rawOutputJson(diagnostics));
   const summary = $derived(
@@ -38,7 +64,7 @@
   }
 </script>
 
-<details class="pg-dev">
+<details class="pg-dev" bind:open>
   <summary>
     <span class="pg-dev-tag">DEV</span>
     <span class="pg-dev-summary">{summary}</span>
@@ -47,8 +73,20 @@
         <button type="button" class="pg-btn-link" onclick={(event) => copy('raw', event)}>{copied === 'raw' ? 'Copied' : 'Copy raw output'}</button>
       {/if}
       <button type="button" class="pg-btn-link" onclick={(event) => copy('spans', event)}>{copied === 'spans' ? 'Copied' : 'Copy spans'}</button>
+      <button type="button" class="pg-btn-link" onclick={askForLog}>Download log</button>
     </span>
   </summary>
+  {#if confirmingLog}
+    <div class="pg-dev-log-warning" role="alertdialog" aria-label="Sensitive data warning">
+      <p class="pg-dev-log-title"><span title="Okay, one exception: if we agreed on it in person, face to face, out loud. You bring the coffee.">⚠</span> This file contains sensitive data</p>
+      <p>The log holds the original, unredacted text, the anonymized text, every detected item, the raw model output and the timings. It is saved only to this device.</p>
+      <p><strong>Do not share it with anyone. The Redacto developer will never ask you for it — not by e-mail, issue, chat or phone.</strong></p>
+      <div class="pg-dev-log-actions">
+        <button type="button" class="pg-btn-link pg-dev-error" onclick={downloadLog}>I understand, download</button>
+        <button type="button" class="pg-btn-link" onclick={() => (confirmingLog = false)}>Cancel</button>
+      </div>
+    </div>
+  {/if}
   {#if diagnostics.error}
     <p class="pg-dev-note pg-dev-error">Model error: {diagnostics.error}</p>
   {/if}

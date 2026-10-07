@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '../../shared/i18n/reactive';
-	import type { DevDiagnostics, PiiSpan } from '../../shared/message-types';
+	import type { DevDiagnostics, PiiSpan, Settings } from '../../shared/message-types';
 	import { modelDownloadState } from '../../shared/model-download-store';
 	import { formatMegabytes } from '../../shared/local-ai-model-download';
 	import {
@@ -13,17 +13,34 @@
 		spansJson,
 		timingText,
 	} from './format-dev-diagnostics';
+	import { downloadDebugLog, type DebugLogSurface } from './debug-log';
 
 	let {
 		diagnostics,
 		spans,
 		copy,
+		surface,
+		originalText,
+		anonymizedText,
+		settings = null,
 	}: {
 		diagnostics: DevDiagnostics;
 		/** The spans the review starts from. */
 		spans: readonly PiiSpan[];
 		copy: (text: string) => Promise<void>;
+		surface: DebugLogSurface;
+		/** The text the detection ran on. */
+		originalText: string;
+		anonymizedText?: string;
+		settings?: Settings | null;
 	} = $props();
+
+	let confirmingLog = $state(false);
+
+	function downloadLog(): void {
+		confirmingLog = false;
+		downloadDebugLog({ surface, originalText, anonymizedText, spans, diagnostics, settings });
+	}
 
 	let copied = $state<'raw' | 'spans' | null>(null);
 	let copyError = $state('');
@@ -103,7 +120,24 @@
 			<button type="button" onclick={() => copyPart('spans')}>
 				{copied === 'spans' ? t('dev.panel.copied') : t('dev.panel.copySpans')}
 			</button>
+			<button type="button" onclick={() => (confirmingLog = !confirmingLog)} aria-expanded={confirmingLog}>
+				{t('dev.log.download')}
+			</button>
 		</div>
+		{#if confirmingLog}
+			<div class="log-warning" role="alertdialog" aria-labelledby="dev-log-warning-title">
+				<p id="dev-log-warning-title" class="log-title">
+					<span class="log-icon" aria-hidden="true" title={t('dev.log.easterEgg')}>⚠</span>
+					{t('dev.log.warning.title')}
+				</p>
+				<p>{t('dev.log.warning.body')}</p>
+				<p class="log-never">{t('dev.log.warning.never')}</p>
+				<div class="actions">
+					<button type="button" class="danger" onclick={downloadLog}>{t('dev.log.confirm')}</button>
+					<button type="button" onclick={() => (confirmingLog = false)}>{t('dev.log.cancel')}</button>
+				</div>
+			</div>
+		{/if}
 		{#if copyError}
 			<p class="error" role="alert">{copyError}</p>
 		{/if}
@@ -141,4 +175,14 @@
 	}
 	.actions button:hover { background: var(--color-input); }
 	.error { margin: 0; color: var(--color-danger); font-size: 11px; line-height: 1.45; }
+	.log-warning {
+		display: flex; flex-direction: column; gap: 6px; padding: 10px 12px;
+		border: 1px solid var(--color-danger); border-radius: var(--radius-sm); background: var(--color-input);
+		color: var(--color-ink); font-size: 11.5px; line-height: 1.45;
+	}
+	.log-warning p { margin: 0; }
+	.log-title { display: flex; align-items: center; gap: 6px; color: var(--color-danger); font-weight: 600; }
+	.log-icon { cursor: help; }
+	.log-never { font-weight: 600; }
+	.actions button.danger { border-color: var(--color-danger); color: var(--color-danger); }
 </style>

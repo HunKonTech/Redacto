@@ -97,7 +97,12 @@
     </div>
 
     {#if model.devDiagnostics}
-      <DevSection diagnostics={model.devDiagnostics} spans={model.originalSpans} />
+      <DevSection
+        diagnostics={model.devDiagnostics}
+        spans={model.originalSpans}
+        originalText={model.originalText}
+        previewText={$previewText}
+      />
     {/if}
 
     <p class="pg-disclaimer">{LIMITS_DISCLAIMER}</p>

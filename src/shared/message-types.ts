@@ -179,6 +179,14 @@ export interface DevDiagnostics {
   nerInputView?: 'identifier-split';
   /** Pipeline spans per source, before the review filters. */
   spanCountsBySource: Partial<Record<DetectionSource, number>>;
+  /** Wall-clock time of each detection stage in the offscreen document. */
+  stageTimings?: {
+    /** Local AI model, including a cold load. */
+    nerMs?: number;
+    /** WASM pipeline: regex recognizers, context boost and span merging. */
+    pipelineMs: number;
+    totalMs: number;
+  };
   error?: string;
 }
 

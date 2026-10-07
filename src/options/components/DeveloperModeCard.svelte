@@ -5,7 +5,7 @@
 	import CardHeading from '../../popup/components/CardHeading.svelte';
 	import DeveloperModeSetting from '../../ui/dev/DeveloperModeSetting.svelte';
 	import DevDetectionPanel from '../../ui/dev/DevDetectionPanel.svelte';
-	import { detectForPanel, type PanelDetection } from '../../sidepanel/panel-anonymizer';
+	import { detectForPanel, previewForPanel, type PanelDetection } from '../../sidepanel/panel-anonymizer';
 	import { copyText } from '../../sidepanel/clipboard';
 
 	let {
@@ -20,6 +20,13 @@
 	let running = $state(false);
 	let error = $state('');
 	let detection = $state.raw<PanelDetection | null>(null);
+	/** The sample the current detection ran on. */
+	let detectedFor = $state('');
+	const anonymized = $derived(
+		detection && $settings
+			? previewForPanel(detectedFor, detection.spans, $settings, null, detection.classifications, detection.knownReplacements).text
+			: undefined,
+	);
 
 	async function run(): Promise<void> {
 		const current = $settings;
@@ -27,7 +34,9 @@
 		running = true;
 		error = '';
 		try {
-			detection = await detectForPanel(sample, current);
+			const text = sample;
+			detection = await detectForPanel(text, current);
+			detectedFor = text;
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -55,7 +64,15 @@
 				<p class="error" role="alert">{error}</p>
 			{/if}
 			{#if detection?.devDiagnostics}
-				<DevDetectionPanel diagnostics={detection.devDiagnostics} spans={detection.spans} copy={copyText} />
+				<DevDetectionPanel
+					diagnostics={detection.devDiagnostics}
+					spans={detection.spans}
+					copy={copyText}
+					surface="options"
+					originalText={detectedFor}
+					anonymizedText={anonymized}
+					settings={$settings}
+				/>
 			{/if}
 		</div>
 	{/if}

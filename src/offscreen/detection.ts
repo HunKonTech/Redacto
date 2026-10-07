@@ -313,6 +313,7 @@ export async function detectWithExternalNer(
   signal?: AbortSignal
 ): Promise<DetectionResult> {
   throwIfAborted(signal);
+  const detectionStartedAt = performance.now();
   const { spans: externalNerSpans, nerMs, dev } = await codeAwareNerSpansFor(text, config, signal);
   throwIfAborted(signal);
   const detectConfig = externalNerSpans.length > 0 ? config : regexOnlyConfig(config);
@@ -320,7 +321,9 @@ export async function detectWithExternalNer(
     externalNerSpanCount: externalNerSpans.length,
     nerEnabledForWasm: detectConfig?.ner_enabled,
   });
+  const pipelineStartedAt = performance.now();
   const spans = await detectPii(text, detectConfig, externalNerSpans);
+  const pipelineMs = Math.round(performance.now() - pipelineStartedAt);
   reattachNerRawLabels(spans, externalNerSpans);
   throwIfAborted(signal);
   const bySource = countBySource(spans);
@@ -338,6 +341,11 @@ export async function detectWithExternalNer(
       ...dev,
       memory: readJsHeap(),
       spanCountsBySource: bySource,
+      stageTimings: {
+        ...(nerMs !== undefined ? { nerMs } : {}),
+        pipelineMs,
+        totalMs: Math.round(performance.now() - detectionStartedAt),
+      },
     },
   };
 }

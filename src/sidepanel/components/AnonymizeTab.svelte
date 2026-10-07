@@ -258,7 +258,15 @@
 		</article>
 
 		{#if settings?.developerMode && detection.devDiagnostics}
-			<DevDetectionPanel diagnostics={detection.devDiagnostics} spans={detection.spans} copy={copyText} />
+			<DevDetectionPanel
+				diagnostics={detection.devDiagnostics}
+				spans={detection.spans}
+				copy={copyText}
+				surface="sidepanel"
+				originalText={detectedFor ?? input}
+				anonymizedText={preview?.text}
+				{settings}
+			/>
 		{/if}
 	{/if}
 
