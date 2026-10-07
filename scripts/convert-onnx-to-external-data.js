@@ -160,6 +160,12 @@ print(json.dumps({"externalTensorLocations": sorted(locations)}))
   });
 
   if (result.status !== 0) {
+    // status is null when the child was killed by a signal (e.g. SIGKILL from the OOM killer).
+    if (result.signal) {
+      throw new Error(
+        `Failed to convert ONNX model to external data with ${python}: the process was killed by ${result.signal} (most likely out of memory).`
+      );
+    }
     const details = (result.stderr || result.stdout || '').trim();
     throw new Error(
       [

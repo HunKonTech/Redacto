@@ -139,6 +139,21 @@ function copyFile(source, destination) {
   fs.copyFileSync(source, destination);
 }
 
+// status is null when the child was killed by a signal: on low-memory
+// machines that is usually SIGKILL from the OOM killer, which leaves no
+// Python traceback, so the "install onnx" hint would only mislead.
+function pythonFailureMessage(summary, hint, result) {
+  if (result.error) {
+    return `${summary} ${result.error.message}`;
+  }
+  if (result.signal) {
+    return `${summary} The Python process was killed by ${result.signal}; `
+      + 'this is most likely the out-of-memory killer (the conversion needs about 2.5 GB of free RAM + swap).';
+  }
+  const details = (result.stderr || result.stdout || '').trim();
+  return [summary, hint, details].filter(Boolean).join(' ');
+}
+
 function quantizeOnnxModel(inputPath, outputPath, pythonCommand) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   const inputLiteral = JSON.stringify(inputPath);
@@ -155,16 +170,11 @@ quantize_dynamic(${inputLiteral}, ${outputLiteral}, weight_type=QuantType.QInt8)
   });
 
   if (result.status !== 0) {
-    const details = (result.stderr || result.stdout || '').trim();
-    throw new Error(
-      [
-        `Failed to quantize ONNX model with ${pythonCommand}.`,
-        'Install onnx, onnxruntime, and sympy in that Python environment or provide an already quantized model_quantized.onnx.',
-        details,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    );
+    throw new Error(pythonFailureMessage(
+      `Failed to quantize ONNX model with ${pythonCommand}.`,
+      'Install onnx, onnxruntime, and sympy in that Python environment or provide an already quantized model_quantized.onnx.',
+      result
+    ));
   }
 }
 
@@ -187,16 +197,11 @@ onnx.save(model_fp16, ${outputLiteral})
   });
 
   if (result.status !== 0) {
-    const details = (result.stderr || result.stdout || '').trim();
-    throw new Error(
-      [
-        `Failed to convert ONNX model to fp16 with ${pythonCommand}.`,
-        'Install onnx and onnxruntime in that Python environment or provide an already converted model_fp16.onnx.',
-        details,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    );
+    throw new Error(pythonFailureMessage(
+      `Failed to convert ONNX model to fp16 with ${pythonCommand}.`,
+      'Install onnx and onnxruntime in that Python environment or provide an already converted model_fp16.onnx.',
+      result
+    ));
   }
 }
 

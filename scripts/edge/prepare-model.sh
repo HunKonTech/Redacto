@@ -55,6 +55,16 @@ if ! "$BASE_PYTHON" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) el
   exit 1
 fi
 
+# The fp16 conversion holds the fp32 and fp16 weights at once (~2.5 GB peak).
+# Without enough RAM + swap the OOM killer ends it with no Python traceback
+# (on a CI runner it can take the runner service down with it), so say so up front.
+if [ -r /proc/meminfo ]; then
+  avail_kb=$(awk '/^(MemAvailable|SwapFree):/ { sum += $2 } END { print sum + 0 }' /proc/meminfo)
+  if [ "$avail_kb" -lt 3145728 ]; then
+    echo "Warning: only $((avail_kb / 1024)) MiB of free RAM + swap; the model conversion needs about 3 GiB and may be killed by the OOM killer. Add swap or use a machine with more memory." >&2
+  fi
+fi
+
 echo "> Python environment (.venv)"
 if [ ! -x .venv/bin/python ]; then
   "$BASE_PYTHON" -m venv .venv
