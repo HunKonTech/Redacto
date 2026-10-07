@@ -8,6 +8,7 @@
 #   scripts/i18n/translate-macos.sh --only de,fr         # csak ezek a nyelvek
 #   scripts/i18n/translate-macos.sh --force              # mindent újrafordít
 #   scripts/i18n/translate-macos.sh --time-budget 30     # 30 perc után nem kezd új köteget
+#   scripts/i18n/translate-macos.sh --workers 1 --cooldown 120   # 429 (túl sok kérés) esetén
 set -euo pipefail
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -41,6 +42,13 @@ fi
 if ! "$VENV/bin/python" -c "import deep_translator" 2>/dev/null; then
   echo "==> deep-translator telepítése"
   "$VENV/bin/pip" install --quiet --upgrade pip deep-translator
+fi
+
+echo "==> Google elérhetőségének ellenőrzése (1 kérés)"
+if ! "$VENV/bin/python" -c "from deep_translator import GoogleTranslator as G; G(source='en', target='de').translate('Hello')" >/dev/null 2>&1; then
+  echo "A Google most elutasítja a kéréseket (túl sok kérés / ideiglenes IP-tiltás)." >&2
+  echo "Várj 30-60 percet, vagy válts hálózatot (pl. mobil hotspot), aztán futtasd újra." >&2
+  exit 2
 fi
 
 echo "==> Fordítás indul"

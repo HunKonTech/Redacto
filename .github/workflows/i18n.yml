@@ -22,6 +22,10 @@ on:
         description: 'Minutes to translate for (at most ~300); the remaining languages follow on the next run'
         type: string
         default: '60'
+      workers:
+        description: 'Parallel requests to Google Translate (fewer = fewer HTTP 429 rate-limit errors)'
+        type: string
+        default: '2'
 
 permissions:
   contents: write
@@ -39,6 +43,7 @@ jobs:
     timeout-minutes: 360
     env:
       TIME_BUDGET: ${{ inputs.time_budget_minutes || '60' }}
+      WORKERS: ${{ inputs.workers || '2' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -68,10 +73,25 @@ jobs:
           echo "path=$RUNNER_TEMP/i18n-venv/bin/python" >> "$GITHUB_OUTPUT"
 
       # Rate limits or failed requests never fail the run: untranslated keys
-      # fall back to English and are tried again on the next run.
-      - name: Translate
+      # fall back to English and are tried again on the next run. A failed
+      # batch is retried after a growing cooldown (HTTP 429), and the run is
+      # skipped when Google already refuses a single probe request (the
+      # runner's IP is temporarily blocked); hammering it would only extend
+      # the block.
+      - name: Check that Google Translate accepts requests
+        id: probe
         run: |
-          args=(--python "${{ steps.python.outputs.path }}" --time-budget "$TIME_BUDGET")
+          if "${{ steps.python.outputs.path }}" -c "from deep_translator import GoogleTranslator as G; G(source='en', target='de').translate('Hello')"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Google Translate refuses requests from this runner (rate limited); skipping, the next run tries again."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Translate
+        if: steps.probe.outputs.ok == 'true'
+        run: |
+          args=(--python "${{ steps.python.outputs.path }}" --time-budget "$TIME_BUDGET" --workers "$WORKERS")
           if [ "${{ inputs.force }}" = "true" ]; then args+=(--force); fi
           node scripts/i18n/machine-translate.js "${args[@]}"
 

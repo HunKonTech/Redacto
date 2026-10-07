@@ -22,7 +22,10 @@
  *
  *   node scripts/i18n/machine-translate.js [--python python3]
  *     [--translator KO_language_translator] [--batch 4] [--time-budget 60]
- *     [--only de,fr] [--force]
+ *     [--only de,fr] [--force] [--workers 2] [--retries 5] [--cooldown 60]
+ *
+ * Google rate-limits the free endpoint (HTTP 429). A batch that fails is retried
+ * after `--cooldown` seconds (growing with each attempt), up to `--retries` times.
  */
 
 const { spawnSync } = require('child_process');
@@ -57,6 +60,9 @@ function parseArgs(argv) {
     python: 'python3',
     translator: path.join(ROOT, 'KO_language_translator'),
     batch: 4,
+    workers: 2,
+    retries: 5,
+    cooldown: 60,
     timeBudget: Infinity,
     only: null,
     force: false,
@@ -71,6 +77,9 @@ function parseArgs(argv) {
     if (arg === '--python') args.python = value();
     else if (arg === '--translator') args.translator = path.resolve(value());
     else if (arg === '--batch') args.batch = Math.max(1, Number.parseInt(value(), 10) || 1);
+    else if (arg === '--workers') args.workers = Math.max(1, Number.parseInt(value(), 10) || 1);
+    else if (arg === '--retries') args.retries = Math.max(0, Number.parseInt(value(), 10) || 0);
+    else if (arg === '--cooldown') args.cooldown = Math.max(0, Number(value()) || 0);
     else if (arg === '--time-budget') args.timeBudget = Number(value()) || Infinity;
     else if (arg === '--only') args.only = new Set(value().split(',').map((code) => code.trim()).filter(Boolean));
     else if (arg === '--force') args.force = true;
@@ -242,18 +251,33 @@ function runTranslator(args, batch, en, timeoutMs) {
   const file = path.join(workDir, 'i18n.ts');
   try {
     writeDictsFile(file, en, batch);
-    const result = spawnSync(
-      args.python,
-      [path.join(args.translator, 'main.py'), args.force ? '--force' : '--new-only', '--i18n-file', file, '--i18n-source-lang', 'en'],
-      { stdio: 'inherit', timeout: Number.isFinite(timeoutMs) ? Math.max(1, Math.round(timeoutMs)) : undefined },
-    );
-    if (result.error?.code === 'ETIMEDOUT') {
-      console.log('Time budget used up during the batch; it is translated again on the next run.');
-      return null;
-    }
-    if (result.status !== 0) {
-      console.warn(`::warning::The translator exited with ${result.status ?? result.error}; this batch is kept as it was.`);
-      return null;
+    const started = Date.now();
+    const maxAttempts = args.retries + 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const result = spawnSync(
+        args.python,
+        [
+          path.join(args.translator, 'main.py'), args.force ? '--force' : '--new-only',
+          '--i18n-file', file, '--i18n-source-lang', 'en', '--workers', String(args.workers),
+        ],
+        { stdio: 'inherit', timeout: Number.isFinite(timeoutMs) ? Math.max(1, Math.round(timeoutMs)) : undefined },
+      );
+      if (result.error?.code === 'ETIMEDOUT') {
+        console.log('Time budget used up during the batch; it is translated again on the next run.');
+        return null;
+      }
+      if (result.status === 0) break;
+      if (attempt === maxAttempts) {
+        console.warn(`::warning::The translator exited with ${result.status ?? result.error}; this batch is kept as it was.`);
+        return null;
+      }
+      const wait = args.cooldown * attempt;
+      if (Number.isFinite(timeoutMs) && Date.now() + wait * 1000 >= started + timeoutMs) {
+        console.log('Not enough time budget left to wait out the rate limit; this batch follows on the next run.');
+        return null;
+      }
+      console.warn(`Translator failed (${result.status ?? result.error}), probably rate limited; retry ${attempt}/${args.retries} in ${wait}s.`);
+      spawnSync('sleep', [String(wait)], { stdio: 'ignore' });
     }
     return readDictsFile(file);
   } finally {
