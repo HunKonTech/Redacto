@@ -24,7 +24,7 @@ import type { DetectPiiRequest, PiiResultResponse, PiiSpan, Settings } from '../
 import { ReviewOverlay } from '../ui/overlay/overlay';
 import { ScanningIndicator } from '../ui/scanning-indicator/scanning-indicator';
 import { PasteInterceptor } from './paste-interceptor';
-import { prepareReviewSpans } from './review-spans';
+import { autoApprovedSpans, prepareReviewSpans } from './review-spans';
 import { SearchGuard, type SearchReviewOutcome } from './search-guard';
 import { SearchAdapter } from './site-adapters/search-adapter';
 import { setFormControlValue } from './site-adapters/adapter-interface';
@@ -140,6 +140,9 @@ function reviewSpans(text: string, rawSpans: PiiSpan[], timings?: { totalMs: num
   const current = settings!;
   const spans = prepareReviewSpans(text, rawSpans, current, {});
   if (spans.length === 0) return Promise.resolve(anonymizeApproved(text, []));
+  if (current.pasteReviewMode === 'auto') {
+    return Promise.resolve(anonymizeApproved(text, autoApprovedSpans(spans, current)));
+  }
 
   return new Promise((resolve) => {
     const overlay = new ReviewOverlay(

@@ -98,6 +98,7 @@
           debug={settings.debug}
           developer={settings.developer}
           clipboardInterceptEnabled={settings.clipboardInterceptEnabled}
+          autoReplaceEnabled={settings.autoReplaceEnabled}
           nerModel={settings.nerModel}
           nerModelChoice={settings.nerModelChoice}
           nerModelChoices={settings.nerModelChoices}
@@ -108,6 +109,7 @@
           setDebug={settings.setDebug}
           setDeveloper={settings.setDeveloper}
           setClipboardInterceptEnabled={settings.setClipboardInterceptEnabled}
+          setAutoReplaceEnabled={settings.setAutoReplaceEnabled}
           setNerModelChoice={settings.setNerModelChoice}
           openOptions={settings.openOptions}
           openIssueReport={settings.openIssueReport}

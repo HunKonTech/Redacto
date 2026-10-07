@@ -87,7 +87,7 @@ import type { PreviewResolverFactory } from '../ui/overlay/overlay';
 import {
   computeAdaptiveThresholds,
 } from '../shared/feedback';
-import { prepareReviewSpans } from './review-spans';
+import { autoApprovedSpans, prepareReviewSpans } from './review-spans';
 import { resolveThreshold } from '../shared/sensitivity-resolver';
 import { CONVERSATION_URL_POLL_MS, LOCAL_AI_ACTIVITY_HEARTBEAT_MS, NO_PII_INDICATOR_MS, RESPONSE_DEBOUNCE_MS, CHIP_FADE_MS } from '../shared/constants';
 import type { DevDiagnostics, PiiSpan, FeedbackEntry, Settings, AllowlistEntry, CancelDetectionBehavior, NerStatus, NerStatusResponse, SystemCompatibilityStatus, SystemCompatibilityStatusResponse } from '../shared/message-types';
@@ -973,6 +973,20 @@ async function showReviewOverlay(
     if (await pasteWithRenamedIdentifiers(originalText)) return;
     showIndicator('\u2713 No actionable personal data found', NO_PII_INDICATOR_MS);
     interceptor.pasteOriginal(originalText);
+    return;
+  }
+
+  if (settings.pasteReviewMode === 'auto') {
+    // Replace what the overlay would preselect, without asking.
+    const approved = autoApprovedSpans(spans, settings);
+    if (approved.length === 0) {
+      if (await pasteWithRenamedIdentifiers(originalText)) return;
+      interceptor.pasteOriginal(originalText);
+      return;
+    }
+    if (!(await pasteAnonymized(originalText, approved, timings))) {
+      interceptor.pasteOriginal(originalText);
+    }
     return;
   }
 

@@ -35,3 +35,14 @@ export function prepareReviewSpans(
 
   return settings.skipCodeBlocks ? tagCodeBlockSpans(spans, originalText) : spans;
 }
+
+/**
+ * The spans the review overlay preselects: at or above their threshold and
+ * outside code blocks. Automatic replacement uses exactly these, so it ends
+ * up where confirming the overlay unchanged would.
+ */
+export function autoApprovedSpans(spans: PiiSpan[], settings: Settings): PiiSpan[] {
+  return spans.filter(
+    (span) => !span.inCodeBlock && span.score >= resolveThreshold(settings, span.entity_type),
+  );
+}

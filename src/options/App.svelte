@@ -8,6 +8,7 @@
 	import PublicDomainsCard from './components/PublicDomainsCard.svelte';
 	import BlocklistCard from './components/BlocklistCard.svelte';
 	import CancelDetectionCard from './components/CancelDetectionCard.svelte';
+	import PasteReviewCard from './components/PasteReviewCard.svelte';
 	import CodeBlocksCard from './components/CodeBlocksCard.svelte';
 	import SearchProtectionCard from './components/SearchProtectionCard.svelte';
 	import DebugSystemCheckCard from './components/DebugSystemCheckCard.svelte';
@@ -116,6 +117,8 @@
 			importVault={model.importVault}
 			clearUnpinned={model.clearUnpinned}
 		/>
+
+		<PasteReviewCard settings={model.settings} setValue={model.setPasteReviewMode} />
 
 		<CancelDetectionCard settings={model.settings} setValue={model.setCancelDetectionBehavior} />
 

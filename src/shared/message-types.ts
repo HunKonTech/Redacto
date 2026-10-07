@@ -412,6 +412,10 @@ export type ReplacementModeSetting = 'placeholder' | 'synthetic';
 export type ThemeSetting = 'dark' | 'light';
 
 export type CancelDetectionBehavior = 'ask' | 'paste-original' | 'drop';
+
+/** Whether a paste with personal data is reviewed first or replaced right away. */
+export type PasteReviewMode = 'manual' | 'auto';
+
 export type LocalAiUnloadTimeoutMs = 60_000 | 300_000 | 600_000 | 1_800_000 | null;
 
 export interface Settings {
@@ -461,6 +465,11 @@ export interface Settings {
   searchProtectionEnabled: boolean;
   /** What to do after the user explicitly cancels a running paste scan. */
   cancelDetectionBehavior: CancelDetectionBehavior;
+  /**
+   * `manual` offers the detected replacements in the review overlay;
+   * `auto` replaces what the overlay would preselect without showing it.
+   */
+  pasteReviewMode: PasteReviewMode;
   /** How long the Local AI runtime may remain loaded after relevant activity. Null keeps it for the browser session. */
   localAiUnloadTimeoutMs: LocalAiUnloadTimeoutMs;
   /** Keep an already-loaded Local AI runtime resident while the user is active on a foreground supported page. */

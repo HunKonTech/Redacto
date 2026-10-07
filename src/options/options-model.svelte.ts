@@ -8,6 +8,7 @@ import type {
   EntityType,
   GroupName,
   LocalAiUnloadTimeoutMs,
+  PasteReviewMode,
   ReplacementModeSetting,
   Settings,
   NerStatusResponse,
@@ -86,6 +87,7 @@ export type OptionsModel = {
   clearUnpinned: () => Promise<number>;
 
   setCancelDetectionBehavior: (value: CancelDetectionBehavior) => Promise<void>;
+  setPasteReviewMode: (value: PasteReviewMode) => Promise<void>;
   setSkipCodeBlocks: (value: boolean) => Promise<void>;
   setCodeAnonymization: (value: CodeAnonymizationMode) => Promise<void>;
   /** Resolves false when the user declines the browser's permission prompt. */
@@ -423,6 +425,7 @@ export function createOptionsModel(): OptionsModel {
     },
 
     setCancelDetectionBehavior: (value) => saveAndBroadcast({ cancelDetectionBehavior: value }),
+    setPasteReviewMode: (value) => saveAndBroadcast({ pasteReviewMode: value }),
     setSkipCodeBlocks: (value) => saveAndBroadcast({ skipCodeBlocks: value }),
     setCodeAnonymization: (value) => saveAndBroadcast({ codeAnonymization: value }),
     setSearchProtectionEnabled: async (value) => {

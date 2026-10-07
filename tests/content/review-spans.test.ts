@@ -1,4 +1,4 @@
-import { prepareReviewSpans } from '../../src/content/review-spans';
+import { autoApprovedSpans, prepareReviewSpans } from '../../src/content/review-spans';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
 import type { AllowlistEntry, BlocklistEntry, PiiSpan, Settings } from '../../src/shared/message-types';
 
@@ -94,5 +94,21 @@ describe('prepareReviewSpans', () => {
     const result = prepareReviewSpans(text, [span('Alice', 6)], settings, {});
 
     expect(result[0]).toEqual(expect.objectContaining({ text: 'Alice', inCodeBlock: true }));
+  });
+});
+
+describe('autoApprovedSpans', () => {
+  test('keeps spans at or above their threshold', () => {
+    const spans = [span('Alice', 0, 'PERSON', 0.9), span('Bob', 10, 'PERSON', 0.5)];
+
+    expect(autoApprovedSpans(spans, settingsWith({ minConfidence: 0.5 }))).toEqual(spans);
+  });
+
+  test('leaves out spans below their threshold and spans in code blocks', () => {
+    const low = span('Alice', 0, 'PERSON', 0.4);
+    const inCode = { ...span('Bob', 10), inCodeBlock: true };
+    const kept = span('Carol', 20);
+
+    expect(autoApprovedSpans([low, inCode, kept], settingsWith({ minConfidence: 0.5 }))).toEqual([kept]);
   });
 });

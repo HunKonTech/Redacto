@@ -20,6 +20,10 @@ Supported beta sites:
 
 When no supported span is found, the extension allows the paste without showing the full review overlay.
 
+## Automatic Replacement
+
+By default the replacements are only offered: the review overlay opens and nothing changes until you confirm it. To skip the overlay, switch **Replace automatically** on in the popup's Settings → Behavior, or choose **Replace automatically** under Options → Replacing personal data. Redacto then replaces the items the overlay would have preselected right away and shows how many it replaced. The setting also applies to protected web searches.
+
 ## Placeholders
 
 Accepted spans are replaced with typed placeholders such as:

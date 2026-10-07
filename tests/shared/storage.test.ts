@@ -153,6 +153,32 @@ describe('settings storage', () => {
     });
   });
 
+  test('normalizes missing and invalid paste review mode to manual', async () => {
+    const { pasteReviewMode: _omitted, ...storedBeforeFlag } = DEFAULT_SETTINGS;
+    (chrome.storage.local.get as jest.Mock)
+      .mockResolvedValueOnce({ pg_settings: storedBeforeFlag })
+      .mockResolvedValueOnce({ pg_settings: { ...DEFAULT_SETTINGS, pasteReviewMode: 'banana' } });
+
+    await expect(loadSettings()).resolves.toEqual(
+      expect.objectContaining({ pasteReviewMode: 'manual' })
+    );
+    await expect(loadSettings()).resolves.toEqual(
+      expect.objectContaining({ pasteReviewMode: 'manual' })
+    );
+  });
+
+  test('persists automatic paste review mode', async () => {
+    (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      pg_settings: DEFAULT_SETTINGS,
+    });
+
+    await saveSettings({ pasteReviewMode: 'auto' });
+
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({
+      pg_settings: expect.objectContaining({ pasteReviewMode: 'auto' }),
+    });
+  });
+
   test('normalizes Local AI runtime lifecycle settings', async () => {
     const { localAiUnloadTimeoutMs: _timeout, keepLocalAiLoadedWhileActive: _keep, autoWarmLocalAiOnActiveSupportedPage: _warm, ...storedBeforeFlags } = DEFAULT_SETTINGS;
     (chrome.storage.local.get as jest.Mock)

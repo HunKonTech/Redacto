@@ -151,6 +151,8 @@ const en = {
   'popup.settings.interceptCopy': 'Intercept copy',
   'popup.settings.interceptCopy.hint':
     'Offer to restore originals when you copy replaced text. Paste review follows the master protection toggle.',
+  'popup.settings.autoReplace': 'Replace automatically',
+  'popup.settings.autoReplace.hint': 'Replace found personal data without the review pop-up',
   'popup.settings.debug': 'Debug mode',
   'popup.settings.debug.hint': 'Verbose logging in console',
 
@@ -426,6 +428,14 @@ const en = {
   'vault.imported': 'Imported {count} record(s).',
   'vault.nothingToClear': 'No unpinned records to clear.',
   'vault.clearConfirm': 'Remove {count} unpinned record(s)? This cannot be undone.',
+
+  'pasteReview.title': 'Replacing personal data',
+  'pasteReview.hint': 'Automatic or manual replacement',
+  'pasteReview.label': 'When personal data is found',
+  'pasteReview.body':
+    'Manual offers the replacements in a pop-up window, where you can review them before pasting. Automatic replaces the items the pop-up would preselect right away, without showing it.',
+  'pasteReview.manual': 'Manual — offer in a pop-up',
+  'pasteReview.auto': 'Replace automatically',
 
   'cancel.title': 'Paste scan cancellation',
   'cancel.hint': 'Canceled paste behavior',

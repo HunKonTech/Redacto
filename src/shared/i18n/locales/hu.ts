@@ -155,6 +155,8 @@ const hu: Record<keyof typeof en, string> = {
   'popup.settings.interceptCopy': 'Másolás figyelése',
   'popup.settings.interceptCopy.hint':
     'Felajánlja az eredeti értékek visszaállítását, ha lecserélt szöveget másolsz. A beillesztés-ellenőrzés a fő védelem kapcsolóját követi.',
+  'popup.settings.autoReplace': 'Automatikus csere',
+  'popup.settings.autoReplace.hint': 'A talált személyes adatokat az ellenőrző ablak nélkül cseréli',
   'popup.settings.debug': 'Hibakereső mód',
   'popup.settings.debug.hint': 'Részletes naplózás a konzolon',
 
@@ -433,6 +435,14 @@ const hu: Record<keyof typeof en, string> = {
   'vault.imported': '{count} rekord importálva.',
   'vault.nothingToClear': 'Nincs törölhető, nem rögzített rekord.',
   'vault.clearConfirm': 'Törlöd a(z) {count} nem rögzített rekordot? Ez nem vonható vissza.',
+
+  'pasteReview.title': 'Személyes adatok cseréje',
+  'pasteReview.hint': 'Automatikus vagy manuális csere',
+  'pasteReview.label': 'Ha személyes adatot talál',
+  'pasteReview.body':
+    'Manuális módban a cseréket egy előugró ablak ajánlja fel, ahol beillesztés előtt átnézheted őket. Automatikus módban a Redacto ablak nélkül, azonnal kicseréli azokat, amelyeket az ablak alapból kijelölne.',
+  'pasteReview.manual': 'Manuális — felajánlás előugró ablakban',
+  'pasteReview.auto': 'Automatikus csere',
 
   'cancel.title': 'Beillesztés-ellenőrzés megszakítása',
   'cancel.hint': 'Megszakított beillesztés kezelése',

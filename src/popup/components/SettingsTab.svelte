@@ -17,6 +17,7 @@
 		debug,
 		developer,
 		clipboardInterceptEnabled,
+		autoReplaceEnabled,
 		nerModel,
 		nerModelChoice,
 		nerModelChoices,
@@ -27,6 +28,7 @@
 		setDebug,
 		setDeveloper,
 		setClipboardInterceptEnabled,
+		setAutoReplaceEnabled,
 		setNerModelChoice,
 		openOptions,
 		openIssueReport,
@@ -42,6 +44,7 @@
 		debug: Writable<boolean>;
 		developer: Writable<DeveloperSettings>;
 		clipboardInterceptEnabled: Writable<boolean>;
+		autoReplaceEnabled: Writable<boolean>;
 		nerModel: Writable<NerModelKey>;
 		nerModelChoice: Writable<string>;
 		nerModelChoices: readonly NerModelChoice[];
@@ -52,6 +55,7 @@
 		setDebug: (enabled: boolean) => Promise<void>;
 		setDeveloper: (partial: Partial<DeveloperSettings>) => Promise<void>;
 		setClipboardInterceptEnabled: (enabled: boolean) => Promise<void>;
+		setAutoReplaceEnabled: (enabled: boolean) => Promise<void>;
 		setNerModelChoice: (value: string) => Promise<void>;
 		openOptions: () => void;
 		openIssueReport: () => void;
@@ -114,6 +118,8 @@
 
 	<article class="card">
 		<div class="head"><span>{t('popup.settings.behavior')}</span></div>
+		<div class="row"><div><div class="row-label">{t('popup.settings.autoReplace')}</div><div class="row-meta">{t('popup.settings.autoReplace.hint')}</div></div><Toggle size="sm" checked={$autoReplaceEnabled} onchange={(checked) => setAutoReplaceEnabled(checked)} label={t('popup.settings.autoReplace')} /></div>
+		<div class="divider"></div>
 		<div class="row"><div><div class="row-label">{t('popup.settings.interceptCopy')}</div><div class="row-meta">{t('popup.settings.interceptCopy.hint')}</div></div><Toggle size="sm" checked={$clipboardInterceptEnabled} onchange={(checked) => setClipboardInterceptEnabled(checked)} label={t('popup.settings.interceptCopy')} /></div>
 		<div class="divider"></div>
 		<div class="row"><div><div class="row-label">{t('popup.settings.debug')}</div><div class="row-meta">{t('popup.settings.debug.hint')}</div></div><Toggle size="sm" checked={$debug} onchange={(checked) => setDebug(checked)} label={t('popup.settings.debug')} /></div>

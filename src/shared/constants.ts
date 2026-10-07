@@ -287,6 +287,8 @@ export const DEFAULT_SETTINGS: Settings = {
   searchProtectionEnabled: false,
   // Privacy-safe default: an explicit cancel asks what to do with the pending paste.
   cancelDetectionBehavior: 'ask',
+  // Existing behaviour: replacements are offered in the review overlay.
+  pasteReviewMode: 'manual',
   localAiUnloadTimeoutMs: OFFSCREEN_IDLE_MS,
   keepLocalAiLoadedWhileActive: true,
   autoWarmLocalAiOnActiveSupportedPage: true,
