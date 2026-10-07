@@ -80,3 +80,4 @@ dist-ide/
 release/ide/
 dist-web/
 __pycache__/
+.venv-i18n/
