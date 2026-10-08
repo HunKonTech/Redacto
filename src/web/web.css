@@ -162,3 +162,14 @@ a.pg-web-tile:hover {
     padding: 8px 16px 24px;
   }
 }
+
+.pg-web-footlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+}
+
+.pg-web-footlinks span[aria-hidden] {
+  color: #db61a2;
+}
