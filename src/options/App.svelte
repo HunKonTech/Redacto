@@ -126,6 +126,8 @@
 			settings={model.settings}
 			setValue={model.setSkipCodeBlocks}
 			setCodeAnonymization={model.setCodeAnonymization}
+			setShareCodeLanguage={model.setShareCodeLanguage}
+			setHighlightCodeSyntax={model.setHighlightCodeSyntax}
 		/>
 
 		<SearchProtectionCard settings={model.settings} setValue={model.setSearchProtectionEnabled} />

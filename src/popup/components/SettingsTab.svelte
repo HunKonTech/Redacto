@@ -17,6 +17,7 @@
 		debug,
 		developer,
 		clipboardInterceptEnabled,
+		highlightCodeSyntax,
 		autoReplaceEnabled,
 		nerModel,
 		nerModelChoice,
@@ -28,6 +29,7 @@
 		setDebug,
 		setDeveloper,
 		setClipboardInterceptEnabled,
+		setHighlightCodeSyntax,
 		setAutoReplaceEnabled,
 		setNerModelChoice,
 		openOptions,
@@ -44,6 +46,7 @@
 		debug: Writable<boolean>;
 		developer: Writable<DeveloperSettings>;
 		clipboardInterceptEnabled: Writable<boolean>;
+		highlightCodeSyntax: Writable<boolean>;
 		autoReplaceEnabled: Writable<boolean>;
 		nerModel: Writable<NerModelKey>;
 		nerModelChoice: Writable<string>;
@@ -55,6 +58,7 @@
 		setDebug: (enabled: boolean) => Promise<void>;
 		setDeveloper: (partial: Partial<DeveloperSettings>) => Promise<void>;
 		setClipboardInterceptEnabled: (enabled: boolean) => Promise<void>;
+		setHighlightCodeSyntax: (enabled: boolean) => Promise<void>;
 		setAutoReplaceEnabled: (enabled: boolean) => Promise<void>;
 		setNerModelChoice: (value: string) => Promise<void>;
 		openOptions: () => void;
@@ -121,6 +125,8 @@
 		<div class="row"><div><div class="row-label">{t('popup.settings.autoReplace')}</div><div class="row-meta">{t('popup.settings.autoReplace.hint')}</div></div><Toggle size="sm" checked={$autoReplaceEnabled} onchange={(checked) => setAutoReplaceEnabled(checked)} label={t('popup.settings.autoReplace')} /></div>
 		<div class="divider"></div>
 		<div class="row"><div><div class="row-label">{t('popup.settings.interceptCopy')}</div><div class="row-meta">{t('popup.settings.interceptCopy.hint')}</div></div><Toggle size="sm" checked={$clipboardInterceptEnabled} onchange={(checked) => setClipboardInterceptEnabled(checked)} label={t('popup.settings.interceptCopy')} /></div>
+		<div class="divider"></div>
+		<div class="row"><div><div class="row-label">{t('code.highlight')}</div><div class="row-meta">{t('popup.settings.highlight.hint')}</div></div><Toggle size="sm" checked={$highlightCodeSyntax} onchange={(checked) => setHighlightCodeSyntax(checked)} label={t('code.highlight')} /></div>
 		<div class="divider"></div>
 		<div class="row"><div><div class="row-label">{t('popup.settings.debug')}</div><div class="row-meta">{t('popup.settings.debug.hint')}</div></div><Toggle size="sm" checked={$debug} onchange={(checked) => setDebug(checked)} label={t('popup.settings.debug')} /></div>
 		<div class="divider"></div>

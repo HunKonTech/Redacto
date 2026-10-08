@@ -120,3 +120,20 @@ describe('generated library profiles', () => {
     expectRenaming("import { map } from 'rxjs';\nconst totals$ = invoices$.pipe(debounceTime(300), map((rows) => sumInvoices(rows)));", ['pipe', 'debounceTime', 'map'], ['invoices$', 'sumInvoices']);
   });
 });
+
+describe('a confidently detected language shared across the paste', () => {
+  const text =
+    '```ruby\ndef greet(name)\n  puts "Hi #{name}"\nend\n```\n\n```\ninvoices.each_slice(2).to_a.map(&:freeze)\n```';
+  const renamed = (shareCodeLanguage: boolean) =>
+    new Set(planIdentifierRenames(text, { shareCodeLanguage }).occurrences.map((occurrence) => occurrence.name));
+
+  test('off: an unlabelled fragment is read on its own', () => {
+    expect(planIdentifierRenames(text).languages).toEqual(['ruby', 'unknown']);
+    expect(renamed(false)).toEqual(new Set(['greet', 'name', 'invoices', 'each_slice', 'freeze']));
+  });
+
+  test('on: the fragment is Ruby too, and its official names stay', () => {
+    expect(planIdentifierRenames(text, { shareCodeLanguage: true }).languages).toEqual(['ruby', 'ruby']);
+    expect(renamed(true)).toEqual(new Set(['greet', 'name', 'invoices']));
+  });
+});

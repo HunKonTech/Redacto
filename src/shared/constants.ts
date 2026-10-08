@@ -283,6 +283,10 @@ export const DEFAULT_SETTINGS: Settings = {
   skipCodeBlocks: false,
   // Credential shapes in code are distinctive enough to scan by default.
   codeAnonymization: 'secrets',
+  // Opt-in: each region keeps the language detected for it alone.
+  shareCodeLanguage: false,
+  // Opt-in: the side panel's fields stay plain text.
+  highlightCodeSyntax: false,
   // Opt-in: switching it on asks the browser for access to the search engines.
   searchProtectionEnabled: false,
   // Privacy-safe default: an explicit cancel asks what to do with the pending paste.

@@ -9,16 +9,22 @@
 		settings,
 		setValue,
 		setCodeAnonymization,
+		setShareCodeLanguage,
+		setHighlightCodeSyntax,
 	}: {
 		settings: Writable<Settings | null>;
 		setValue: (value: boolean) => Promise<void>;
 		setCodeAnonymization: (value: CodeAnonymizationMode) => Promise<void>;
+		setShareCodeLanguage: (value: boolean) => Promise<void>;
+		setHighlightCodeSyntax: (value: boolean) => Promise<void>;
 	} = $props();
 
 	let value = $derived($settings?.skipCodeBlocks ?? false);
 	let codeMode = $derived($settings?.codeAnonymization ?? 'secrets');
 	let codeSecrets = $derived(codeMode !== 'off');
 	let renameIdentifiers = $derived(codeMode === 'full');
+	let shareCodeLanguage = $derived($settings?.shareCodeLanguage ?? false);
+	let highlightCodeSyntax = $derived($settings?.highlightCodeSyntax ?? false);
 </script>
 
 <article class="card" id="code-blocks-section">
@@ -44,6 +50,36 @@
 			checked={renameIdentifiers}
 			label={t('code.rename')}
 			onchange={(checked) => setCodeAnonymization(checked ? 'full' : 'secrets')}
+		/>
+	</div>
+	{#if renameIdentifiers}
+		<div class="row">
+			<div class="info">
+				<span class="row-label">{t('code.shareLanguage')}</span>
+				<p class="hint">
+					{t('code.shareLanguage.hintBefore')}<code>```python</code>{t('code.shareLanguage.hintAfter')}
+				</p>
+			</div>
+			<Toggle
+				size="sm"
+				checked={shareCodeLanguage}
+				label={t('code.shareLanguage')}
+				onchange={(checked) => setShareCodeLanguage(checked)}
+			/>
+		</div>
+	{/if}
+	<div class="row">
+		<div class="info">
+			<span class="row-label">{t('code.highlight')}</span>
+			<p class="hint">
+				{t('code.highlight.hintBefore')}<code>```python</code>{t('code.highlight.hintAfter')}
+			</p>
+		</div>
+		<Toggle
+			size="sm"
+			checked={highlightCodeSyntax}
+			label={t('code.highlight')}
+			onchange={(checked) => setHighlightCodeSyntax(checked)}
 		/>
 	</div>
 	<div class="row">

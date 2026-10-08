@@ -1,4 +1,12 @@
-import { detectCodeLanguage, fenceLabelOf, grammarNames, KNOWN_LANGUAGES, languageFromFenceLabel } from '../../src/shared/code-language';
+import {
+  detectCodeLanguage,
+  fenceLabelOf,
+  grammarNames,
+  KNOWN_LANGUAGES,
+  languageFromFenceLabel,
+  shareConfidentLanguage,
+  type LanguageGuess,
+} from '../../src/shared/code-language';
 import { LANGUAGE_SAMPLES } from './code-language-samples';
 
 const SAMPLES: Array<[label: string, code: string, language: string]> = [
@@ -87,5 +95,36 @@ describe('fence labels', () => {
     expect(languageFromFenceLabel('golang')).toBe('go');
     expect(languageFromFenceLabel('mermaid')).toBeUndefined();
     expect(languageFromFenceLabel(undefined)).toBeUndefined();
+  });
+});
+
+describe('shareConfidentLanguage', () => {
+  const guess = (language: LanguageGuess['language'], confidence: number, ruledOut: LanguageGuess['ruledOut'] = []): LanguageGuess => ({
+    language,
+    confidence,
+    source: language === 'unknown' ? 'none' : 'signal',
+    ruledOut,
+  });
+
+  test('a confident language reaches the unsure regions', () => {
+    const shared = shareConfidentLanguage([guess('ruby', 1), guess('unknown', 0), guess('python', 0.6)]);
+    expect(shared.map((g) => [g.language, g.source])).toEqual([
+      ['ruby', 'signal'],
+      ['ruby', 'paste'],
+      ['ruby', 'paste'],
+    ]);
+  });
+
+  test('a single signal is not confident enough', () => {
+    expect(shareConfidentLanguage([guess('ruby', 0.7 + 0.1), guess('unknown', 0)]).map((g) => g.language)).toEqual(['ruby', 'unknown']);
+  });
+
+  test('confident regions that disagree share nothing', () => {
+    const guesses = [guess('python', 1), guess('sql', 1), guess('unknown', 0)];
+    expect(shareConfidentLanguage(guesses)).toEqual(guesses);
+  });
+
+  test('the shared language is no longer ruled out', () => {
+    expect(shareConfidentLanguage([guess('python', 1), guess('unknown', 0, ['python'])])[1].ruledOut).toEqual([]);
   });
 });

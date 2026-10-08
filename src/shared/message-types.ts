@@ -467,6 +467,16 @@ export interface Settings {
   /** Source-code recognizers applied to pasted text (API keys, credentials, internal hosts). */
   codeAnonymization: CodeAnonymizationMode;
   /**
+   * When renaming code identifiers, a language recognised with high
+   * confidence in one code region of a paste applies to all of its regions.
+   */
+  shareCodeLanguage: boolean;
+  /**
+   * Syntax colouring of code in the side panel's fields when its language
+   * is recognised with high confidence (`code-highlight.ts`).
+   */
+  highlightCodeSyntax: boolean;
+  /**
    * Review pastes and held searches on the web search engines in
    * `SEARCH_ENGINE_ORIGINS`. Needs the optional host permission for them.
    */

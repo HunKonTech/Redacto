@@ -173,6 +173,7 @@ export function anonymizeForPanel(
   const options = {
     renameIdentifiers: settings.codeAnonymization === 'full',
     identifierClassifications: classifications,
+    shareCodeLanguage: settings.shareCodeLanguage,
     knownReplacements,
   };
   const result = vault

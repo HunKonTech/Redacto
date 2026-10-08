@@ -3,7 +3,7 @@ import { EntityMap } from './entity-map';
 import { dropKnownReplacements, knownReplacementTokens, placeholdersInText } from './already-anonymized';
 import { byteOffsetToStringIndex } from './text-offsets';
 import { bareIdentifierPlaceholder, consistentIdentifierSpans, createIdentifierPositionCheck } from './code-identifiers';
-import { aliasFor, IDENTIFIER_ALIAS_RE, planIdentifierRenames, type IdentifierRole } from './code-rename';
+import { aliasFor, IDENTIFIER_ALIAS_RE, planIdentifierRenames, type IdentifierRole, type RenamePlanOptions } from './code-rename';
 import type { IdentifierVerdict } from './identifier-classifier-constants';
 import {
   type IdentityVaultData,
@@ -27,6 +27,11 @@ export interface AnonymizeOptions {
    * any name it doesn't cover (including when omitted entirely).
    */
   identifierClassifications?: ReadonlyMap<string, IdentifierVerdict>;
+  /**
+   * When renaming, apply a language recognised with high confidence in one
+   * code region to every other region of the paste (`Settings.shareCodeLanguage`).
+   */
+  shareCodeLanguage?: boolean;
   /**
    * Replacement tokens from outside the EntityMap and vault passed in — the
    * anonymization history. Like the tokens those two already know, they are
@@ -104,10 +109,10 @@ function identifierReplacements(
   spanRanges: readonly Replacement[],
   resolveAlias: AliasResolver,
   knownNames: Iterable<string>,
-  classifications?: ReadonlyMap<string, IdentifierVerdict>,
+  planOptions: Pick<RenamePlanOptions, 'classifications' | 'shareCodeLanguage'> = {},
   replacementTokens: ReadonlySet<string> = new Set(),
 ): { replacements: Replacement[]; renamed: number } {
-  const plan = planIdentifierRenames(originalText, { knownNames, classifications });
+  const plan = planIdentifierRenames(originalText, { ...planOptions, knownNames });
   const blocked = new Set<string>();
   for (const occurrence of plan.occurrences) {
     if (spanRanges.some((span) => occurrence.start < span.end && occurrence.end > span.start)) {
@@ -191,7 +196,12 @@ export interface IdentifierRename {
 export function previewIdentifierRenames(
   originalText: string,
   spans: readonly PiiSpan[],
-  context: { entityMap?: EntityMap; vaultData?: IdentityVaultData; knownReplacements?: Iterable<string> } = {},
+  context: {
+    entityMap?: EntityMap;
+    vaultData?: IdentityVaultData;
+    knownReplacements?: Iterable<string>;
+    shareCodeLanguage?: boolean;
+  } = {},
 ): IdentifierRename[] {
   const entityMap = new EntityMap(context.entityMap?.toStored());
   const known = knownReplacementTokens({
@@ -214,7 +224,7 @@ export function previewIdentifierRenames(
         spanRanges,
         vaultAliases(vaultData, entityMap, []),
         vaultAliasedNames(vaultData, entityMap),
-        undefined,
+        { shareCodeLanguage: context.shareCodeLanguage },
         known,
       )
     : identifierReplacements(
@@ -222,7 +232,7 @@ export function previewIdentifierRenames(
         spanRanges,
         entityMapAliases(entityMap),
         entityMapAliasedNames(entityMap),
-        undefined,
+        { shareCodeLanguage: context.shareCodeLanguage },
         known,
       );
   // Preview is best-effort and stays synchronous (it re-runs on every span
@@ -280,7 +290,7 @@ export function anonymize(
       replacements,
       entityMapAliases(entityMap),
       entityMapAliasedNames(entityMap),
-      options.identifierClassifications,
+      { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
       known,
     );
     replacements.push(...renames.replacements);
@@ -370,7 +380,7 @@ export function anonymizeWithVault(
       replacements,
       vaultAliases(vaultData, entityMap, recordsTouched),
       vaultAliasedNames(vaultData, entityMap),
-      options.identifierClassifications,
+      { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
       known,
     );
     replacements.push(...renames.replacements);

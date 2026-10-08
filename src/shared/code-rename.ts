@@ -1,5 +1,12 @@
 import { findCodeLikeRegions } from './code-identifiers';
-import { detectCodeLanguage, fenceLabelOf, hasReliableDeclarations, type CodeLanguage, type LanguageGuess } from './code-language';
+import {
+  detectCodeLanguage,
+  fenceLabelOf,
+  hasReliableDeclarations,
+  shareConfidentLanguage,
+  type CodeLanguage,
+  type LanguageGuess,
+} from './code-language';
 import { activeProfiles, languageLexicon, type Lexicon } from './code-lexicon';
 import type { CodeRegion } from './code-region-finder';
 import {
@@ -1317,7 +1324,7 @@ function isScreamingCase(name: string): boolean {
 }
 
 /** Strip a fenced block's ``` lines; other regions are analysed whole. */
-function codeBody(text: string, region: CodeRegion): CodeRegion {
+export function codeBody(text: string, region: CodeRegion): CodeRegion {
   let { start, end } = region;
   if (text.startsWith('```', start)) {
     const firstLineEnd = text.indexOf('\n', start);
@@ -1420,6 +1427,13 @@ export interface RenamePlanOptions {
    * unavailable model degrades to the previous behaviour.
    */
   classifications?: ReadonlyMap<string, IdentifierVerdict>;
+  /**
+   * Apply a language recognised with high confidence in one code region to
+   * every region of the paste that is less sure of its own
+   * (`shareConfidentLanguage`), so a short fragment uses the same syntax and
+   * official names as the fenced block next to it.
+   */
+  shareCodeLanguage?: boolean;
 }
 
 /** Matches every identifier-shaped word in a text, code or comment. */
@@ -1466,7 +1480,8 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
   const errorSlots = parseErrorSlots(text, errorRegions);
   const regions = options.regions ?? findCodeLikeRegions(text);
   const bodies = codeBodies(text, regions, errorRegions);
-  const guesses = regions.map((region) => detectRegionLanguage(text, region));
+  const detected = regions.map((region) => detectRegionLanguage(text, region));
+  const guesses = options.shareCodeLanguage ? shareConfidentLanguage(detected) : detected;
   const regionOf = (body: CodeRegion) => regions.findIndex((region) => body.start >= region.start && body.end <= region.end);
   const lexer = new Lexer(text);
   for (const body of bodies) {

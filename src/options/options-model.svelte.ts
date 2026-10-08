@@ -90,6 +90,8 @@ export type OptionsModel = {
   setPasteReviewMode: (value: PasteReviewMode) => Promise<void>;
   setSkipCodeBlocks: (value: boolean) => Promise<void>;
   setCodeAnonymization: (value: CodeAnonymizationMode) => Promise<void>;
+  setShareCodeLanguage: (value: boolean) => Promise<void>;
+  setHighlightCodeSyntax: (value: boolean) => Promise<void>;
   /** Resolves false when the user declines the browser's permission prompt. */
   setSearchProtectionEnabled: (value: boolean) => Promise<boolean>;
 
@@ -428,6 +430,8 @@ export function createOptionsModel(): OptionsModel {
     setPasteReviewMode: (value) => saveAndBroadcast({ pasteReviewMode: value }),
     setSkipCodeBlocks: (value) => saveAndBroadcast({ skipCodeBlocks: value }),
     setCodeAnonymization: (value) => saveAndBroadcast({ codeAnonymization: value }),
+    setShareCodeLanguage: (value) => saveAndBroadcast({ shareCodeLanguage: value }),
+    setHighlightCodeSyntax: (value) => saveAndBroadcast({ highlightCodeSyntax: value }),
     setSearchProtectionEnabled: async (value) => {
       const origins = [...SEARCH_ENGINE_ORIGINS];
       if (value) {

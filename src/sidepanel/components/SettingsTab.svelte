@@ -87,7 +87,13 @@
 		<WebModelCard />
 	{/if}
 
-	<CodeBlocksCard {settings} setValue={model.setSkipCodeBlocks} setCodeAnonymization={model.setCodeAnonymization} />
+	<CodeBlocksCard
+		{settings}
+		setValue={model.setSkipCodeBlocks}
+		setCodeAnonymization={model.setCodeAnonymization}
+		setShareCodeLanguage={model.setShareCodeLanguage}
+		setHighlightCodeSyntax={model.setHighlightCodeSyntax}
+	/>
 
 	<SensitivityCard
 		{settings}

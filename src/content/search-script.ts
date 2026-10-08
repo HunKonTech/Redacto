@@ -88,7 +88,7 @@ function renameIdentifiersEnabled(): boolean {
  */
 function anonymizeApproved(text: string, approvedSpans: PiiSpan[]): string {
   const current = settings!;
-  const options = { renameIdentifiers: renameIdentifiersEnabled() };
+  const options = { renameIdentifiers: renameIdentifiersEnabled(), shareCodeLanguage: current.shareCodeLanguage };
   let result: { text: string; entityMap: EntityMap; renamedIdentifiers: number };
   if (current.identityVaultEnabled) {
     const vaultResult = anonymizeWithVault(
@@ -164,6 +164,7 @@ function reviewSpans(text: string, rawSpans: PiiSpan[], timings?: { totalMs: num
         ? (approved) =>
             previewIdentifierRenames(text, approved, {
               vaultData: current.identityVaultEnabled ? identityVault : undefined,
+              shareCodeLanguage: current.shareCodeLanguage,
             })
         : undefined,
     );

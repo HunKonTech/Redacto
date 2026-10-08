@@ -152,6 +152,8 @@ const hu: Record<keyof typeof en, string> = {
   'popup.settings.nerModel': 'NER-modell',
   'popup.settings.nerModel.hint': 'Az észleléshez használt helyi transformer',
   'popup.settings.behavior': 'Működés',
+  'popup.settings.highlight.hint':
+    'Szintaxiskiemelés az oldalpanelen, ha a kód nyelvét nagy biztonsággal felismeri, a válaszban is.',
   'popup.settings.interceptCopy': 'Másolás figyelése',
   'popup.settings.interceptCopy.hint':
     'Felajánlja az eredeti értékek visszaállítását, ha lecserélt szöveget másolsz. A beillesztés-ellenőrzés a fő védelem kapcsolóját követi.',
@@ -476,6 +478,16 @@ const hu: Record<keyof typeof en, string> = {
     '. Az importált és könyvtári nevek maradnak. Azok a nevek, amelyekben a helyi MI személyes adatot talál, típusos helyőrzőt kapnak (',
   'code.rename.hint6':
     '). A válaszból visszamásolt kód az eredeti neveket kapja vissza. Bekapcsolása a titkok észlelését is bekapcsolja.',
+  'code.shareLanguage': 'Biztosan felismert nyelv alkalmazása mindenhol',
+  'code.shareLanguage.hintBefore':
+    'Ha a beillesztés egyik kódrészének nyelvét nagy biztonsággal felismeri (kerítéscímke, mint ',
+  'code.shareLanguage.hintAfter':
+    ', vagy egyértelmű szintaxis), a többi kódrészt és töredéket is e nyelv szerint olvassa: a szintaxisával és a hivatalos neveivel, amelyek nem kerülnek átnevezésre. A más nyelvűnek felismert részek megtartják a sajátjukat.',
+  'code.highlight': 'Szintaxiskiemelés felismert nyelvnél',
+  'code.highlight.hintBefore':
+    'Ha egy kódrész nyelvét nagy biztonsággal felismeri (kerítéscímke, mint ',
+  'code.highlight.hintAfter':
+    ', vagy egyértelmű szintaxis), az oldalpanel minden mezőjében e nyelv szintaxiskiemelésével jelenik meg a kód: az anonimizálandó szövegben és az eredményben, valamint a visszaállítandó válaszban és a visszaállított szövegben. A válasz rövid töredékei az eredeti beillesztés nyelvén kapnak színt. A más nyelvűnek felismert részek megtartják a sajátjukat.',
   'code.skip': 'Kódblokkok kihagyása',
   'code.skip.hintBefore': 'Bekapcsolva a kerítéses markdown blokkokban és a ',
   'code.skip.hintAfter':

@@ -852,7 +852,12 @@ async function pasteAnonymized(
   const identifierClassifications = renameIdentifiers
     ? await classifyCodeIdentifiers(originalText)
     : undefined;
-  const options = { renameIdentifiers, identifierClassifications, knownReplacements: historyTokens() };
+  const options = {
+    renameIdentifiers,
+    identifierClassifications,
+    shareCodeLanguage: settings.shareCodeLanguage,
+    knownReplacements: historyTokens(),
+  };
   let anonymizedText: string;
   let renamedIdentifiers: number;
 
@@ -1070,6 +1075,7 @@ async function showReviewOverlay(
             entityMap,
             vaultData: settings.identityVaultEnabled ? identityVault : undefined,
             knownReplacements: historyTokens(),
+            shareCodeLanguage: settings.shareCodeLanguage,
           })
       : undefined,
     devDiagnostics,

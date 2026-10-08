@@ -148,6 +148,8 @@ const en = {
   'popup.settings.nerModel': 'NER model',
   'popup.settings.nerModel.hint': 'Local transformer used for detection',
   'popup.settings.behavior': 'Behavior',
+  'popup.settings.highlight.hint':
+    'Syntax colouring in the side panel when the language of the code is recognised with high confidence, also for the reply.',
   'popup.settings.interceptCopy': 'Intercept copy',
   'popup.settings.interceptCopy.hint':
     'Offer to restore originals when you copy replaced text. Paste review follows the master protection toggle.',
@@ -469,6 +471,16 @@ const en = {
     '. Imported and library names stay. Names in which Local AI finds personal data keep a typed placeholder instead (',
   'code.rename.hint6':
     '). Copying code back from a reply restores the original names. Turning this on also turns on secret detection.',
+  'code.shareLanguage': 'Use a confidently detected language everywhere',
+  'code.shareLanguage.hintBefore':
+    'When one code block of a paste is recognised with high confidence (a fence label such as ',
+  'code.shareLanguage.hintAfter':
+    ', or unmistakable syntax), every other block and fragment in it is read with that language too: its syntax and its official names, which are not renamed. Blocks recognised as different languages keep their own.',
+  'code.highlight': 'Syntax highlighting for a recognised language',
+  'code.highlight.hintBefore':
+    'When the language of a code block is recognised with high confidence (a fence label such as ',
+  'code.highlight.hintAfter':
+    ', or unmistakable syntax), code in every field of the side panel is shown with that language\'s syntax colouring: the text to anonymize and its result, and the reply to restore and the restored text. Short fragments of the reply are coloured in the language of the original paste. Blocks recognised as another language keep their own.',
   'code.skip': 'Skip code blocks',
   'code.skip.hintBefore': 'When on, detections inside fenced markdown blocks and ',
   'code.skip.hintAfter':

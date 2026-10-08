@@ -80,8 +80,8 @@ export interface LanguageGuess {
   language: CodeLanguage;
   /** 0…1; 0 for `unknown`. */
   confidence: number;
-  /** What decided it. */
-  source: 'fence' | 'signal' | 'highlight' | 'none';
+  /** What decided it; `paste` is another region of the same paste (`shareConfidentLanguage`). */
+  source: 'fence' | 'signal' | 'highlight' | 'paste' | 'none';
   /**
    * Languages the text cannot be, even when the language itself is unclear
    * (`;` at line ends, `&&`, `===` rule out Python). Lets an `unknown`
@@ -445,6 +445,39 @@ export function detectCodeLanguage(code: string, options: { fenceLabel?: string 
     };
   }
   return { language: 'unknown', confidence: 0, source: 'none', ruledOut: ruledOutBy(sample) };
+}
+
+/**
+ * Confidence from which a region's language may stand for the whole paste:
+ * a fence label, two or more unrivalled signals, or a very clear
+ * highlight.js lead. A single signal (0.8) is not enough.
+ */
+export const CONFIDENT_LANGUAGE = 0.85;
+
+/**
+ * One paste's region languages, with a language recognised confidently
+ * applied to every region that is less sure (an `unknown` fragment next to
+ * a fenced ```python block is read as Python too). Confident regions keep
+ * their own language; when they disagree (```python and ```sql), nothing is
+ * shared.
+ */
+export function shareConfidentLanguage(guesses: readonly LanguageGuess[]): LanguageGuess[] {
+  const confident = guesses.filter((guess) => guess.language !== 'unknown' && guess.confidence >= CONFIDENT_LANGUAGE);
+  const languages = new Set(confident.map((guess) => guess.language));
+  if (languages.size !== 1) return [...guesses];
+  const [language] = languages;
+  const confidence = Math.max(...confident.map((guess) => guess.confidence));
+  return guesses.map((guess) =>
+    guess.confidence >= CONFIDENT_LANGUAGE && guess.language !== 'unknown'
+      ? guess
+      : { language, confidence, source: 'paste', ruledOut: guess.ruledOut.filter((ruledOut) => ruledOut !== language) },
+  );
+}
+
+/** highlight.js's HTML for `code` read as `language` (scopes as `<span class="hljs-…">`). */
+export function highlightCode(code: string, language: KnownLanguage): string {
+  ensureRegistered();
+  return hljs.highlight(code, { language, ignoreIllegals: true }).value;
 }
 
 export interface GrammarNames {

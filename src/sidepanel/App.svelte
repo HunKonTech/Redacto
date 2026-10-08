@@ -148,6 +148,7 @@
 			{vault}
 			{vaultEnabled}
 			{restoreInput}
+			highlightCode={settings?.highlightCodeSyntax ?? false}
 			autoPicked={!pinnedByUser}
 			onrestoreinput={onRestoreInput}
 			onauto={selectAutomatically}

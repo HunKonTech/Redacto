@@ -111,6 +111,7 @@ export type SettingsModel = {
   debug: Writable<boolean>;
   developer: Writable<DeveloperSettings>;
   clipboardInterceptEnabled: Writable<boolean>;
+  highlightCodeSyntax: Writable<boolean>;
   autoReplaceEnabled: Writable<boolean>;
   nerModel: Writable<NerModelKey>;
   nerModelChoice: Writable<string>;
@@ -126,6 +127,7 @@ export type SettingsModel = {
   setDebug: (enabled: boolean) => Promise<void>;
   setDeveloper: (partial: Partial<DeveloperSettings>) => Promise<void>;
   setClipboardInterceptEnabled: (enabled: boolean) => Promise<void>;
+  setHighlightCodeSyntax: (enabled: boolean) => Promise<void>;
   setAutoReplaceEnabled: (enabled: boolean) => Promise<void>;
   setNerModelChoice: (value: string) => Promise<void>;
 };
@@ -227,6 +229,7 @@ export function createAppModels(): AppModels {
   const debug = writable(false);
   const developer = writable<DeveloperSettings>({ developerMode: false, devUseNer: true, devUseRegex: true });
   const clipboardInterceptEnabled = writable(true);
+  const highlightCodeSyntax = writable(false);
   const autoReplaceEnabled = writable(false);
   const nerModel = writable<NerModelKey>('bardsai');
   const nerModelChoice = writable<string>(nerModelChoiceValue('bardsai', undefined));
@@ -243,6 +246,7 @@ export function createAppModels(): AppModels {
     debug.set(settings.debug);
     developer.set({ developerMode: settings.developerMode, devUseNer: settings.devUseNer, devUseRegex: settings.devUseRegex });
     clipboardInterceptEnabled.set(settings.clipboardInterceptEnabled);
+    highlightCodeSyntax.set(settings.highlightCodeSyntax);
     autoReplaceEnabled.set(settings.pasteReviewMode === 'auto');
     const normalizedModel = runtimeNerModelKey(settings.nerModel);
     nerModel.set(normalizedModel);
@@ -418,6 +422,7 @@ export function createAppModels(): AppModels {
     const preview = anonymize(text, spans, new EntityMap(), {
       renameIdentifiers,
       identifierClassifications: classifier?.classifications,
+      shareCodeLanguage: settings.shareCodeLanguage,
     });
     const classifierLine = classifier ? formatClassifierLine(classifier) : '';
     if (preview.text === text) return classifierLine;
@@ -559,6 +564,7 @@ export function createAppModels(): AppModels {
       debug,
       developer,
       clipboardInterceptEnabled,
+      highlightCodeSyntax,
       autoReplaceEnabled,
       nerModel,
       nerModelChoice,
@@ -574,6 +580,7 @@ export function createAppModels(): AppModels {
       setDebug: async (value) => { await saveSettings({ debug: value }); debug.set(value); },
       setDeveloper: (partial) => saveAndBroadcast(partial),
       setClipboardInterceptEnabled: (value) => saveAndBroadcast({ clipboardInterceptEnabled: value }),
+      setHighlightCodeSyntax: (value) => saveAndBroadcast({ highlightCodeSyntax: value }),
       setAutoReplaceEnabled: (value) => saveAndBroadcast({ pasteReviewMode: value ? 'auto' : 'manual' }),
       setNerModelChoice: async (value) => {
         const parsed = parseNerModelChoice(value);

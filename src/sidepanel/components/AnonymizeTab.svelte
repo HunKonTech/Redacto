@@ -14,6 +14,8 @@
 	} from '../panel-anonymizer';
 	import type { ExternalAnonymizeRequest } from '../external-input';
 	import { segmentsOf, toneFor } from '../segments';
+	import { confidentLanguage, syntaxRuns, type SyntaxRun } from '../../shared/code-highlight';
+	import CodeTextarea from './CodeTextarea.svelte';
 	import MarkedText from './MarkedText.svelte';
 	import DevDetectionPanel from '../../ui/dev/DevDetectionPanel.svelte';
 
@@ -72,6 +74,24 @@
 		preview ? segmentsOf(preview.text, resolveText(preview.text, new EntityMap(preview.mappings)), 'token') : [],
 	);
 	const changed = $derived(preview !== null && detectedFor !== null && preview.text !== detectedFor);
+
+	/** Colour code whose language is recognised with high confidence (`Settings.highlightCodeSyntax`). */
+	const highlightCode = $derived(settings?.highlightCodeSyntax ?? false);
+	let inputSyntax = $state.raw<{ text: string; runs: SyntaxRun[] } | null>(null);
+	// Coloured shortly after typing stops, not on every keystroke.
+	$effect(() => {
+		if (!highlightCode) {
+			inputSyntax = null;
+			return;
+		}
+		const text = input;
+		const timer = setTimeout(() => (inputSyntax = { text, runs: syntaxRuns(text, confidentLanguage([text])) }), 150);
+		return () => clearTimeout(timer);
+	});
+	// The result is coloured in the language of the text it was made from.
+	const previewSyntax = $derived(
+		highlightCode && preview && detectedFor !== null ? syntaxRuns(preview.text, confidentLanguage([detectedFor])) : [],
+	);
 
 	function flash(message: string): void {
 		note = message;
@@ -179,13 +199,15 @@
 	<article class="card">
 		<CardHeading title={t('anonymize.title')} hint={t('anonymize.hint')} />
 		<div class="body">
-			<textarea
+			<CodeTextarea
 				bind:value={input}
+				highlighted={highlightCode ? (inputSyntax ?? { text: '', runs: [] }) : null}
+				minHeight={150}
 				onkeydown={onKeydown}
 				onpaste={onPaste}
 				aria-label={t('anonymize.inputAria')}
 				placeholder={t('anonymize.placeholder')}
-			></textarea>
+			/>
 			<button type="button" class="primary" disabled={running || !input.trim() || !settings} onclick={run}>
 				{running ? t('common.detecting') : stale ? t('anonymize.again') : t('anonymize.run')}
 			</button>
@@ -248,7 +270,7 @@
 					</p>
 				{/if}
 				{#if preview && changed}
-					<MarkedText segments={previewSegments} label={t('anonymize.result.aria')} oncopy={onManualCopy} />
+					<MarkedText segments={previewSegments} label={t('anonymize.result.aria')} oncopy={onManualCopy} syntax={previewSyntax} />
 					<button type="button" class="primary" onclick={copy}>{t('anonymize.copy')}</button>
 					<p class="hint">{t('anonymize.copyHint')}</p>
 				{:else}
@@ -279,12 +301,6 @@
 	.stack { display: flex; flex-direction: column; gap: 8px; }
 	.card { overflow: hidden; border: var(--border-hairline); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: var(--shadow-sm); }
 	.body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
-	textarea {
-		box-sizing: border-box; width: 100%; min-height: 150px; padding: 10px; resize: vertical;
-		border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); outline: none;
-		background: var(--color-input); color: var(--color-ink); font: 11px/1.5 var(--font-mono);
-	}
-	textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-focus); }
 	.primary {
 		width: 100%; padding: 9px; border: 0; border-radius: var(--radius-sm); background: var(--color-accent);
 		color: var(--color-on-accent); font-size: 12px; font-weight: 600; cursor: pointer;

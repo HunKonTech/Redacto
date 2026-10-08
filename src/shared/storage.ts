@@ -138,6 +138,12 @@ function normalizeSettings(raw: unknown): Settings {
   if (!['off', 'secrets', 'full'].includes(settings.codeAnonymization)) {
     settings.codeAnonymization = DEFAULT_SETTINGS.codeAnonymization;
   }
+  if (typeof settings.shareCodeLanguage !== 'boolean') {
+    settings.shareCodeLanguage = DEFAULT_SETTINGS.shareCodeLanguage;
+  }
+  if (typeof settings.highlightCodeSyntax !== 'boolean') {
+    settings.highlightCodeSyntax = DEFAULT_SETTINGS.highlightCodeSyntax;
+  }
   if (typeof settings.searchProtectionEnabled !== 'boolean') {
     settings.searchProtectionEnabled = DEFAULT_SETTINGS.searchProtectionEnabled;
   }

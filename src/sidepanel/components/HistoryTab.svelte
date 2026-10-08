@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { date, t, time } from '../../shared/i18n/reactive';
 	import { restoreFromHistory, type HistoryEntry } from '../../shared/anonymization-history';
+	import { confidentLanguage, syntaxRuns, type SyntaxRun } from '../../shared/code-highlight';
 	import type { IdentityVaultData } from '../../shared/identity-vault';
 	import CardHeading from '../../popup/components/CardHeading.svelte';
 	import { copyText } from '../clipboard';
 	import { segmentsOf } from '../segments';
+	import CodeTextarea from './CodeTextarea.svelte';
 	import MarkedText from './MarkedText.svelte';
 
 	let {
@@ -13,6 +15,7 @@
 		vault,
 		vaultEnabled,
 		restoreInput,
+		highlightCode = false,
 		autoPicked,
 		onrestoreinput,
 		onauto,
@@ -25,6 +28,8 @@
 		vault: IdentityVaultData;
 		vaultEnabled: boolean;
 		restoreInput: string;
+		/** Colour code whose language is recognised with high confidence (`Settings.highlightCodeSyntax`). */
+		highlightCode?: boolean;
 		/** False when the user clicked the selected entry themselves. */
 		autoPicked: boolean;
 		onrestoreinput: (value: string) => void;
@@ -44,6 +49,28 @@
 		selected && restoreInput ? restoreFromHistory(restoreInput, selected, vault, vaultEnabled) : null,
 	);
 	const restoredSegments = $derived(restored ? segmentsOf(restoreInput, restored, 'original') : []);
+	const restoredText = $derived(restoredSegments.map((segment) => segment.text).join(''));
+
+	type Coloured = { text: string; runs: SyntaxRun[] };
+	let replySyntax = $state.raw<Coloured | null>(null);
+	let restoredSyntax = $state.raw<Coloured | null>(null);
+	// Coloured shortly after typing stops; the language the original paste
+	// was recognised as also colours the reply's unsure fragments.
+	$effect(() => {
+		if (!highlightCode) {
+			replySyntax = restoredSyntax = null;
+			return;
+		}
+		const reply = restoreInput;
+		const output = restoredText;
+		const original = selected?.originalText ?? '';
+		const timer = setTimeout(() => {
+			const language = confidentLanguage([original, reply]);
+			replySyntax = { text: reply, runs: syntaxRuns(reply, language) };
+			restoredSyntax = { text: output, runs: syntaxRuns(output, language) };
+		}, 150);
+		return () => clearTimeout(timer);
+	});
 
 	function flash(note: string): void {
 		copyNote = note;
@@ -162,14 +189,15 @@
 	<article class="card">
 		<CardHeading title={t('history.restore.title')} />
 		<div class="body">
-			<textarea
+			<CodeTextarea
 				value={restoreInput}
+				highlighted={highlightCode ? (replySyntax ?? { text: '', runs: [] }) : null}
 				oninput={(event) => onrestoreinput(event.currentTarget.value)}
 				aria-label={t('history.restore.aria')}
 				placeholder={entries.length > 0
 					? t('history.restore.placeholder')
 					: t('history.restore.placeholderEmpty')}
-			></textarea>
+			/>
 			{#if selected}
 				<p class="source-line">
 					{t('history.using')} <strong>{selected.site ?? t('history.sidePanel')} · {when(selected.createdAt)}</strong>
@@ -186,7 +214,11 @@
 					<span class="count">{t('history.restoredCount', { count: restored.matches.length })}</span>
 					<button type="button" class="primary" onclick={() => copy(restored.deAnonText, t('history.copiedRestored'))}>{t('history.copyRestored')}</button>
 				</div>
-				<MarkedText segments={restoredSegments} label={t('history.restoredAria')} />
+				<MarkedText
+					segments={restoredSegments}
+					label={t('history.restoredAria')}
+					syntax={restoredSyntax?.text === restoredText ? restoredSyntax.runs : []}
+				/>
 				{#if restored.matches.length === 0}
 					<p class="hint">{t('history.noMatches')}</p>
 				{/if}
@@ -243,12 +275,6 @@
 	.link { padding: 2px 0; border: 0; background: transparent; color: var(--color-muted); font-size: 11px; cursor: pointer; }
 	.link.danger:hover, .link.danger:focus-visible { color: var(--color-danger); outline: none; }
 
-	textarea {
-		box-sizing: border-box; width: 100%; min-height: 110px; padding: 10px; resize: vertical;
-		border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); outline: none;
-		background: var(--color-input); color: var(--color-ink); font: 11px/1.5 var(--font-mono);
-	}
-	textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-focus); }
 	.result-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 	.count { color: var(--color-muted); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 	.hint { margin: 0; color: var(--color-muted); font-size: 11px; line-height: 1.45; }
