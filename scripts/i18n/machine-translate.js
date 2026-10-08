@@ -205,7 +205,7 @@ function nativeName(locale, englishName) {
   return englishName.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/** generated/index.ts: the languages that have a dictionary, sorted by their own name. */
+/** generated/index.ts: every machine-translated language, sorted by its own name. */
 function renderIndex(languages) {
   const sorted = [...languages].sort((a, b) => a.name.localeCompare(b.name, 'en'));
   const lines = (render) => sorted.map((language) => `  ${render(language)},\n`).join('');
@@ -347,11 +347,17 @@ function main() {
     }
   }
 
-  const available = languages
-    .filter(({ locale }) => Object.keys(dictionaries.get(locale)).length > 0)
-    .map(({ locale, englishName }) => ({ locale, name: nativeName(locale, englishName) }));
+  // Every language is offered, translated or not: keys it lacks show in English.
+  // A language with nothing translated yet gets an empty dictionary, so picking
+  // it loads a file instead of failing.
+  for (const { locale } of languages) {
+    const file = path.join(LOCALES_DIR, `${locale}.json`);
+    if (!fs.existsSync(file)) writeJson(file, {});
+  }
+  const available = languages.map(({ locale, englishName }) => ({ locale, name: nativeName(locale, englishName) }));
   fs.writeFileSync(INDEX_FILE, renderIndex(available));
-  console.log(`\n${available.length} machine-translated language(s) available.`);
+  const complete = languages.filter(({ locale }) => Object.keys(dictionaries.get(locale)).length === total).length;
+  console.log(`\n${available.length} machine-translated language(s) available, ${complete} fully translated.`);
 }
 
 if (require.main === module) {
