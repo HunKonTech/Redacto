@@ -129,7 +129,7 @@ véletlenül egyezik egy könyvtári névvel (pl. saját `each`), nem anonimizá
 ## Megvalósítási lépések
 
 1. **Tesztek a hibára**: jQuery, React, Lodash, pandas, LINQ minták a
-   `tests/code-rename*.test.ts` mellé; várt: hivatalos nevek érintetlenek, saját nevek
+   `tests/code-rename*.test.ts` mellé, plusz a töredék-tesztkészlet (lásd lent); várt: hivatalos nevek érintetlenek, saját nevek
    átnevezve.
 2. **Gyors javítás (1. fázis, függőség nélkül)**: `$`, `jQuery`, `JQuery`, `JQueryStatic`,
    `_` hozzáadása + 4. és 5. lépés (receiver-tag és objektum-kulcs szabály) az `Analyzer`-ben.
@@ -142,6 +142,36 @@ véletlenül egyezik egy könyvtári névvel (pl. saját `each`), nem anonimizá
    `check:privacy-boundary`, csomagméret ellenőrzése.
 8. Opcionális 2. fázis: `@vscode/vscode-languagedetection` vagy web-tree-sitter, ha a
    mérések szerint a highlight.js pontossága kevés.
+
+## Kódtöredékek
+
+Rövid (1–3 soros) töredéknél a nyelvfelismerés bizonytalan, ezért:
+
+- A **profilaktiválás nyelvtől független**: jellegzetes minták (`$(…)`, `.addClass(`,
+  `JQuery<`, `useState(`, `_.map(`) önmagukban is bekapcsolják a profilt.
+- Alacsony bizalomnál a nyelv `unknown`; ekkor csak a nyelvfüggetlen, egyértelmű
+  hivatalos nevek (`$`, `jQuery`, `console`, `Math`) és az aktív profilok érvényesek.
+- Nem lehet rosszabb a mai működésnél: `unknown` nyelv = mai lista + aktív profilok.
+
+Töredék-tesztkészlet (`tests/code-rename-fragments.test.ts`):
+
+| Töredék | Megmarad | Átnevezendő |
+| --- | --- | --- |
+| `$('.cart-item').addClass('active');` | `$`, `addClass` | – |
+| `const items = $(sel); items.hide();` | `$`, `hide` | `items`, `sel` |
+| `jQuery.ajax({ url: apiUrl });` | `jQuery`, `ajax`, `url` | `apiUrl` |
+| `function f(el: JQuery<HTMLElement>) {}` | `JQuery`, `HTMLElement` | `f`, `el` |
+| `$.each(orders, (i, o) => total += o.sum);` | `$`, `each` | `orders`, `total`, `sum`* |
+| `const [n, setN] = useState(0);` | `useState` | `n`, `setN` |
+| `_.map(users, 'email')` | `_`, `map` | `users` |
+| `df.groupby('city').mean()` | `groupby`, `mean` | `df` |
+| `customers.Where(c => c.IsActive).ToList();` | `Where`, `ToList` | `customers`, `IsActive` |
+| `invoiceService.loadInvoice(id);` (ismeretlen nyelv) | – | mind |
+
+\* `o.sum` saját mező, mert `o` nem LIB-értékű.
+
+Mérés: a töredékkészleten külön LIB-megőrzési és OWN-átnevezési arány; a nyelvfelismerés
+pontosságát töredékekre nem kérjük számon, csak hogy bizonytalanság esetén `unknown` legyen.
 
 ## Mérés
 
