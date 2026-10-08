@@ -14,8 +14,9 @@ on:
   # A push to main runs I18N first (.github/workflows/i18n.yml): it commits
   # the machine-translated dictionaries, and its completion starts this
   # workflow on the latest main, so every build ships the current translations.
+  # Its hand-started GitHub-hosted twin (i18n-hosted.yml) does the same.
   workflow_run:
-    workflows: [I18N]
+    workflows: [I18N, I18N (GitHub-hosted)]
     types: [completed]
     branches: [main]
   push:

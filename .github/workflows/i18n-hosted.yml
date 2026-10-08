@@ -1,0 +1,101 @@
+name: I18N (GitHub-hosted)
+
+# The I18N workflow (i18n.yml) on a GitHub-hosted runner, started by hand only.
+# Google Translate blocks the self-hosted runner's IP after too many requests;
+# a hosted runner comes from a different IP every run. Same script and
+# translator (KO_language_translator's latest main), same commit to main, and
+# Build and Release starts when it finishes, as after I18N.
+# See docs/developer/i18n.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Translate every key of every language again'
+        type: boolean
+        default: false
+      time_budget_minutes:
+        description: 'Minutes to translate for (at most ~300); the remaining languages follow on the next run'
+        type: string
+        default: '60'
+      workers:
+        description: 'Parallel requests to Google Translate (fewer = fewer HTTP 429 rate-limit errors)'
+        type: string
+        default: '2'
+
+permissions:
+  contents: write
+
+# Shared with I18N, so the two never commit dictionaries at the same time.
+concurrency:
+  group: redacto-i18n
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    name: Machine-translate UI strings (GitHub-hosted)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      TIME_BUDGET: ${{ inputs.time_budget_minutes || '60' }}
+      WORKERS: ${{ inputs.workers || '2' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Update KO_language_translator to its latest main
+        run: |
+          git submodule update --init --remote KO_language_translator
+          echo "KO_language_translator at $(git -C KO_language_translator rev-parse --short HEAD)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python with deep-translator
+        id: python
+        run: |
+          uv venv "$RUNNER_TEMP/i18n-venv" --python 3.12
+          uv pip install --python "$RUNNER_TEMP/i18n-venv/bin/python" deep-translator
+          echo "path=$RUNNER_TEMP/i18n-venv/bin/python" >> "$GITHUB_OUTPUT"
+
+      - name: Check that Google Translate accepts requests
+        id: probe
+        run: |
+          if "${{ steps.python.outputs.path }}" -c "from deep_translator import GoogleTranslator as G; G(source='en', target='de').translate('Hello')"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Google Translate refuses requests from this runner (rate limited); start the workflow again for a runner with another IP."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Translate
+        if: steps.probe.outputs.ok == 'true'
+        run: |
+          args=(--python "${{ steps.python.outputs.path }}" --time-budget "$TIME_BUDGET" --workers "$WORKERS")
+          if [ "${{ inputs.force }}" = "true" ]; then args+=(--force); fi
+          node scripts/i18n/machine-translate.js "${args[@]}"
+
+      - name: Commit changed dictionaries
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git add src/shared/i18n/generated
+          if git diff --cached --quiet; then
+            echo "No dictionary changed."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'i18n: machine-translate UI strings' -m "KO_language_translator $(git -C KO_language_translator rev-parse --short HEAD)"
+          for _ in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+          done
+          echo "::error::Could not push the translated dictionaries."
+          exit 1
