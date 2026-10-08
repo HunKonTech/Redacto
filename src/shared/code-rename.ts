@@ -1,4 +1,6 @@
 import { findCodeLikeRegions } from './code-identifiers';
+import { detectCodeLanguage, fenceLabelOf, hasReliableDeclarations, type CodeLanguage, type LanguageGuess } from './code-language';
+import { activeProfiles, languageLexicon, type Lexicon } from './code-lexicon';
 import type { CodeRegion } from './code-region-finder';
 import {
   errorRegionCodeTexts,
@@ -27,6 +29,18 @@ import type { IdentifierVerdict } from './identifier-classifier-constants';
  * diagnostics — see `error-trace.ts`) is not analysed as code: its frames
  * add the user's own namespaces, classes and methods, and the names it
  * quotes get the same aliases as in the code, while its prose stays as is.
+ *
+ * Official names are recognised from the region's detected language
+ * (`code-language.ts`) and the library profiles the paste activates
+ * (`code-lexicon`). An undeclared name is decided in this order:
+ *   1. the snippet declares it → own;
+ *   2. it is imported → external;
+ *   3. the language lexicon or an active profile has it → library;
+ *   4. it is a member of a library receiver (`$.each`, a `$(…)` value) → library;
+ *   5. it is an option key of a library call (`$.ajax({ url })`) → library;
+ *   6. the identifier-classifier model's verdict;
+ *   7. the hardcoded `LIBRARY_NAMES` fallback.
+ * Steps 3–5 only ever rename less; a declaration always wins.
  */
 
 export type IdentifierRole = 'class' | 'function' | 'variable' | 'field' | 'param' | 'constant' | 'namespace';
@@ -44,6 +58,10 @@ export interface RenamePlan {
   occurrences: RenameOccurrence[];
   /** Every identifier-shaped word in the code, for alias collision checks. */
   identifiersInText: Set<string>;
+  /** The detected language of each analysed code region, in order. */
+  languages: CodeLanguage[];
+  /** Ids of the library profiles the paste activated. */
+  profiles: string[];
 }
 
 type TokenKind = 'ident' | 'string' | 'comment' | 'number' | 'punct' | 'newline';
@@ -87,25 +105,40 @@ const TYPE_KEYWORDS = new Set(
  */
 const RESERVED_NAMES = new Set(
   (
-    '_ main Main self this cls super base constructor prototype toString equals hashCode ToString Equals ' +
+    '_ main Main self this $this cls super base constructor prototype toString equals hashCode ToString Equals ' +
     'GetHashCode Dispose DisposeAsync'
   ).split(' '),
 );
 
-/**
- * Standard-library and runtime names a snippet uses without declaring or
- * importing them. Every other undeclared name is taken to be the user's own
- * (declared elsewhere in their project) and renamed.
- */
-const LIBRARY_NAMES = new Set(
+/** Python built-ins: in code that cannot be Python (`;` line ends, `===`) they are left to renaming. */
+const PYTHON_LIBRARY_NAMES = new Set(
   (
-    // Python
     'print len range str int float bool list dict set tuple frozenset bytes bytearray open input isinstance ' +
     'issubclass enumerate zip map filter sorted reversed sum min max abs round any all iter next hasattr ' +
     'getattr setattr delattr callable repr hash id format vars dir globals locals staticmethod classmethod ' +
     'property Exception ValueError TypeError KeyError IndexError RuntimeError AttributeError StopIteration ' +
-    'NotImplementedError OSError IOError FileNotFoundError ZeroDivisionError AssertionError ' +
+    'NotImplementedError OSError IOError FileNotFoundError ZeroDivisionError AssertionError'
+  ).split(' '),
+);
+
+/** Python built-in names that other languages share (`print`, `len`, `range`, `bytes` in Go, `Exception` in C#/Java). */
+const SHARED_BUILTIN_NAMES = new Set(
+  'print len range bytes min max abs round format open map filter zip Exception TypeError AssertionError'.split(' '),
+);
+
+/** Names every language's code may use for a library: `$`, `jQuery`, `_`, `console`, `Math`, `JSON`. */
+const UNIVERSAL_LIBRARY_NAMES = new Set(['$', 'jQuery', 'JQuery', 'JQueryStatic', '_', 'console', 'Math', 'JSON']);
+
+/**
+ * Standard-library and runtime names a snippet uses without declaring or
+ * importing them, the fallback after the language lexicons and profiles
+ * (`code-lexicon`). Every other undeclared name is taken to be the user's
+ * own (declared elsewhere in their project) and renamed.
+ */
+const OTHER_LIBRARY_NAMES = new Set(
+  (
     // JavaScript / TypeScript
+    '$ jQuery JQuery JQueryStatic ' +
     'console Math JSON Object Array String Number Boolean Promise Date Error RegExp Map Set WeakMap WeakSet ' +
     'Symbol BigInt Reflect Proxy Intl window document globalThis navigator location localStorage ' +
     'sessionStorage fetch setTimeout clearTimeout setInterval clearInterval queueMicrotask structuredClone ' +
@@ -135,6 +168,75 @@ const LIBRARY_NAMES = new Set(
     'format_args assert_eq assert_ne unwrap expect'
   ).split(' '),
 );
+
+const LIBRARY_NAMES = new Set([...PYTHON_LIBRARY_NAMES, ...OTHER_LIBRARY_NAMES]);
+
+/** Python built-ins no other language has as a free name. */
+const PYTHON_ONLY_LIBRARY_NAMES = new Set(
+  [...PYTHON_LIBRARY_NAMES].filter((name) => !SHARED_BUILTIN_NAMES.has(name) && !OTHER_LIBRARY_NAMES.has(name)),
+);
+
+/**
+ * What counts as an official name in one code region: its language's
+ * lexicon, the active library profiles that apply to that language, and the
+ * hardcoded fallback list (without Python's built-ins when the region cannot
+ * be Python). An `unknown` region has no language lexicon: only the
+ * universal names, the profiles and the full fallback list — the behaviour
+ * from before languages were detected.
+ */
+class SymbolScope {
+  private readonly lexicons: Lexicon[];
+  private readonly withoutPythonBuiltins: boolean;
+
+  constructor(
+    readonly language: CodeLanguage,
+    ruledOut: readonly CodeLanguage[],
+    profiles: readonly Lexicon[],
+  ) {
+    const lexicon = languageLexicon(language);
+    this.lexicons = [...(lexicon ? [lexicon] : []), ...profiles.filter((profile) => profile.appliesTo(language))];
+    this.withoutPythonBuiltins = language === 'unknown' ? ruledOut.includes('python') : language !== 'python';
+  }
+
+  /**
+   * The language's own official names when its declarations cannot be told
+   * from keywords and built-ins (`hasReliableDeclarations`); empty otherwise.
+   */
+  unrenameableNames(): ReadonlySet<string> {
+    if (hasReliableDeclarations(this.language)) return new Set();
+    return languageLexicon(this.language)?.names ?? new Set();
+  }
+
+  /** Step 3: the language lexicon, an active profile, or a universal name. */
+  isOfficial(name: string): boolean {
+    return UNIVERSAL_LIBRARY_NAMES.has(name) || this.lexicons.some((lexicon) => lexicon.names.has(name));
+  }
+
+  /** A library module used as a receiver: `np.array`, `path.join`, `os.getenv`. */
+  isNamespace(name: string): boolean {
+    return this.lexicons.some((lexicon) => lexicon.namespaces.has(name));
+  }
+
+  /** A library type's member, recognised after any receiver: `rows.filter`, `df.groupby`, `q.Where`. */
+  isValueMember(name: string): boolean {
+    return this.lexicons.some((lexicon) => lexicon.valueMembers.has(name));
+  }
+
+  isOptionKey(name: string): boolean {
+    return this.lexicons.some((lexicon) => lexicon.optionKeys.has(name));
+  }
+
+  /** Step 7: the hardcoded list. */
+  isFallbackLibraryName(name: string): boolean {
+    if (this.withoutPythonBuiltins && PYTHON_ONLY_LIBRARY_NAMES.has(name)) return false;
+    return LIBRARY_NAMES.has(name);
+  }
+}
+
+const MEMBER_ACCESS = ['.', '?.', '->', '::'];
+
+/** Shells: bare words are commands, flags and cmdlets; only `$variables` are the user's. */
+const SHELL_LANGUAGES = new Set<CodeLanguage>(['bash', 'powershell']);
 
 const DECLARING_KEYWORDS: Record<string, IdentifierRole> = {
   class: 'class',
@@ -182,16 +284,31 @@ const IDENT_PART_RE = /[\p{L}\p{N}_$]/u;
 
 const TWO_CHAR_PUNCT = new Set(['=>', '->', '::', '?.', '==', '!=', '<=', '>=', '+=', '-=', '*=', '/=', ':=', '&&', '||', '??', '**']);
 
+/**
+ * How a region's double-quoted strings interpolate variables:
+ * `sigil` — `"$name"` names the variable `$name` (shells, PHP, Perl);
+ * `bare` — `"$name"` and `"${expr}"` name `name` and code (Kotlin, Groovy, Dart).
+ */
+type DollarInterpolation = 'none' | 'sigil' | 'bare';
+
+const DOLLAR_INTERPOLATION: Partial<Record<CodeLanguage, DollarInterpolation>> = {
+  bash: 'sigil', powershell: 'sigil', php: 'sigil', perl: 'sigil',
+  kotlin: 'bare', groovy: 'bare', dart: 'bare',
+};
+
 class Lexer {
   readonly tokens: Token[] = [];
+  private dollar: DollarInterpolation = 'none';
 
   constructor(private readonly text: string) {}
 
-  lex(start: number, end: number): void {
+  lex(start: number, end: number, dollar: DollarInterpolation = 'none'): void {
+    this.dollar = dollar;
     let i = start;
     while (i < end) {
       i = this.lexOne(i, end);
     }
+    this.dollar = 'none';
   }
 
   /** Lex one token at `i`; returns the next index. */
@@ -324,6 +441,24 @@ class Lexer {
         segmentStart = k;
         continue;
       }
+      if (this.dollar !== 'none' && quote === '"' && !verbatim && c === '$') {
+        if (this.dollar === 'bare' && text[k + 1] === '{') {
+          this.push('string', segmentStart, k + 2);
+          k = this.interpolation(k + 2, end);
+          segmentStart = k;
+          continue;
+        }
+        if (IDENT_START_RE.test(text[k + 1] ?? '') && text[k + 1] !== '$') {
+          let j = k + 2;
+          while (j < end && IDENT_PART_RE.test(text[j]) && text[j] !== '$') j += 1;
+          const nameStart = this.dollar === 'sigil' ? k : k + 1;
+          this.push('string', segmentStart, nameStart);
+          this.push('ident', nameStart, j);
+          segmentStart = j;
+          k = j;
+          continue;
+        }
+      }
       k += 1;
     }
     this.push('string', segmentStart, Math.min(k, end));
@@ -375,35 +510,69 @@ function isTypeLike(token: Token | undefined): boolean {
 }
 
 /**
- * Whether an undeclared name is a library/framework name. Consults the
- * identifier-classifier model's verdict first (when it had an opinion on
- * this exact name); falls back to the hardcoded `LIBRARY_NAMES` list when
- * the model is unavailable or did not see this name.
+ * Whether an undeclared name is a library/framework name in `scope`: a
+ * lexicon or profile name is (step 3); otherwise the identifier-classifier
+ * model's verdict decides when it had an opinion on this exact name
+ * (step 6), and the hardcoded list when it did not or is unavailable (step 7).
  */
-function isLibraryName(name: string, classifications?: ReadonlyMap<string, IdentifierVerdict>): boolean {
+function isLibraryName(name: string, scope: SymbolScope, classifications?: ReadonlyMap<string, IdentifierVerdict>): boolean {
+  if (scope.isOfficial(name)) return true;
   const verdict = classifications?.get(name);
   if (verdict) return verdict === 'LIB';
-  return LIBRARY_NAMES.has(name);
+  return scope.isFallbackLibraryName(name);
+}
+
+/** A code body and the scope its names are judged in. */
+interface ScopedRange {
+  start: number;
+  end: number;
+  scope: SymbolScope;
 }
 
 class Analyzer {
   private readonly code: Token[];
   readonly roles = new Map<string, IdentifierRole>();
   readonly external = new Set<string>();
+  /** Imported from the user's own modules (`from './invoice'`, `from .models`): external, but not a library. */
+  private readonly relativeImports = new Set<string>();
   private readonly overrides = new Set<string>();
   private readonly classifications?: ReadonlyMap<string, IdentifierVerdict>;
+  /** Declared names holding a library value (`const items = $(…)`, `el: JQuery`): their members are the library's. */
+  private readonly libValued = new Set<string>();
+  /** Callback and loop variables over the user's own data (`orders.map(o => …)`): their members are the user's. */
+  private ownValued = new Set<string>();
 
   constructor(
     tokens: readonly Token[],
     classifications?: ReadonlyMap<string, IdentifierVerdict>,
     private readonly text?: string,
+    private readonly scopes: readonly ScopedRange[] = [],
+    private readonly defaultScope: SymbolScope = new SymbolScope('unknown', [], []),
+    /** Official names of languages whose declarations are unreliable: never renamed. */
+    private readonly unrenameable: ReadonlySet<string> = new Set(),
   ) {
     this.code = significant(tokens);
     this.classifications = classifications;
   }
 
-  private isLibraryName(name: string): boolean {
-    return isLibraryName(name, this.classifications);
+  /** The scope of the code body token i is in. */
+  private scopeAt(i: number): SymbolScope {
+    const offset = this.code[i]?.start;
+    if (offset === undefined) return this.defaultScope;
+    let low = 0;
+    let high = this.scopes.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const range = this.scopes[mid];
+      if (offset < range.start) high = mid - 1;
+      else if (offset >= range.end) low = mid + 1;
+      else return range.scope;
+    }
+    return this.defaultScope;
+  }
+
+  private isLibraryName(name: string, i: number): boolean {
+    return isLibraryName(name, this.scopeAt(i), this.classifications);
   }
 
   /** Index of the previous non-newline token. */
@@ -450,6 +619,8 @@ class Analyzer {
   private declare(name: string, role: IdentifierRole): void {
     const current = this.roles.get(name);
     if (!current || ROLE_PRIORITY[role] > ROLE_PRIORITY[current]) this.roles.set(name, role);
+    // A PHP property `$name` is read as `$this->name`.
+    if (role === 'field' && /^\$\w/.test(name)) this.declare(name.slice(1), 'field');
   }
 
   analyze(): void {
@@ -480,7 +651,7 @@ class Analyzer {
         if (after && ['=', ':'].includes(after.text)) this.declare(token.text, 'field');
         continue;
       }
-      if (before && ['.', '?.', '->', '::'].includes(before.text)) continue;
+      if (before && MEMBER_ACCESS.includes(before.text)) continue;
 
       // Go struct fields: `FirstName string`, `ID, Name string \`json:"id"\``.
       // Before the typed rule, which would read the previous line's type as
@@ -548,6 +719,228 @@ class Analyzer {
         this.declare(token.text, 'variable');
       }
     }
+    this.collectLibValued();
+  }
+
+  // --- Library and own values (decision steps 4 and 5) ----------------------
+
+  private brackets?: { partner: Int32Array; enclosing: Int32Array };
+
+  /**
+   * Bracket structure, computed once: the partner of every bracket and the
+   * innermost opener around every token (-1 when none). A closer that does
+   * not match the innermost opener is ignored.
+   */
+  private bracketIndex(): { partner: Int32Array; enclosing: Int32Array } {
+    if (this.brackets) return this.brackets;
+    const partner = new Int32Array(this.code.length).fill(-1);
+    const enclosing = new Int32Array(this.code.length).fill(-1);
+    const stack: number[] = [];
+    const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+    for (let j = 0; j < this.code.length; j += 1) {
+      const text = this.code[j].text;
+      const opener = pairs[text];
+      if (opener && stack.length > 0 && this.code[stack[stack.length - 1]].text === opener) {
+        const open = stack.pop()!;
+        partner[open] = j;
+        partner[j] = open;
+      }
+      enclosing[j] = stack.length > 0 ? stack[stack.length - 1] : -1;
+      if (text === '(' || text === '[' || text === '{') stack.push(j);
+    }
+    this.brackets = { partner, enclosing };
+    return this.brackets;
+  }
+
+  /** Index of the opener matching the closer at `close`, or -1. */
+  private matchingOpen(close: number): number {
+    return this.bracketIndex().partner[close];
+  }
+
+  private matchingClose(open: number): number {
+    return this.bracketIndex().partner[open];
+  }
+
+  /** Index of the innermost unclosed `(`, `[` or `{` before token i, or -1. */
+  private enclosingOpen(i: number): number {
+    return this.bracketIndex().enclosing[i];
+  }
+
+  /**
+   * The first name of the member chain ending at token `end`:
+   * `$('#cart').find('li')` → `$`, `jQuery.ajax` → `jQuery`. -1 when the
+   * chain starts with something else (`(a || b).x`, a literal).
+   */
+  private chainRoot(end: number): number {
+    let j = end;
+    for (;;) {
+      let token = this.code[j];
+      if (!token) return -1;
+      if (token.text === ')' || token.text === ']') {
+        const open = this.matchingOpen(j);
+        if (open < 0) return -1;
+        j = this.prevIndex(open);
+        token = this.code[j];
+      }
+      if (token?.kind !== 'ident') return -1;
+      const before = this.code[this.prevIndex(j)];
+      if (!before || !['.', '?.', '::'].includes(before.text)) {
+        return KEYWORDS.has(token.text) && token.text !== 'this' && token.text !== 'self' ? -1 : j;
+      }
+      j = this.prevIndex(this.prevIndex(j));
+    }
+  }
+
+  /** Whether a chain rooted at the name at token i yields library values. */
+  private isLibRoot(i: number): boolean {
+    const name = this.code[i].text;
+    if (this.libValued.has(name)) return true;
+    if (this.roles.has(name)) return false;
+    if (this.external.has(name)) return !this.relativeImports.has(name);
+    return this.isLibraryName(name, i) || (this.next(i)?.text === '.' && this.scopeAt(i).isNamespace(name));
+  }
+
+  /**
+   * Whether the call whose `(` is at `open` calls the library: its chain is
+   * rooted in a library name or value (`jQuery.ajax(`, `$(sel).css(`,
+   * `requests.get(`), or it calls a library type's method (`df.groupby(`).
+   */
+  private isLibCall(open: number): boolean {
+    const calleeEnd = this.prevIndex(open);
+    const callee = this.code[calleeEnd];
+    if (!callee || (callee.kind !== 'ident' && callee.text !== ')')) return false;
+    const isMethod = ['.', '?.'].includes(this.prev(calleeEnd)?.text ?? '');
+    // `if (`, `for (` — but `requests.get(` is a call.
+    if (callee.kind === 'ident' && !isMethod && KEYWORDS.has(callee.text) && callee.text !== 'require') return false;
+    const root = this.chainRoot(calleeEnd);
+    if (root >= 0 && this.isLibRoot(root)) return true;
+    return callee.kind === 'ident' && isMethod && this.scopeAt(calleeEnd).isValueMember(callee.text);
+  }
+
+  /**
+   * Step 5: a known option key of a library call — `$.ajax({ url: … })`,
+   * `requests.get(u, timeout=5)`. Only keys of the options object itself;
+   * nested objects are data.
+   */
+  private isLibOptionKey(i: number): boolean {
+    const after = this.next(i);
+    const before = this.prev(i);
+    if (!after || !before || !this.scopeAt(i).isOptionKey(this.code[i].text)) return false;
+    const open = this.enclosingOpen(i);
+    if (open < 0) return false;
+    if (after.text === ':' && ['{', ','].includes(before.text) && this.code[open].text === '{') {
+      if (!['(', ','].includes(this.prev(open)?.text ?? '')) return false;
+      const call = this.enclosingOpen(open);
+      return call >= 0 && this.code[call].text === '(' && this.isLibCall(call);
+    }
+    // Keyword and named arguments: `timeout=5`, `name: value`.
+    if ((after.text === '=' || after.text === ':') && ['(', ','].includes(before.text) && this.code[open].text === '(') {
+      return this.isLibCall(open);
+    }
+    return false;
+  }
+
+  /**
+   * Declared names that hold a library value: assigned from a library chain
+   * (`const items = $(sel)`, `r = requests.get(u)`, `const y = items.find('li')`)
+   * or annotated with a library type (`el: JQuery<HTMLElement>`).
+   */
+  private collectLibValued(): void {
+    const code = this.code;
+    for (let i = 0; i < code.length; i += 1) {
+      const token = code[i];
+      if (!isName(token) || !this.roles.has(token.text)) continue;
+      const before = this.prev(i);
+      if (before && MEMBER_ACCESS.includes(before.text)) continue;
+      const afterIndex = this.nextIndex(i);
+      const after = code[afterIndex];
+      if (!after) continue;
+      if (after.text === '=' || after.text === ':=') {
+        let j = this.nextIndex(afterIndex);
+        while (code[j] && ['new', 'await'].includes(code[j].text)) j = this.nextIndex(j);
+        if (code[j]?.kind === 'ident' && !KEYWORDS.has(code[j].text) && this.isLibRoot(j)) this.libValued.add(token.text);
+      } else if (after.text === ':') {
+        const type = code[this.nextIndex(afterIndex)];
+        if (isName(type) && !this.roles.has(type!.text) && this.isLibraryName(type!.text, i)) this.libValued.add(token.text);
+      }
+    }
+  }
+
+  /** The parameter tokens of the callback whose `=>` is at `arrow`, and where they start. */
+  private arrowParams(arrow: number): { start: number; params: number[] } | null {
+    const beforeIndex = this.prevIndex(arrow);
+    const before = this.code[beforeIndex];
+    if (isName(before)) return { start: beforeIndex, params: [beforeIndex] };
+    if (before?.text !== ')') return null;
+    const open = this.matchingOpen(beforeIndex);
+    return open < 0 ? null : { start: open, params: this.paramNames(open) };
+  }
+
+  /** Name tokens at the top level of the parentheses opened at `open`. */
+  private paramNames(open: number): number[] {
+    const close = this.matchingClose(open);
+    const out: number[] = [];
+    for (let j = open + 1; j < close; j += 1) {
+      if (this.enclosingOpen(j) !== open || !isName(this.code[j])) continue;
+      if (['(', ','].includes(this.prev(j)?.text ?? '') && [',', ')', ':', '='].includes(this.next(j)?.text ?? '')) out.push(j);
+    }
+    return out;
+  }
+
+  /**
+   * Whether the call at `open` runs over the user's own data: its receiver
+   * chain (`customers.Where(…)`) or one of its bare arguments
+   * (`$.each(orders, …)`) is an own name.
+   */
+  private callOverOwn(open: number, isOwn: (name: string) => boolean, skip: ReadonlySet<number>): boolean {
+    const calleeEnd = this.prevIndex(open);
+    const root = this.chainRoot(calleeEnd);
+    if (root >= 0 && root !== calleeEnd && isOwn(this.code[root].text)) return true;
+    const close = this.matchingClose(open);
+    for (let j = open + 1; j < close; j += 1) {
+      if (skip.has(j) || this.enclosingOpen(j) !== open || this.code[j].kind !== 'ident') continue;
+      if (['(', ','].includes(this.prev(j)?.text ?? '') && [',', ')'].includes(this.next(j)?.text ?? '') && isOwn(this.code[j].text)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Callback and loop variables whose values come from the user's own data:
+   * `orders.map(o => …)`, `$.each(orders, (i, o) => …)`,
+   * `customers.Where(c => …)`, `for o in orders:`. Members read through
+   * them (`o.sum`, `c.IsActive`) are the user's fields.
+   */
+  private collectOwnValued(used: ReadonlyMap<string, IdentifierRole>): Set<string> {
+    const own = new Set<string>();
+    const isOwn = (name: string) => used.has(name) || own.has(name);
+    const code = this.code;
+    const mark = (params: number[]) => {
+      for (const j of params) if (!this.libValued.has(code[j].text)) own.add(code[j].text);
+    };
+    for (let i = 0; i < code.length; i += 1) {
+      const text = code[i].text;
+      let callback: { start: number; params: number[] } | null = null;
+      if (text === '=>') callback = this.arrowParams(i);
+      else if (text === 'function' && this.next(i)?.text === '(') callback = { start: i, params: this.paramNames(this.nextIndex(i)) };
+      else if (text === 'lambda') {
+        const params: number[] = [];
+        for (let j = i + 1; j < code.length && code[j].text !== ':'; j += 1) if (isName(code[j])) params.push(j);
+        callback = { start: i, params };
+      } else if ((text === 'in' || text === 'of') && isName(this.next(i))) {
+        // `for o in orders` / `for (const o of orders)`
+        const variable = this.prevIndex(i);
+        let k = this.prevIndex(variable);
+        if (['const', 'let', 'var', 'val'].includes(code[k]?.text ?? '')) k = this.prevIndex(k);
+        if (code[k]?.text === '(') k = this.prevIndex(k);
+        if (code[k]?.text === 'for' && isName(code[variable]) && isOwn(this.next(i)!.text)) mark([variable]);
+        continue;
+      }
+      if (!callback || callback.params.length === 0) continue;
+      const open = this.enclosingOpen(callback.start);
+      if (open < 0 || code[open].text !== '(') continue;
+      if (this.callOverOwn(open, isOwn, new Set(callback.params))) mark(callback.params);
+    }
+    return own;
   }
 
   /** `x => …` and `(a, b) => …` (JS/TS, C#, Java `->` is not handled). */
@@ -575,9 +968,17 @@ class Analyzer {
     if (!['import', 'from', 'using', 'require', 'package', 'namespace', 'use'].includes(token.text)) return false;
     if (!this.startsStatement(i) && token.text !== 'require') return false;
     let j = i + 1;
+    const names: string[] = [];
+    let relative = token.text === 'from' && this.code[j]?.text === '.';
     while (j < this.code.length && this.code[j].kind !== 'newline' && this.code[j].text !== ';') {
-      if (this.code[j].kind === 'ident') this.external.add(this.code[j].text);
+      const current = this.code[j];
+      if (current.kind === 'ident') names.push(current.text);
+      if (current.kind === 'string' && /^['"`](?:\.{1,2}\/|\/|~\/|@\/)/.test(current.text)) relative = true;
       j += 1;
+    }
+    for (const name of names) {
+      this.external.add(name);
+      if (relative) this.relativeImports.add(name);
     }
     return true;
   }
@@ -812,29 +1213,49 @@ class Analyzer {
    */
   usedNames(): Map<string, IdentifierRole> {
     const used = new Map<string, IdentifierRole>();
-    const note = (name: string, role: IdentifierRole) => {
+    const firstSeen = new Map<string, number>();
+    const note = (name: string, role: IdentifierRole, i: number) => {
       const current = used.get(name);
       if (!current || ROLE_PRIORITY[role] > ROLE_PRIORITY[current]) used.set(name, role);
+      if (!firstSeen.has(name) || firstSeen.get(name)! > i) firstSeen.set(name, i);
     };
-    const candidate = (token: Token) =>
-      isName(token) && !this.roles.has(token.text) && !this.isLibraryName(token.text) && !this.excluded(token.text);
+    const candidate = (i: number) => {
+      const token = this.code[i];
+      return isName(token) && !this.roles.has(token.text) && !this.isLibraryName(token.text, i) && !this.excluded(token.text);
+    };
 
+    const members: number[] = [];
     for (let i = 0; i < this.code.length; i += 1) {
       const token = this.code[i];
-      if (!candidate(token)) continue;
+      if (!candidate(i)) continue;
       const before = this.prev(i);
       if (before?.text === '@') continue;
       if (this.isModifierUse(i) || this.inAnnotationArgs(i)) continue;
-      if (before && ['.', '?.', '->', '::'].includes(before.text)) {
-        const receiver = this.prev(this.prevIndex(i));
-        if (receiver?.kind === 'ident' && used.has(receiver.text)) {
-          note(token.text, this.next(i)?.text === '(' ? 'function' : 'field');
-        }
+      // `<?php`
+      if (before?.text === '?' && this.prev(this.prevIndex(i))?.text === '<') continue;
+      if (SHELL_LANGUAGES.has(this.scopeAt(i).language) && !token.text.startsWith('$')) continue;
+      if (before && MEMBER_ACCESS.includes(before.text)) {
+        members.push(i);
         continue;
       }
-      note(token.text, this.usedRole(i));
+      // A library module as a receiver (`np.array`), an option key of a library call.
+      if (this.next(i)?.text === '.' && this.scopeAt(i).isNamespace(token.text)) continue;
+      if (this.isLibOptionKey(i)) continue;
+      note(token.text, this.usedRole(i), i);
     }
-    return used;
+
+    // Members of the user's own receivers are the user's, unless they are a
+    // library type's (`orders.filter`, `df.groupby`); members of library
+    // receivers and of other locals stay.
+    this.ownValued = this.collectOwnValued(used);
+    for (const i of members) {
+      const receiver = this.prev(this.prevIndex(i));
+      if (receiver?.kind !== 'ident' || !(used.has(receiver.text) || this.ownValued.has(receiver.text))) continue;
+      if (this.scopeAt(i).isValueMember(this.code[i].text)) continue;
+      note(this.code[i].text, this.next(i)?.text === '(' ? 'function' : 'field', i);
+    }
+    // In order of appearance, which is the order aliases are numbered in.
+    return new Map([...used].sort(([a], [b]) => firstSeen.get(a)! - firstSeen.get(b)!));
   }
 
   /** Best guess at what an undeclared name is, from how it is used. */
@@ -861,6 +1282,7 @@ class Analyzer {
       RESERVED_NAMES.has(name) ||
       this.external.has(name) ||
       this.overrides.has(name) ||
+      this.unrenameable.has(name) ||
       /^__.*__$/.test(name)
     );
   }
@@ -880,7 +1302,8 @@ class Analyzer {
         const receiver = this.prev(this.prevIndex(i));
         const receiverIsOwn =
           receiver !== undefined &&
-          (['this', 'self', 'cls', ')', ']'].includes(receiver.text) || renamed.has(receiver.text));
+          !this.libValued.has(receiver.text) &&
+          (['this', '$this', 'self', 'cls', ')', ']'].includes(receiver.text) || renamed.has(receiver.text));
         if (!receiverIsOwn) continue;
       }
       out.push({ start: token.start, end: token.end, name: token.text });
@@ -990,10 +1413,11 @@ export interface RenamePlanOptions {
   knownNames?: Iterable<string>;
   /**
    * OWN/LIB verdicts from the identifier-classifier model, keyed by exact
-   * name. Only consulted for undeclared (used-but-not-declared) names — the
-   * snippet's own declarations are always renamed regardless. A name absent
-   * from the map falls back to the hardcoded `LIBRARY_NAMES` list, so a
-   * missing or unavailable model degrades to the previous behaviour.
+   * name. Only consulted for undeclared (used-but-not-declared) names that
+   * no language lexicon or active profile knows — the snippet's own
+   * declarations are always renamed regardless. A name absent from the map
+   * falls back to the hardcoded `LIBRARY_NAMES` list, so a missing or
+   * unavailable model degrades to the previous behaviour.
    */
   classifications?: ReadonlyMap<string, IdentifierVerdict>;
 }
@@ -1022,15 +1446,46 @@ export function extractCodeRegionTexts(text: string, regions?: CodeRegion[]): st
  * occur, across all code regions (so a class declared in one block and used
  * in another is renamed in both).
  */
+/**
+ * The language of a code region: its own `language` when the caller set it,
+ * otherwise detected from its body (and fence label).
+ */
+export function detectRegionLanguage(text: string, region: CodeRegion): LanguageGuess {
+  if (region.language) return { language: region.language, confidence: 1, source: 'fence', ruledOut: [] };
+  const body = codeBody(text, region);
+  return detectCodeLanguage(text.slice(body.start, body.end), { fenceLabel: fenceLabelOf(text, region.start) });
+}
+
+/** The code regions of `text` with their detected `language`. */
+export function regionsWithLanguages(text: string, regions?: CodeRegion[]): CodeRegion[] {
+  return (regions ?? findCodeLikeRegions(text)).map((region) => ({ ...region, language: detectRegionLanguage(text, region).language }));
+}
+
 export function planIdentifierRenames(text: string, options: RenamePlanOptions = {}): RenamePlan {
   const errorRegions = findErrorRegions(text);
   const errorSlots = parseErrorSlots(text, errorRegions);
   const regions = options.regions ?? findCodeLikeRegions(text);
+  const bodies = codeBodies(text, regions, errorRegions);
+  const guesses = regions.map((region) => detectRegionLanguage(text, region));
+  const regionOf = (body: CodeRegion) => regions.findIndex((region) => body.start >= region.start && body.end <= region.end);
   const lexer = new Lexer(text);
-  for (const body of codeBodies(text, regions, errorRegions)) {
-    lexer.lex(body.start, body.end);
+  for (const body of bodies) {
+    const index = regionOf(body);
+    lexer.lex(body.start, body.end, index === -1 ? 'none' : (DOLLAR_INTERPOLATION[guesses[index].language as CodeLanguage] ?? 'none'));
     lexer.tokens.push({ kind: 'newline', start: body.end, end: body.end, text: '\n' });
   }
+
+  // Languages per region, profiles for the whole paste (a profile's signals
+  // may sit in another block than the code that needs it).
+  const profiles = activeProfiles(bodies.map((body) => text.slice(body.start, body.end)).join('\n'));
+  const regionScopes = guesses.map((guess) => new SymbolScope(guess.language, guess.ruledOut, profiles));
+  const traceScope = new SymbolScope('unknown', [], profiles);
+  const scopes: ScopedRange[] = bodies
+    .map((body) => {
+      const index = regionOf(body);
+      return { start: body.start, end: body.end, scope: index === -1 ? traceScope : regionScopes[index] };
+    })
+    .sort((a, b) => a.start - b.start);
   // Source lines quoted by error output: their names are renamed like the
   // code's, but they declare nothing.
   const echoLexer = new Lexer(text);
@@ -1040,7 +1495,8 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
     echoLexer.tokens.push({ kind: 'newline', start: slot.end, end: slot.end, text: '\n' });
   }
 
-  const analyzer = new Analyzer(lexer.tokens, options.classifications, text);
+  const unrenameable = new Set(regionScopes.flatMap((scope) => [...scope.unrenameableNames()]));
+  const analyzer = new Analyzer(lexer.tokens, options.classifications, text, scopes, traceScope, unrenameable);
   analyzer.analyze();
 
   const roles = new Map<string, IdentifierRole>();
@@ -1064,7 +1520,7 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
     undeclared.add(name);
   }
   const ownInTrace = (name: string) =>
-    !analyzer.excluded(name) && !isLibraryName(name, options.classifications) && !TYPE_KEYWORDS.has(name);
+    !analyzer.excluded(name) && !isLibraryName(name, traceScope, options.classifications) && !TYPE_KEYWORDS.has(name);
   for (const [name, role] of errorTraceRoles(errorSlots, ownInTrace, new Set([...roles.keys(), ...knownNames]))) {
     if (roles.has(name)) continue;
     roles.set(name, role);
@@ -1103,7 +1559,13 @@ export function planIdentifierRenames(text: string, options: RenamePlanOptions =
   const identifiersInText = new Set<string>();
   for (const match of text.matchAll(/[\p{L}_$][\p{L}\p{N}_$]*/gu)) identifiersInText.add(match[0]);
 
-  return { roles, occurrences, identifiersInText };
+  return {
+    roles,
+    occurrences,
+    identifiersInText,
+    languages: guesses.map((guess) => guess.language),
+    profiles: profiles.map((profile) => profile.id),
+  };
 }
 
 // --- Aliases -----------------------------------------------------------------

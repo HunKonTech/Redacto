@@ -1,0 +1,15 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"numpy",
+"languages":["python"],
+"sources":["numpy@2.5.3 (BSD-3-Clause)"],
+"globals":[],
+"types":["bytes_","complex128","datetime64","dtype","float64","ndarray","object_","str_","timedelta64"],
+"namespaces":["np","numpy"],
+"members":{
+"ndarray":["AnyShapeT","T","all","any","argmax","argmin","argpartition","argsort","astype","axis","base","byteswap","choose","clip","compress","conj","conjugate","copy","correction","ctypes","cumprod","cumsum","data","ddof","device","diagonal","dot","dtype","dump","dumps","fill","flags","flat","flatten","getfield","imag","initial","item","itemsize","keepdims","mT","max","mean","min","nbytes","ndim","nonzero","order","out","partition","prod","put","ravel","real","repeat","reshape","resize","round","searchsorted","self","setfield","setflags","shape","size","sort","squeeze","std","strides","sum","swapaxes","take","to_device","tobytes","tofile","tolist","trace","transpose","var","view","where"],
+"numpy.kwargs":["a","a0","a1","a2","a_max","a_min","ai","align","allow_duplicate","api_version","arg0","argname","array","arrays","arrays_and_dtypes","arys","atol","axes","axis","axis1","axis2","axisa","axisb","axisc","b","base","bitorder","buffer","buffersize","busdaycal","bytes","casting","choices","cmp","condition","context","copy","correction","count","ddof","decimals","descending","destination","device","dict_","dimensions","dims","dl_device","doc","docstring","dst","dtype","dtypes","element","encoding","enddates","endpoint","equal_nan","errors","exc","fid","file","fill_value","flags","format","from_","func","holidays","i","i0","identity","imag","include_initial","ind","index","indices","initial","inplace","inputs","int","item","itershape","keepdims","key","keys","kind","kth","length_or_data","lhs","like","mask","max","max_version","max_work","mean","memo","metadata","method","min","minlength","mod","mode","msg_prefix","n","ndigits","ndim","ndmax","ndmin","new_order","new_shape","nin","nout","num","number","obj","object","offset","offsets","op","op_axes","op_dtypes","op_flags","order","other","out","padding","precision","real","reduction","refcheck","repeats","retstep","return_scalar","rhs","roll","rstrip","rtol","sep","shape","shift","side","signature","size0","size1","size2","size3","size4","size5","sizes6_","sorter","source","sparse","src","stable","start","state","step","stop","str","stream","strides","subok","tb","timezone","to","type","type_arg","types","typestr","ufunc","uic","unit","v","val","value","values","warn_on_python","weekmask","weights","whence","where","width","write","x","y"]
+},
+"valueTypes":["ndarray"],
+"optionTypes":["numpy.kwargs"]
+}

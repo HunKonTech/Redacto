@@ -86,3 +86,6 @@ __pycache__/
 ide/vscode/README.md
 ide/visualstudio/PrivacyGuardrail.VisualStudio/overview.md
 ide/jetbrains/build-generated/
+
+# Downloaded sources of the code lexicons (scripts/code-lexicon/sources.js)
+.cache/

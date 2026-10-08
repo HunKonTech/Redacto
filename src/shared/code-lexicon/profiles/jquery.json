@@ -1,0 +1,17 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"jquery",
+"languages":["javascript","typescript"],
+"sources":["@types/jquery@3.5.32 (MIT)"],
+"globals":["$","jQuery"],
+"types":["BaseJQueryEventObject","JQuery","JQueryAjaxSettings","JQueryAnimationOptions","JQueryCallback","JQueryCoordinates","JQueryDeferred","JQueryEasingFunction","JQueryEasingFunctions","JQueryEventConstructor","JQueryEventObject","JQueryGenericPromise","JQueryInputEventObject","JQueryKeyEventObject","JQueryMouseEventObject","JQueryParam","JQueryPromise","JQueryPromiseCallback","JQueryPromiseOperator","JQuerySerializeArrayElement","JQueryStatic","JQuerySupport","JQueryXHR"],
+"namespaces":[],
+"members":{
+"$":["Animation","Callbacks","Deferred","Event","Tween","ajax","ajaxPrefilter","ajaxSettings","ajaxSetup","ajaxTransport","camelCase","cleanData","contains","css","cssHooks","cssNumber","data","dequeue","each","easing","error","escapeSelector","event","expr","extend","fn","fx","get","getJSON","getScript","globalEval","grep","hasData","holdReady","htmlPrefilter","inArray","isArray","isEmptyObject","isFunction","isNumeric","isPlainObject","isWindow","isXMLDoc","makeArray","map","merge","noConflict","nodeName","noop","now","param","parseHTML","parseJSON","parseXML","post","proxy","queue","ready","readyException","removeData","speed","support","timers","trim","type","unique","uniqueSort","valHooks","when"],
+"JQuery":["add","addBack","addClass","after","ajaxComplete","ajaxError","ajaxSend","ajaxStart","ajaxStop","ajaxSuccess","animate","append","appendTo","attr","before","bind","blur","change","children","clearQueue","click","clone","closest","contents","contextmenu","css","data","dblclick","delay","delegate","dequeue","detach","each","empty","end","eq","even","extend","fadeIn","fadeOut","fadeTo","fadeToggle","filter","find","finish","first","focus","focusin","focusout","get","has","hasClass","height","hide","hover","html","index","innerHeight","innerWidth","insertAfter","insertBefore","is","jquery","keydown","keypress","keyup","last","length","load","map","mousedown","mouseenter","mouseleave","mousemove","mouseout","mouseover","mouseup","next","nextAll","nextUntil","not","odd","off","offset","offsetParent","on","one","outerHeight","outerWidth","parent","parents","parentsUntil","position","prepend","prependTo","prev","prevAll","prevUntil","promise","prop","pushStack","queue","ready","remove","removeAttr","removeClass","removeData","removeProp","replaceAll","replaceWith","resize","scroll","scrollLeft","scrollTop","select","serialize","serializeArray","show","siblings","slice","slideDown","slideToggle","slideUp","stop","submit","text","toArray","toggle","toggleClass","trigger","triggerHandler","unbind","undelegate","unwrap","val","width","wrap","wrapAll","wrapInner"],
+"JQuery.AjaxSettings":["accepts","async","beforeSend","cache","complete","contentType","contents","context","converters","crossDomain","data","dataFilter","dataType","enctype","error","global","headers","ifModified","isLocal","jsonp","jsonpCallback","method","mimeType","password","processData","scriptCharset","statusCode","success","timeout","traditional","type","url","username","xhr","xhrFields"],
+"JQuery.EffectsOptions":["always","complete","done","duration","easing","fail","progress","queue","specialEasing","start","step"]
+},
+"valueTypes":["JQuery"],
+"optionTypes":["JQuery.AjaxSettings","JQuery.EffectsOptions"]
+}

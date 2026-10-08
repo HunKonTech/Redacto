@@ -1,0 +1,14 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"node",
+"languages":["javascript","typescript"],
+"sources":["@types/node@18.19.130 (MIT)"],
+"globals":["Buffer","__dirname","__filename","clearImmediate","exports","global","process","require","setImmediate"],
+"types":["Buffer","NodeJS"],
+"namespaces":["assert","async_hooks","buffer","child_process","cluster","console","crypto","dgram","diagnostics_channel","dns","events","fs","http","http2","https","net","os","path","perf_hooks","process","querystring","readline","repl","stream","string_decoder","timers","tls","tty","url","util","v8","vm","worker_threads","zlib"],
+"members":{
+
+},
+"valueTypes":[],
+"optionTypes":[]
+}

@@ -13,6 +13,10 @@ Output: train.jsonl / val.jsonl / test.jsonl with lines
     {"repo", "lang", "text", "spans": [[start, end, "OWN"|"LIB"|"IGN"], ...]}
 with code-point offsets (Python string indices).
 
+The train split also gets short fragments built from the extension's code
+lexicons (`lexicon_snippets.py`, `--lexicon-snippets`): official library
+names in paste-sized shapes, next to OWN names from the training repositories.
+
 Usage:
     python build_dataset.py --inputs work/labels/*.jsonl --out work/dataset
 """
@@ -26,6 +30,8 @@ import json
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
+
+from lexicon_snippets import DEFAULT_LEXICON_DIR, lexicon_fragments
 
 HERE = Path(__file__).resolve().parent
 
@@ -111,6 +117,8 @@ def main() -> None:
     parser.add_argument("--test-repos", nargs="*", default=[], help="repository dirs (owner__name) held out for test")
     parser.add_argument("--val-repos", nargs="*", default=[], help="repository dirs (owner__name) held out for validation")
     parser.add_argument("--seed", type=int, default=13)
+    parser.add_argument("--lexicon-snippets", type=int, default=3000, help="lexicon fragments per language added to train (0: none)")
+    parser.add_argument("--lexicon-dir", type=Path, default=DEFAULT_LEXICON_DIR)
     args = parser.parse_args()
 
     rng = random.Random(args.seed)
@@ -128,6 +136,7 @@ def main() -> None:
     handles = {name: open(args.out / f"{name}.jsonl", "w", encoding="utf-8") for name in ("train", "val", "test")}
     seen: set[str] = set()
     stats: dict[str, Counter] = defaultdict(Counter)
+    train_snippets: list[dict] = []
     for repo in sorted(by_repo):
         snippets = by_repo[repo]
         rng.shuffle(snippets)
@@ -141,11 +150,19 @@ def main() -> None:
                 continue
             seen.add(digest)
             handles[split].write(json.dumps(snippet, ensure_ascii=False) + "\n")
+            if split == "train":
+                train_snippets.append(snippet)
             kept += 1
             stats[split]["snippets"] += 1
             for *_, label in snippet["spans"]:
                 stats[split][label] += 1
         stats[split]["repos"] += 1
+    if args.lexicon_snippets > 0:
+        for fragment in lexicon_fragments(rng, train_snippets, args.lexicon_snippets, args.lexicon_dir):
+            handles["train"].write(json.dumps(fragment, ensure_ascii=False) + "\n")
+            stats["train"]["lexicon_snippets"] += 1
+            for *_, label in fragment["spans"]:
+                stats["train"][label] += 1
     for handle in handles.values():
         handle.close()
 

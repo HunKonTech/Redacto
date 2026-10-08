@@ -1,0 +1,16 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"requests",
+"languages":["python"],
+"sources":["typeshed stubs/requests via pyright@1.1.408 (Apache-2.0)"],
+"globals":[],
+"types":[],
+"namespaces":["requests"],
+"members":{
+"Response":["apparent_encoding","close","connection","content","cookies","elapsed","encoding","headers","history","is_permanent_redirect","is_redirect","iter_content","iter_lines","json","links","next","ok","raise_for_status","raw","reason","request","status_code","text","url"],
+"Session":["adapters","auth","cert","close","cookies","delete","get","get_adapter","get_redirect_target","head","headers","hooks","max_redirects","merge_environment_settings","mount","options","params","patch","post","prepare_request","proxies","put","rebuild_auth","rebuild_method","rebuild_proxies","request","resolve_redirects","send","should_strip_auth","stream","trust_env","verify"],
+"requests.kwargs":["adapter","adapter_kwargs","allow_redirects","auth","cert","cookies","data","dict_class","files","headers","hooks","json","method","new_url","old_url","params","prefix","prepared_request","proxies","req","request","request_hooks","request_setting","resp","response","session_hooks","session_setting","stream","timeout","url","verify","yield_requests"]
+},
+"valueTypes":["Response","Session"],
+"optionTypes":["requests.kwargs"]
+}

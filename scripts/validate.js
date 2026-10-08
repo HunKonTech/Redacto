@@ -69,6 +69,7 @@ function runCiValidation(options = {}) {
   runNpm('Version alignment', ['run', 'version:check', '--', version]);
   runNpm('Chrome permission audit', ['run', 'check:permissions']);
   runNpm('Privacy boundary check', ['run', 'check:privacy-boundary']);
+  runNpm('Code lexicons up to date', ['run', 'check:code-lexicon']);
   runNpm('Rust tests', ['run', 'test:rust']);
   runNpm('Model-free extension build', ['run', 'build:ext']);
 }

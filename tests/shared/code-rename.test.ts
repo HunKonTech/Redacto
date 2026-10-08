@@ -213,16 +213,25 @@ describe('planIdentifierRenames — classifications option', () => {
   });
 
   test('classifier verdicts override LIBRARY_NAMES membership for names it has an opinion on', () => {
+    const snippet = `${SNIPPET}    Thread(myThing)\n`;
     const classifications = new Map<string, IdentifierVerdict>([
       ['helper', 'LIB'],
-      ['print', 'OWN'],
+      ['Thread', 'OWN'],
     ]);
-    const plan = planIdentifierRenames(SNIPPET, { classifications });
+    const plan = planIdentifierRenames(snippet, { classifications });
     const names = Object.fromEntries(plan.roles);
 
     expect(names).not.toHaveProperty('helper'); // model says LIB, though absent from LIBRARY_NAMES
     expect(names).toHaveProperty('myThing'); // untouched by the map, still renamed by default
-    expect(names).toHaveProperty('print'); // model says OWN, overriding the hardcoded list
+    expect(names).toHaveProperty('Thread'); // model says OWN, overriding the hardcoded list
+  });
+
+  test('a name the language lexicon knows stays a library name whatever the classifier says', () => {
+    const classifications = new Map<string, IdentifierVerdict>([['print', 'OWN']]);
+    const plan = planIdentifierRenames(SNIPPET, { classifications });
+
+    expect(plan.languages).toEqual(['python']);
+    expect(Object.fromEntries(plan.roles)).not.toHaveProperty('print');
   });
 });
 

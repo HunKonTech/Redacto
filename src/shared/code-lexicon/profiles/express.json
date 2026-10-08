@@ -1,0 +1,17 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"express",
+"languages":["javascript","typescript"],
+"sources":["@types/express-serve-static-core@5.1.0 (MIT)","@types/express@5.0.6 (MIT)"],
+"globals":["express"],
+"types":["ApplicationRequestHandler","ByteRange","CookieOptions","DownloadOptions","ErrorRequestHandler","ILayer","IRoute","IRouter","IRouterHandler","IRouterMatcher","MediaType","NextFunction","ParamsArray","ParamsDictionary","PathParams","RequestHandler","RequestHandlerParams","RequestParamHandler","RequestRanges","RouteParameters","SendFileOptions"],
+"namespaces":[],
+"members":{
+"Application":["all","checkout","connect","copy","defaultConfiguration","delete","disable","disabled","enable","enabled","engine","get","head","init","link","listen","locals","lock","map","merge","mkactivity","mkcol","mountpath","move","notify","on","options","param","patch","path","post","propfind","proppatch","purge","put","render","report","resource","route","router","routes","search","set","settings","stack","subscribe","trace","unlink","unlock","unsubscribe","use"],
+"Request":["accepted","accepts","acceptsCharsets","acceptsEncodings","acceptsLanguages","app","baseUrl","body","cookies","fresh","get","header","host","hostname","ip","ips","is","method","next","originalUrl","params","path","protocol","query","range","res","route","secure","signedCookies","stale","subdomains","url","xhr"],
+"Response":["app","append","attachment","charset","clearCookie","contentType","cookie","download","format","get","header","headersSent","json","jsonp","links","locals","location","redirect","render","req","send","sendFile","sendStatus","set","status","type","vary"],
+"Router":["all","checkout","connect","copy","delete","get","head","link","lock","merge","mkactivity","mkcol","move","notify","options","param","patch","post","propfind","proppatch","purge","put","report","route","search","stack","subscribe","trace","unlink","unlock","unsubscribe","use"]
+},
+"valueTypes":["Request","Response","Application","Router"],
+"optionTypes":[]
+}

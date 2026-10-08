@@ -1,6 +1,6 @@
 # Terv: nyelvfelismerés és hivatalos (könyvtári) azonosítók megkímélése
 
-Állapot: javaslat · 2026-10-08
+Állapot: megvalósítva (1–5. és 7. lépés; 6.: tanítóadat kész, újratanítás hátra) · 2026-10-08
 
 ## Probléma
 
@@ -178,3 +178,72 @@ pontosságát töredékekre nem kérjük számon, csak hogy bizonytalanság eset
 - Új benchmark-készlet: 50–100 valós snippet nyelvenként, kézi OWN/LIB címkével.
 - Metrikák: LIB megőrzési arány (cél ≥ 98% a profilban szereplő neveknél), OWN átnevezési
   arány (nem romolhat a mai ~96%-hoz képest), nyelvfelismerési pontosság.
+
+## Megvalósítás (2026-10-08)
+
+| Rész | Hol |
+| --- | --- |
+| Nyelvfelismerés 50 nyelvre (highlight.js core + 50 grammatika, erős jelek, fence-címkék, `ruledOut`) | `src/shared/code-language.ts` |
+| Lexikonok, 17 profil, a grammatikák kulcsszó- és beépítettnév-listái, lusta betöltés | `src/shared/code-lexicon/` |
+| Generátor (`npm run build:code-lexicon [-- --fetch]`, CI: `check:code-lexicon`) | `scripts/build-code-lexicon.js`, `scripts/code-lexicon/` |
+| Pinnelt, SHA-256-tal ellenőrzött távoli források (NuGet, Maven Central, PyPI, GitHub) | `scripts/code-lexicon/sources.js` → `.cache/code-lexicon/` |
+| Döntési sorrend, LIB-/OWN-értékű adatfolyam, opciókulcsok, `$név` interpoláció | `src/shared/code-rename.ts` |
+| Tanítóadat-bővítés lexikonból | `tools/identifier-classifier/lexicon_snippets.py` |
+| Tesztek | `tests/shared/code-rename-{fragments,libraries,languages}.test.ts`, `code-language.test.ts`, `code-lexicon.test.ts`, `tests/scripts/code-lexicon.test.js` |
+
+### Források (minden név gépi forrásból, kézi lista nincs)
+
+| Lexikon | Forrás |
+| --- | --- |
+| JavaScript/TypeScript | TypeScript `lib.*.d.ts` |
+| Python, requests | typeshed (a pyright npm-csomagból) |
+| C#, LINQ, ASP.NET Core, EF Core | .NET referencia-assembly XML-dokumentáció (NuGet) |
+| Java | GWT JRE-emuláció (Apache-2.0; az OpenJDK GPL, nem használjuk) |
+| Kotlin | `kotlin-stdlib` class fájlok (a `$this$` lokális választja szét az extension függvényeket) |
+| Go | `api/go1*.txt` |
+| PHP | JetBrains phpstorm-stubs |
+| Ruby | ruby/rbs `core/*.rbs` |
+| jQuery, React, Lodash, Node, Express | DefinitelyTyped `@types/*` |
+| Angular, Vue, RxJS | a csomagok saját `.d.ts`-ei (TypeScript type checkerrel, re-exportokkal) |
+| NumPy, pandas, Django | a csomagok type stubjai (PyPI wheel) |
+| Spring, JUnit/Mockito/AssertJ | jar-ok class fájljai |
+| mind az 50 nyelv kulcsszavai, beépített nevei | a highlight.js grammatikák (futásidőben olvasva) |
+
+A specifikációkban (`scripts/code-lexicon/profiles/*.js`) csak szabályok vannak: aktiváló jelek,
+melyik modul/névtér/csomag számít, melyik típusok tagjai érvényesek bármely receiver után
+(`valueTypes`), kinek a tagjai opciókulcsok (`optionTypes`), és néhány egyszavas név, amiről egy
+könyvtár ismert (`keep`).
+
+### Eltérések a tervtől
+
+- **Lusta betöltés:** a JSON-ok a bundle-ben vannak, de csak első használatkor parse-olódnak;
+  a highlight.js grammatikák is csak az első felismeréskor regisztrálódnak.
+- **Csak a futásidőben használt tagok kerülnek a csomagba** (érték- és opciótípusok tagjai).
+- **Opciókulcs (5. lépés)** csak ismert opciónévre, és csak a legfelső szintű opcióobjektumban.
+- **OWN-értékű változók:** a saját gyűjteményen futó callback- és ciklusváltozók tagjai saját mezők.
+- **A lexikon megelőzi a modellt** (3. lépés a 6. előtt).
+- **Python beépített nevei** nem könyvtári nevek olyan kódban, ami nem lehet Python.
+- **Nem C-családú nyelvekben** a nyelv hivatalos nevei deklarációként sem neveződnek át
+  (az általános deklaráció-felismerő ott `let rec`, `mov eax` alakokat félreolvasna);
+  shellekben csak a `$változók` számítanak saját névnek.
+- **Töredéktesztek** explicit régióval futnak (a régiókereső nem ismer fel minden egysoros töredéket).
+
+### Csomagméret
+
+| Belépési pont | Eredeti | Most |
+| --- | --- | --- |
+| content-script | 322 KB | 862 KB |
+| sidepanel | 275 KB | 814 KB |
+| offscreen | 608 KB | 1126 KB |
+
+Kb. 310 KB lexikon-JSON és ~200 KB highlight.js (core + 50 grammatika) belépési pontonként.
+Javasolt következő lépés: a lexikonokat külön csomagolt fájlokból, aszinkron előtöltéssel betölteni
+(amíg nincs betöltve, a mai, nyelvfüggetlen viselkedés marad) — ehhez `web_accessible_resources`
+kell a content scriptnek, és mind az öt build-cél érintett.
+
+### Hátra van
+
+- Az identifier-classifier újratanítása a bővített adattal, utána a `DEFAULT_LIB_THRESHOLD` frissítése.
+- A „Mérés” szakasz valós, kézzel címkézett snippet-benchmarkja.
+- Gyenge forrású nyelvek (Swift UI-típusok, Scala Predef, R/dplyr, Flutter): ezekhez nincs bekötött
+  gépi forrás, csak a grammatika kulcsszavai.

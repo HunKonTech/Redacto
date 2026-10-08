@@ -1,0 +1,14 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"lodash",
+"languages":["javascript","typescript"],
+"sources":["@types/lodash@4.17.13 (MIT)"],
+"globals":["_"],
+"types":["LoDashStatic"],
+"namespaces":[],
+"members":{
+
+},
+"valueTypes":[],
+"optionTypes":[]
+}

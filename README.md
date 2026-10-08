@@ -19,6 +19,7 @@ Redacto is an independent, non-commercial fork of [Privacy Guardrail](https://gi
 - [Install](#install)
 - [System requirements](#system-requirements)
 - [How it works](#how-it-works)
+- [Code languages](#code-languages)
 - [Known limitations](#known-limitations)
 - [Documentation](#documentation)
 - [For developers](#for-developers)
@@ -66,6 +67,29 @@ These requirements are heuristic because Local AI runs a transformer NER model e
 - Stores the placeholder map locally in Chrome storage so model responses can be restored later, with restored values visually highlighted.
 
 No pasted text is sent to a remote inference service. There is no telemetry or analytics. See [`PRIVACY.md`](PRIVACY.md) for the full privacy posture.
+
+## Code languages
+
+**Rename code identifiers** detects the language of each pasted code block, locally and offline, so it knows which names are the language's and its libraries' own (keywords, built-ins, standard library) and leaves those alone. It recognizes these 50 languages:
+
+| | | | | |
+| --- | --- | --- | --- | --- |
+| JavaScript | TypeScript | Python | Java | C# |
+| C++ | C | Go | Rust | PHP |
+| Kotlin | Swift | Ruby | SQL | Bash |
+| PowerShell | R | Dart | Scala | Lua |
+| Perl | Haskell | Elixir | Erlang | Julia |
+| Objective-C | VB.NET | F# | Groovy | Clojure |
+| OCaml | MATLAB | Fortran | Delphi / Pascal | x86 Assembly |
+| Ada | Common Lisp | Scheme | Prolog | Smalltalk |
+| Tcl | VBScript | D | Nim | Crystal |
+| Elm | Haxe | CoffeeScript | VHDL | Verilog |
+
+For every language, its keywords and built-in names stay as they are. JavaScript/TypeScript, Python, C#, Java, Kotlin, Go, PHP and Ruby also have their full standard-library names. It also recognizes these libraries from how the code uses them, also in one-line snippets: jQuery, React, Lodash, Node.js, Express, Angular, Vue, RxJS, NumPy, pandas, requests, Django, ASP.NET Core, Entity Framework Core, LINQ, Spring and JUnit (with Mockito and AssertJ).
+
+**For the most accurate results, label your code blocks** with the language, the way chat apps write them: ```` ```python ````, ```` ```ts ````, ```` ```csharp ````, ```` ```kotlin ````, ```` ```sql ````. A label always decides. Without one, the language is guessed from the code itself: longer snippets are usually recognized, but a one- or two-line fragment often cannot be told apart.
+
+**Other languages work too.** Code in a language that is not on the list, or a fragment too short to recognize, is still renamed, just without that language's own names: the snippet's own declarations and the names it uses are renamed, and a general list of well-known library names (plus any library recognized above) is left alone, as before language detection existed. This errs on the side of renaming more, so nothing of yours is kept by mistake; at worst a library name is renamed too and restored in the reply.
 
 ## Known limitations
 

@@ -1,6 +1,10 @@
+import type { CodeLanguage } from './code-language';
+
 export interface CodeRegion {
   start: number;
   end: number;
+  /** The region's language, when known (`code-language.ts`); detected when absent. */
+  language?: CodeLanguage;
 }
 
 /**

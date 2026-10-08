@@ -1,0 +1,15 @@
+{
+"generated":"scripts/build-code-lexicon.js — do not edit by hand",
+"id":"linq",
+"languages":["csharp"],
+"sources":["microsoft.netcore.app.ref@10.0.12 (MIT)"],
+"globals":[],
+"types":["AsyncEnumerable","Enumerable","EnumerableExecutor","EnumerableQuery","IGrouping","ILookup","IOrderedAsyncEnumerable","IOrderedEnumerable","IOrderedQueryable","IQueryProvider","IQueryable","ImmutableArrayExtensions","Lookup","OrderedParallelQuery","ParallelEnumerable","ParallelExecutionMode","ParallelMergeOptions","ParallelQuery","Queryable"],
+"namespaces":[],
+"members":{
+"IEnumerable":["Aggregate","AggregateBy","All","Any","Append","AsEnumerable","AsQueryable","Average","Cast","Chunk","Concat","Contains","Count","CountBy","DefaultIfEmpty","Distinct","DistinctBy","ElementAt","ElementAtOrDefault","Empty","Except","ExceptBy","First","FirstOrDefault","GroupBy","GroupJoin","Index","InfiniteSequence","Intersect","IntersectBy","Join","Last","LastOrDefault","LeftJoin","LongCount","Max","MaxBy","Min","MinBy","OfType","Order","OrderBy","OrderByDescending","OrderDescending","Prepend","Range","Repeat","Reverse","RightJoin","Select","SelectMany","Sequence","SequenceEqual","Shuffle","Single","SingleOrDefault","Skip","SkipLast","SkipWhile","Sum","Take","TakeLast","TakeWhile","ThenBy","ThenByDescending","ToArray","ToDictionary","ToHashSet","ToList","ToLookup","TryGetNonEnumeratedCount","Union","UnionBy","Where","Zip"],
+"IGrouping":["Key"]
+},
+"valueTypes":["IEnumerable","IGrouping"],
+"optionTypes":[]
+}

@@ -22,3 +22,10 @@ Modifications Copyright 2026 Benedek Koncsik.
 Redacto is a modified version of Privacy Guardrail, distributed under the
 Apache License, Version 2.0. It is not affiliated with or endorsed by DFKI.
 See FORK.md for the upstream base and a description of the modifications.
+
+Redacto bundles highlight.js (Copyright (c) 2006, Ivan Sagalaev; BSD-3-Clause)
+for code language detection, and API name lists generated from the
+machine-readable API descriptions of TypeScript (Apache-2.0), typeshed
+(Apache-2.0), .NET (MIT), GWT (Apache-2.0), Kotlin (Apache-2.0), Go
+(BSD-3-Clause), phpstorm-stubs (Apache-2.0), RBS (BSD-2-Clause) and of the
+libraries listed in THIRD_PARTY_NOTICES.md. Only names are included.
