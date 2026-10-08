@@ -60,6 +60,10 @@ function runClassify(providerPath, texts) {
   `;
   const stdout = execFileSync(process.execPath, ['-e', script], {
     cwd: REPO_ROOT,
+    // The compiled provider lives in os.tmpdir(), outside the repo, so its
+    // bare imports (e.g. highlight.js) can't find the repo's node_modules on
+    // their own.
+    env: { ...process.env, NODE_PATH: path.join(REPO_ROOT, 'node_modules') },
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 120_000,
   });
