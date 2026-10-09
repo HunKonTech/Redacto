@@ -54,6 +54,12 @@ pub fn detect_with_external_spans(
         span.entity_type != EntityType::Url
             || url_path::is_sensitive_url(&span.text, &config.public_domains)
     });
+    // A name the model found inside a path makes the whole path private.
+    if config.regex_enabled {
+        url_path::promote_paths_with_ner(text, &mut regex_spans, &mut ner_spans, |span| {
+            span.score >= confidence_threshold_for(span, config)
+        });
+    }
 
     // Stage 3: Checksum validation (filter out invalid regex matches)
     regex_spans.retain(|span| checksum::validate(span));
@@ -799,6 +805,51 @@ mod tests {
             .map(|span| span.text.as_str())
             .collect();
         assert_eq!(urls, vec!["https://wiki.acme.internal/HR"]);
+    }
+
+    fn path_spans(text: &str, external: Vec<PiiSpan>) -> Vec<(EntityType, String)> {
+        detect_with_external_spans(text, &default_config(), external)
+            .into_iter()
+            .map(|span| (span.entity_type, span.text))
+            .collect()
+    }
+
+    #[test]
+    fn a_name_inside_a_path_makes_the_whole_path_private() {
+        let text = r"Nézd meg: D:\Munka\Ügyfelek\Kovács Béla\szerződés.pdf";
+        assert!(path_spans(text, Vec::new()).is_empty());
+        assert_eq!(
+            path_spans(
+                text,
+                vec![external_span(text, "Kovács Béla", EntityType::Person, 0.9)]
+            ),
+            vec![(
+                EntityType::FilePath,
+                r"D:\Munka\Ügyfelek\Kovács Béla\szerződés.pdf".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn a_name_running_past_a_path_joins_it() {
+        let text = r"Saved to C:\Users\Anna Kovacs today";
+        assert_eq!(
+            path_spans(
+                text,
+                vec![external_span(text, "Anna Kovacs", EntityType::Person, 0.9)]
+            ),
+            vec![(EntityType::FilePath, r"C:\Users\Anna Kovacs".to_string())]
+        );
+    }
+
+    #[test]
+    fn weak_names_do_not_promote_a_path() {
+        let text = r"D:\Munka\Ügyfelek\Kovács Béla\szerződés.pdf";
+        assert!(path_spans(
+            text,
+            vec![external_span(text, "Kovács Béla", EntityType::Person, 0.3)]
+        )
+        .is_empty());
     }
 
     #[test]

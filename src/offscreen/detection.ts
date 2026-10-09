@@ -16,6 +16,8 @@ import {
   mapViewSpansToOriginal,
   propagateIdentifierSpans,
 } from '../shared/code-identifiers';
+import { buildPathSplitView } from '../shared/path-view';
+import { sliceTextByByteOffsets } from '../shared/text-offsets';
 import { createNerProvider, resetNerProviderCachesForTests, type NerProvider } from './ner-provider';
 
 type NerProviderFactory = (
@@ -351,24 +353,36 @@ export async function detectWithExternalNer(
 }
 
 /**
- * With source-code detection on, the model reads code regions with their
- * identifiers split into words, so it can spot `Anna Mueller` inside
- * `getAnnaMuellerInvoice`. Its spans are mapped back onto the pasted text,
- * and each flagged identifier word is flagged at every other occurrence.
+ * The model reads filesystem paths with their separators as spaces, so it
+ * can spot `Anna Kovacs` inside `D:\Clients\Anna_Kovacs\offer.pdf`; that view
+ * keeps every offset. With source-code detection on, it also reads code
+ * regions with their identifiers split into words, so it can spot
+ * `Anna Mueller` inside `getAnnaMuellerInvoice`. Its spans are mapped back
+ * onto the pasted text, and each flagged identifier word is flagged at every
+ * other occurrence.
  */
 async function codeAwareNerSpansFor(
   text: string,
   config?: DetectionOptions,
   signal?: AbortSignal
 ): Promise<ExternalNerResult> {
+  const pathView = buildPathSplitView(text);
   const regions = config?.code_mode && config.code_mode !== 'off' ? findCodeLikeRegions(text) : [];
-  if (regions.length === 0) return externalNerSpansFor(text, config, signal);
+  if (regions.length === 0) {
+    const result = await externalNerSpansFor(pathView, config, signal);
+    if (pathView === text) return result;
+    const spans = result.spans.map((span) => ({
+      ...span,
+      text: sliceTextByByteOffsets(text, span.start, span.end),
+    }));
+    return { ...result, spans };
+  }
 
-  const view = buildIdentifierSplitView(text, regions);
+  const view = buildIdentifierSplitView(pathView, regions);
   const result = await externalNerSpansFor(view.text, config, signal);
   const mapped = view.text === text ? result.spans : mapViewSpansToOriginal(result.spans, view, text);
   const spans = propagateIdentifierSpans(text, regions, mapped);
-  if (result.dev && view.text !== text) result.dev.nerInputView = 'identifier-split';
+  if (result.dev && view.text !== pathView) result.dev.nerInputView = 'identifier-split';
   debugLog('[PG:offscreen] code-aware NER', {
     regionCount: regions.length,
     viewLengthDelta: view.text.length - text.length,

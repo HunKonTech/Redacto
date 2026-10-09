@@ -40,6 +40,16 @@ static WINDOWS_PATH_RE: LazyLock<Regex> = LazyLock::new(|| {
 static UNC_PATH_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"\\\\[\w.\-$]+(?:\\[^\\/:*?"<>|\s]+)+"#).unwrap());
 
+/// One more space-separated word of a file name, and the extension that ends it
+/// (`Kovács Béla szerződés.pdf` after the match stopped at `Kovács`).
+static FILE_NAME_WORD_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^ [^\\/:*?"<>|\s]+"#).unwrap());
+static FILE_EXTENSION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\.[A-Za-z][A-Za-z0-9]{0,4}$").unwrap());
+
+/// How many extra words a file name may take in before its extension.
+const MAX_FILE_NAME_WORDS: usize = 5;
+
 static TOKEN_RUN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[A-Za-z0-9_\-]+").unwrap());
 
 static UUID_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -278,41 +288,143 @@ const SHARED_HOME_DIRS: &[&str] = &[
 /// Run the link and path recognizers against the input text.
 pub fn detect_links_and_paths(text: &str, public_domains: &[String]) -> Vec<PiiSpan> {
     let mut spans = Vec::new();
-    let mut urls: Vec<(usize, usize)> = Vec::new();
+    let urls = url_ranges(text);
 
-    for mat in URL_RE.find_iter(text) {
-        let end = mat.start() + trim_trailing_punctuation(mat.as_str()).len();
-        urls.push((mat.start(), end));
-        if is_sensitive_url(&text[mat.start()..end], public_domains) {
-            spans.push(span(mat.start(), end, text, EntityType::Url, URL_SCORE));
+    for &(start, end) in &urls {
+        if is_sensitive_url(&text[start..end], public_domains) {
+            spans.push(span(start, end, text, EntityType::Url, URL_SCORE));
         }
     }
 
-    let paths = UNC_PATH_RE
-        .find_iter(text)
-        .chain(WINDOWS_PATH_RE.find_iter(text))
-        .chain(UNIX_PATH_RE.find_iter(text));
-    for mat in paths {
-        let end = mat.start() + trim_trailing_punctuation(mat.as_str()).len();
-        let inside_url = urls.iter().any(|&(s, e)| mat.start() < e && s < end);
-        let claimed = spans.iter().any(|s| mat.start() < s.end && s.start < end);
-        if inside_url
-            || claimed
-            || !starts_a_filesystem_path(text, mat.start())
-            || !is_sensitive_path(&text[mat.start()..end])
-        {
-            continue;
+    for (start, end) in paths_outside(text, &urls) {
+        if is_sensitive_path(&text[start..end]) {
+            spans.push(span(start, end, text, EntityType::FilePath, PATH_SCORE));
         }
-        spans.push(span(
-            mat.start(),
-            end,
-            text,
-            EntityType::FilePath,
-            PATH_SCORE,
-        ));
     }
 
     spans
+}
+
+/// Every filesystem path in the text, private or not, outside links.
+pub fn path_candidates(text: &str) -> Vec<(usize, usize)> {
+    paths_outside(text, &url_ranges(text))
+}
+
+fn url_ranges(text: &str) -> Vec<(usize, usize)> {
+    URL_RE
+        .find_iter(text)
+        .map(|mat| {
+            let end = mat.start() + trim_trailing_punctuation(mat.as_str()).len();
+            (mat.start(), end)
+        })
+        .collect()
+}
+
+fn paths_outside(text: &str, urls: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    let mut paths: Vec<(usize, usize)> = Vec::new();
+    let matches = UNC_PATH_RE
+        .find_iter(text)
+        .chain(WINDOWS_PATH_RE.find_iter(text))
+        .chain(UNIX_PATH_RE.find_iter(text));
+    for mat in matches {
+        let start = mat.start();
+        let matched_end = start + trim_trailing_punctuation(mat.as_str()).len();
+        let end = extend_path_end(text, start, matched_end);
+        let overlaps = |&(s, e): &(usize, usize)| start < e && s < end;
+        if urls.iter().any(overlaps)
+            || paths.iter().any(overlaps)
+            || !starts_a_filesystem_path(text, start)
+        {
+            continue;
+        }
+        paths.push((start, end));
+    }
+    paths
+}
+
+/// Names with spaces are cut at the first space by the patterns. A quoted
+/// path runs to its closing quote; otherwise a last segment followed by more
+/// words and an extension on the same line takes them in.
+fn extend_path_end(text: &str, start: usize, end: usize) -> usize {
+    let line_end = text[end..].find('\n').map_or(text.len(), |i| end + i);
+    let rest = &text[end..line_end];
+
+    if let Some(quote) = text[..start].chars().next_back().filter(|c| "\"'`".contains(*c)) {
+        if let Some(close) = rest.find(quote) {
+            if !rest[..close].contains(['<', '>', '|', '*', '?', '"']) {
+                return end + close;
+            }
+        }
+    }
+
+    let last_segment = text[start..end].rsplit(['\\', '/']).next().unwrap_or("");
+    if last_segment.is_empty() || last_segment.contains('.') {
+        return end;
+    }
+    let mut taken = 0;
+    for _ in 0..MAX_FILE_NAME_WORDS {
+        let Some(word) = FILE_NAME_WORD_RE.find(&rest[taken..]) else {
+            break;
+        };
+        let trimmed = trim_trailing_punctuation(word.as_str());
+        if FILE_EXTENSION_RE.is_match(trimmed) {
+            return end + taken + trimmed.len();
+        }
+        taken += word.end();
+    }
+    end
+}
+
+/// Model labels that make a path private when found inside it.
+const PATH_REVEALING_TYPES: &[EntityType] = &[
+    EntityType::Person,
+    EntityType::Username,
+    EntityType::Organization,
+    EntityType::Email,
+    EntityType::Address,
+    EntityType::Phone,
+    EntityType::Misc,
+];
+
+/// A path that names a person or an organisation (`D:\Clients\Anna Kovacs\offer.pdf`)
+/// is private even without an account segment. Each path the model found such
+/// a name in becomes one FILE_PATH span covering the path and the names that
+/// reach into it, so neither half of the reference survives on its own.
+/// `accepts` tells which model spans are confident enough to count.
+pub fn promote_paths_with_ner(
+    text: &str,
+    regex_spans: &mut Vec<PiiSpan>,
+    ner_spans: &mut Vec<PiiSpan>,
+    accepts: impl Fn(&PiiSpan) -> bool,
+) {
+    for (path_start, path_end) in path_candidates(text) {
+        let line_start = text[..path_start].rfind('\n').map_or(0, |i| i + 1);
+        let line_end = text[path_end..].find('\n').map_or(text.len(), |i| path_end + i);
+        let names: Vec<(usize, usize)> = ner_spans
+            .iter()
+            .filter(|s| {
+                PATH_REVEALING_TYPES.contains(&s.entity_type)
+                    && s.start < path_end
+                    && path_start < s.end
+                    && s.start >= line_start
+                    && s.end <= line_end
+                    && accepts(s)
+            })
+            .map(|s| (s.start, s.end))
+            .collect();
+        if names.is_empty() {
+            continue;
+        }
+
+        let start = names.iter().map(|&(s, _)| s).fold(path_start, usize::min);
+        let end = names.iter().map(|&(_, e)| e).fold(path_end, usize::max);
+        let inside = |s: &PiiSpan| s.start >= start && s.end <= end;
+        ner_spans.retain(|s| !inside(s));
+        regex_spans.retain(|s| {
+            !inside(s) && !(s.entity_type == EntityType::FilePath && s.start < end && start < s.end)
+        });
+        regex_spans.push(span(start, end, text, EntityType::FilePath, PATH_SCORE));
+    }
 }
 
 /// Fold link and path spans into the regex spans. A sensitive link or path
@@ -739,6 +851,51 @@ mod tests {
         assert!(paths("ls /Users/Shared/data").is_empty());
         assert!(paths("~/projects/app/src").is_empty());
         assert!(paths("and/or 12/05/2023").is_empty());
+    }
+
+    #[test]
+    fn file_names_with_spaces_run_to_their_extension() {
+        assert_eq!(
+            paths(r"Saved C:\Users\anna\Kovács Béla szerződés.pdf, thanks"),
+            vec![r"C:\Users\anna\Kovács Béla szerződés.pdf"]
+        );
+        assert_eq!(
+            paths(r"open C:\Users\anna\a b.txt and c.txt"),
+            vec![r"C:\Users\anna\a b.txt"]
+        );
+        assert_eq!(
+            paths(r"cd C:\Users\anna\Documents and look"),
+            vec![r"C:\Users\anna\Documents"]
+        );
+    }
+
+    #[test]
+    fn quoted_paths_run_to_the_closing_quote() {
+        assert_eq!(
+            path_candidates(r#"open "C:\Projects\Acme Kft\Kovács Béla" now"#)
+                .into_iter()
+                .map(|(s, e)| &r#"open "C:\Projects\Acme Kft\Kovács Béla" now"#[s..e])
+                .collect::<Vec<_>>(),
+            vec![r"C:\Projects\Acme Kft\Kovács Béla"]
+        );
+        assert_eq!(
+            paths(r#"path = "C:\\Users\\mmueller\\AppData""#),
+            vec![r#"C:\\Users\\mmueller\\AppData"#]
+        );
+    }
+
+    #[test]
+    fn path_candidates_include_public_paths_once() {
+        let text = r"C:/Users/Shared/data and C:\Windows\System32 and /usr/local/bin";
+        let found: Vec<&str> = path_candidates(text)
+            .into_iter()
+            .map(|(s, e)| &text[s..e])
+            .collect();
+        assert_eq!(
+            found,
+            vec![r"C:/Users/Shared/data", r"C:\Windows\System32", "/usr/local/bin"]
+        );
+        assert!(path_candidates("https://example.com/home/about").is_empty());
     }
 
     #[test]

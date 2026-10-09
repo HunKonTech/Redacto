@@ -86,6 +86,31 @@ describe('offscreen detection flow', () => {
     }
   });
 
+  test('the model reads paths as words and its spans land on the original text', async () => {
+    const text = 'Mentve: D:\\Ügyfelek\\Ada_Lovelace\\szerződés.pdf';
+    const detect = jest.fn(async (input: string) => {
+      const start = input.indexOf('Ada Lovelace');
+      return start < 0
+        ? []
+        : [{
+          start: Buffer.byteLength(input.slice(0, start)),
+          end: Buffer.byteLength(input.slice(0, start + 'Ada Lovelace'.length)),
+          entity_type: 'PERSON' as const,
+          score: 0.9,
+          text: 'Ada Lovelace',
+          source: 'ner' as const,
+        }];
+    });
+    setNerProviderFactoryForTests(() => ({ mode: 'fixture', detect }));
+
+    await detectWithExternalNer(text, { ner_provider: 'fixture', code_mode: 'off' });
+
+    expect(detect.mock.calls[0][0]).toBe('Mentve: D: Ügyfelek Ada Lovelace szerződés.pdf');
+    const [span] = (detectPii as jest.Mock).mock.calls[0][2];
+    expect(span.text).toBe('Ada_Lovelace');
+    expect(Buffer.from(text).subarray(span.start, span.end).toString()).toBe('Ada_Lovelace');
+  });
+
   test('code mode off keeps identifiers opaque to the model', async () => {
     const text = 'def getAdaLovelaceInvoice(ada_id):\n    return ada_id';
 
