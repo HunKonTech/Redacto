@@ -82,13 +82,13 @@ print(var3.field2)`);
     expect(syntaxErrors(text)).toEqual([]);
   });
 
-  test('a name the model flagged keeps its typed placeholder instead of a neutral alias', () => {
+  test('a name the model flagged renames the whole identifier', () => {
     const code = 'function getAnnaMuellerInvoice(id) {\n  return load(id);\n}\nconst x1 = getAnnaMuellerInvoice(1);';
     const spans = [personSpan(code, 'AnnaMueller'), personSpan(code, 'AnnaMueller', 40)];
 
     const { text } = anonymize(code, spans, new EntityMap(), RENAME);
 
-    expect(text).toBe('function getPERSON_1Invoice(param1) {\n  return func3(param1);\n}\nconst var2 = getPERSON_1Invoice(1);');
+    expect(text).toBe('function func1(param2) {\n  return func4(param2);\n}\nconst var3 = func1(1);');
   });
 
   test('aliases never collide with names already in the code', () => {

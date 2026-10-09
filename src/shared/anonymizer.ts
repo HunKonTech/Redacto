@@ -98,20 +98,71 @@ function applyReplacements(originalText: string, replacements: Replacement[]): s
   return result + originalText.slice(cursor);
 }
 
+/** UTF-16 range of a span in the original text. */
+interface TextRange {
+  start: number;
+  end: number;
+}
+
+function spanRange(originalText: string, span: PiiSpan): TextRange {
+  return {
+    start: byteOffsetToStringIndex(originalText, span.start),
+    end: byteOffsetToStringIndex(originalText, span.end),
+  };
+}
+
+const IDENTIFIER_NAME_RE = /^[\p{L}_$][\p{L}\p{N}_$]*$/u;
+const IDENTIFIER_CHAR_RE = /[\p{L}\p{N}_$]/u;
+
 /**
- * Replacements renaming every identifier the code declares. A name any of
- * whose occurrences overlaps a reviewed span is left to that span: the model
- * flagged something inside it (`getAnnaMuellerInvoice` → `getPERSON_1Invoice`),
- * and that replacement is already applied at every occurrence.
+ * With renaming on, a detected name that is a whole identifier in code
+ * (`annaMueller`, or `UserDataViewModel` widened from `UserData` by
+ * `consistentIdentifierSpans`) is renamed like the code's own names
+ * (`Class3`) instead of getting a placeholder. Pattern matches (secrets,
+ * emails) keep theirs.
+ */
+function identifierSpansToRename(
+  originalText: string,
+  spans: readonly PiiSpan[],
+  inIdentifierPosition: (start: number, end: number) => boolean,
+): Set<PiiSpan> {
+  return new Set(
+    spans.filter((span) => {
+      if (span.source === 'regex') return false;
+      const { start, end } = spanRange(originalText, span);
+      return (
+        IDENTIFIER_NAME_RE.test(originalText.slice(start, end)) &&
+        !IDENTIFIER_CHAR_RE.test(originalText[start - 1] ?? '') &&
+        !IDENTIFIER_CHAR_RE.test(originalText[end] ?? '') &&
+        inIdentifierPosition(start, end)
+      );
+    }),
+  );
+}
+
+/** Role for a flagged name the rename plan does not know, read from its case. */
+function roleFromCase(name: string): IdentifierRole {
+  const bare = name.replace(/^_+/, '');
+  if (/^[A-Z][A-Z0-9_]+$/.test(bare)) return 'constant';
+  return /^[A-Z]/.test(bare) ? 'class' : 'variable';
+}
+
+/**
+ * Replacements renaming every identifier the code declares, plus the
+ * `flagged` identifiers detection found personal data in. A name any of
+ * whose occurrences overlaps a reviewed span is left to that span. Flagged
+ * names that get no alias (the vault already maps them to a placeholder) are
+ * returned in `unrenamed`, for the caller to replace with their placeholder.
  */
 function identifierReplacements(
   originalText: string,
-  spanRanges: readonly Replacement[],
+  spanRanges: readonly TextRange[],
   resolveAlias: AliasResolver,
   knownNames: Iterable<string>,
   planOptions: Pick<RenamePlanOptions, 'classifications' | 'shareCodeLanguage'> = {},
   replacementTokens: ReadonlySet<string> = new Set(),
-): { replacements: Replacement[]; renamed: number } {
+  flagged: readonly TextRange[] = [],
+): { replacements: Replacement[]; renamed: number; unrenamed: Set<string> } {
   const plan = planIdentifierRenames(originalText, { ...planOptions, knownNames });
   const blocked = new Set<string>();
   for (const occurrence of plan.occurrences) {
@@ -120,19 +171,53 @@ function identifierReplacements(
     }
   }
 
-  const aliases = new Map<string, string>();
-  for (const [name, role] of plan.roles) {
-    // An alias or placeholder from an earlier anonymization is already safe;
-    // renaming it again would break the way back to the original.
-    if (blocked.has(name) || replacementTokens.has(name)) continue;
-    const alias = resolveAlias(name, role, plan.identifiersInText);
-    if (alias) aliases.set(name, alias);
+  const flaggedOccurrences = flagged.map(({ start, end }) => ({ start, end, name: originalText.slice(start, end) }));
+  const flaggedNames = new Set(flaggedOccurrences.map((occurrence) => occurrence.name));
+  const roles = new Map(plan.roles);
+  for (const name of flaggedNames) {
+    if (!roles.has(name)) roles.set(name, roleFromCase(name));
   }
 
-  const replacements = plan.occurrences
-    .filter((occurrence) => aliases.has(occurrence.name))
+  const aliases = new Map<string, string>();
+  const unrenamed = new Set<string>();
+  for (const [name, role] of roles) {
+    const isFlagged = flaggedNames.has(name);
+    // An alias or placeholder from an earlier anonymization is already safe;
+    // renaming it again would break the way back to the original.
+    const alias =
+      (blocked.has(name) && !isFlagged) || replacementTokens.has(name)
+        ? null
+        : resolveAlias(name, role, plan.identifiersInText);
+    if (alias) aliases.set(name, alias);
+    else if (isFlagged) unrenamed.add(name);
+  }
+
+  const seen = new Set<number>();
+  const replacements = [...flaggedOccurrences, ...plan.occurrences]
+    .filter((occurrence) => aliases.has(occurrence.name) && !seen.has(occurrence.start) && seen.add(occurrence.start))
     .map((occurrence) => ({ start: occurrence.start, end: occurrence.end, text: aliases.get(occurrence.name)! }));
-  return { replacements, renamed: aliases.size };
+  return { replacements, renamed: aliases.size, unrenamed };
+}
+
+/**
+ * The spans to replace with placeholders and the identifier replacements,
+ * when renaming is on. Identifiers detection flagged are renamed whole; those
+ * that get no alias fall back to their placeholder.
+ */
+function renameAlongsideSpans(
+  originalText: string,
+  sorted: readonly PiiSpan[],
+  inIdentifierPosition: (start: number, end: number) => boolean,
+  rename: (spanRanges: TextRange[], flagged: TextRange[]) => ReturnType<typeof identifierReplacements>,
+): { spans: PiiSpan[]; renames: Replacement[]; renamed: number } {
+  const toRename = identifierSpansToRename(originalText, sorted, inIdentifierPosition);
+  const others = sorted.filter((span) => !toRename.has(span));
+  const result = rename(
+    others.map((span) => spanRange(originalText, span)),
+    [...toRename].map((span) => spanRange(originalText, span)),
+  );
+  const spans = sorted.filter((span) => !toRename.has(span) || result.unrenamed.has(span.text));
+  return { spans, renames: result.replacements, renamed: result.renamed };
 }
 
 /** Alias resolver backed by the conversation EntityMap (cross-session memory off). */
@@ -209,32 +294,35 @@ export function previewIdentifierRenames(
     entityMap,
     extra: context.knownReplacements,
   });
-  const spanRanges = spans.map((span) => ({
-    start: byteOffsetToStringIndex(originalText, span.start),
-    end: byteOffsetToStringIndex(originalText, span.end),
-    text: '',
-  }));
   // The vault is plain JSON (it lives in chrome.storage), so this copy is exact.
   const vaultData: IdentityVaultData | null = context.vaultData
     ? JSON.parse(JSON.stringify(context.vaultData))
     : null;
-  const { replacements } = vaultData
-    ? identifierReplacements(
-        originalText,
-        spanRanges,
-        vaultAliases(vaultData, entityMap, []),
-        vaultAliasedNames(vaultData, entityMap),
-        { shareCodeLanguage: context.shareCodeLanguage },
-        known,
-      )
-    : identifierReplacements(
-        originalText,
-        spanRanges,
-        entityMapAliases(entityMap),
-        entityMapAliasedNames(entityMap),
-        { shareCodeLanguage: context.shareCodeLanguage },
-        known,
-      );
+  const { renames: replacements } = renameAlongsideSpans(
+    originalText,
+    consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known)),
+    createIdentifierPositionCheck(originalText),
+    (spanRanges, flagged) =>
+      vaultData
+        ? identifierReplacements(
+            originalText,
+            spanRanges,
+            vaultAliases(vaultData, entityMap, []),
+            vaultAliasedNames(vaultData, entityMap),
+            { shareCodeLanguage: context.shareCodeLanguage },
+            known,
+            flagged,
+          )
+        : identifierReplacements(
+            originalText,
+            spanRanges,
+            entityMapAliases(entityMap),
+            entityMapAliasedNames(entityMap),
+            { shareCodeLanguage: context.shareCodeLanguage },
+            known,
+            flagged,
+          ),
+  );
   // Preview is best-effort and stays synchronous (it re-runs on every span
   // toggle in the review overlay); it always uses the lexical LIBRARY_NAMES
   // fallback rather than awaiting the classifier. The actual paste (below)
@@ -270,31 +358,34 @@ export function anonymize(
   const known = knownReplacementTokens({ entityMap, extra: options.knownReplacements });
   for (const { type, index } of placeholdersInText(originalText, known)) entityMap.reserve(type, index);
   // Sort spans by start position (should already be sorted from merger)
-  const sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
+  let sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 
+  let renamedIdentifiers = 0;
+  if (options.renameIdentifiers) {
+    const renames = renameAlongsideSpans(originalText, sorted, inIdentifierPosition, (spanRanges, flagged) =>
+      identifierReplacements(
+        originalText,
+        spanRanges,
+        entityMapAliases(entityMap),
+        entityMapAliasedNames(entityMap),
+        { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
+        known,
+        flagged,
+      ),
+    );
+    sorted = renames.spans;
+    replacements.push(...renames.renames);
+    renamedIdentifiers = renames.renamed;
+  }
+
   for (const span of sorted) {
-    const start = byteOffsetToStringIndex(originalText, span.start);
-    const end = byteOffsetToStringIndex(originalText, span.end);
+    const { start, end } = spanRange(originalText, span);
     // Replace span with placeholder; in code, drop the brackets so the
     // identifier it sits in stays valid.
     const ph = entityMap.add(span);
     replacements.push({ start, end, text: inIdentifierPosition(start, end) ? bareIdentifierPlaceholder(ph) : ph });
-  }
-
-  let renamedIdentifiers = 0;
-  if (options.renameIdentifiers) {
-    const renames = identifierReplacements(
-      originalText,
-      replacements,
-      entityMapAliases(entityMap),
-      entityMapAliasedNames(entityMap),
-      { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
-      known,
-    );
-    replacements.push(...renames.replacements);
-    renamedIdentifiers = renames.renamed;
   }
 
   return { text: applyReplacements(originalText, replacements), entityMap, renamedIdentifiers };
@@ -350,13 +441,30 @@ export function anonymizeWithVault(
     const entityType = type as EntityType;
     vaultData.counters[entityType] = Math.max(vaultData.counters[entityType] ?? 0, index);
   }
-  const sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
+  let sorted = consistentIdentifierSpans(originalText, dropKnownReplacements(spans, known));
   const inIdentifierPosition = createIdentifierPositionCheck(originalText);
   const replacements: Replacement[] = [];
 
+  let renamedIdentifiers = 0;
+  if (options.renameIdentifiers) {
+    const renames = renameAlongsideSpans(originalText, sorted, inIdentifierPosition, (spanRanges, flagged) =>
+      identifierReplacements(
+        originalText,
+        spanRanges,
+        vaultAliases(vaultData, entityMap, recordsTouched),
+        vaultAliasedNames(vaultData, entityMap),
+        { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
+        known,
+        flagged,
+      ),
+    );
+    sorted = renames.spans;
+    replacements.push(...renames.renames);
+    renamedIdentifiers = renames.renamed;
+  }
+
   for (const span of sorted) {
-    const start = byteOffsetToStringIndex(originalText, span.start);
-    const end = byteOffsetToStringIndex(originalText, span.end);
+    const { start, end } = spanRange(originalText, span);
 
     const { record } = upsertEntity(vaultData, span, Date.now(), defaultMode);
     recordsTouched.push(record);
@@ -371,20 +479,6 @@ export function anonymizeWithVault(
       entityMap.addExternal(replacement, record.originalText);
       replacements.push({ start, end, text: replacement });
     }
-  }
-
-  let renamedIdentifiers = 0;
-  if (options.renameIdentifiers) {
-    const renames = identifierReplacements(
-      originalText,
-      replacements,
-      vaultAliases(vaultData, entityMap, recordsTouched),
-      vaultAliasedNames(vaultData, entityMap),
-      { classifications: options.identifierClassifications, shareCodeLanguage: options.shareCodeLanguage },
-      known,
-    );
-    replacements.push(...renames.replacements);
-    renamedIdentifiers = renames.renamed;
   }
 
   return {

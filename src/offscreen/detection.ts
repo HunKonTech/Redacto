@@ -12,6 +12,7 @@ import { debugError, debugLog, debugWarn } from '../shared/debug-log';
 import { detectPii } from './wasm-bridge';
 import {
   buildIdentifierSplitView,
+  dropGenericIdentifierSpans,
   findCodeLikeRegions,
   mapViewSpansToOriginal,
   propagateIdentifierSpans,
@@ -359,7 +360,8 @@ export async function detectWithExternalNer(
  * regions with their identifiers split into words, so it can spot
  * `Anna Mueller` inside `getAnnaMuellerInvoice`. Its spans are mapped back
  * onto the pasted text, and each flagged identifier word is flagged at every
- * other occurrence.
+ * other occurrence. Flagged identifier parts made only of generic code
+ * words (`UserData` in `UserDataViewModel`) are dropped.
  */
 async function codeAwareNerSpansFor(
   text: string,
@@ -370,18 +372,17 @@ async function codeAwareNerSpansFor(
   const regions = config?.code_mode && config.code_mode !== 'off' ? findCodeLikeRegions(text) : [];
   if (regions.length === 0) {
     const result = await externalNerSpansFor(pathView, config, signal);
-    if (pathView === text) return result;
     const spans = result.spans.map((span) => ({
       ...span,
       text: sliceTextByByteOffsets(text, span.start, span.end),
     }));
-    return { ...result, spans };
+    return { ...result, spans: dropGenericIdentifierSpans(text, regions, spans) };
   }
 
   const view = buildIdentifierSplitView(pathView, regions);
   const result = await externalNerSpansFor(view.text, config, signal);
   const mapped = view.text === text ? result.spans : mapViewSpansToOriginal(result.spans, view, text);
-  const spans = propagateIdentifierSpans(text, regions, mapped);
+  const spans = propagateIdentifierSpans(text, regions, dropGenericIdentifierSpans(text, regions, mapped));
   if (result.dev && view.text !== pathView) result.dev.nerInputView = 'identifier-split';
   debugLog('[PG:offscreen] code-aware NER', {
     regionCount: regions.length,

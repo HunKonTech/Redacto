@@ -10,6 +10,7 @@
 
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
 import type { IdentifierRename } from '../../shared/anonymizer';
+import { consistentIdentifierSpans } from '../../shared/code-identifiers';
 import type { DevDiagnostics, EntityType, FeedbackEntry, PiiSpan } from '../../shared/message-types';
 import {
   byteOffsetToStringIndex,
@@ -404,14 +405,19 @@ function buildPreview(
   type Mark = { start: number; end: number; html: string };
   const marks: Mark[] = [];
   const counters: Record<string, number> = {};
-  for (const span of spans) {
+  // As pasting does: a name inside an identifier stands for the whole
+  // identifier, and a renamed identifier shows its alias.
+  for (const span of consistentIdentifierSpans(originalText, spans)) {
+    const start = byteOffsetToStringIndex(originalText, span.start);
+    const end = byteOffsetToStringIndex(originalText, span.end);
+    if (renames.some((rename) => rename.start < end && start < rename.end)) continue;
     counters[span.entity_type] = (counters[span.entity_type] || 0) + 1;
     const token = resolver
       ? resolver(span)
       : `[${span.entity_type}_${counters[span.entity_type]}]`;
     marks.push({
-      start: byteOffsetToStringIndex(originalText, span.start),
-      end: byteOffsetToStringIndex(originalText, span.end),
+      start,
+      end,
       html:
         `<span class="pg-highlight pg-highlight-${span.entity_type.toLowerCase()}" ` +
         `title="${span.entity_type} (${(span.score * 100).toFixed(0)}%)">` +

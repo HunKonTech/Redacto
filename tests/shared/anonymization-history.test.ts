@@ -84,8 +84,8 @@ describe('usedMappings', () => {
     const code = 'function getAnnaMuellerInvoice(id) {\n  return id;\n}';
     const { text, entityMap } = anonymize(code, [span(code, 'AnnaMueller', 'PERSON')], new EntityMap());
 
-    expect(text).toContain('getPERSON_1Invoice');
-    expect(usedMappings(text, entityMap)).toEqual({ '[PERSON_1]': 'AnnaMueller' });
+    expect(text).toContain('function PERSON_1(id)');
+    expect(usedMappings(text, entityMap)).toEqual({ '[PERSON_1]': 'getAnnaMuellerInvoice' });
   });
 
   it('keeps synthetic values and code aliases, which are not placeholder-shaped', () => {

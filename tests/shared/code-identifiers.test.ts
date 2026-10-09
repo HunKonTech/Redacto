@@ -2,6 +2,7 @@ import { anonymize } from '../../src/shared/anonymizer';
 import {
   buildIdentifierSplitView,
   createIdentifierPositionCheck,
+  dropGenericIdentifierSpans,
   findCodeLikeRegions,
   mapViewSpansToOriginal,
   propagateIdentifierSpans,
@@ -152,7 +153,7 @@ describe('propagateIdentifierSpans', () => {
 });
 
 describe('code-safe replacement and restoration', () => {
-  test('placeholders inside identifiers lose their brackets, strings keep them', () => {
+  test('a name inside an identifier replaces it whole without brackets, strings keep them', () => {
     const text = [
       'def getAdaLovelaceInvoice():',
       '    print("Ada Lovelace")  # Ada Lovelace',
@@ -169,12 +170,35 @@ describe('code-safe replacement and restoration', () => {
 
     expect(anonymized).toBe(
       [
-        'def getPERSON_1Invoice():',
+        'def PERSON_1():',
         '    print("[PERSON_2]")  # [PERSON_2]',
         '    return 1',
       ].join('\n'),
     );
     expect(deAnonymize(anonymized, entityMap)).toBe(text);
+  });
+
+  test('a flagged part of a C# class name replaces the whole name', () => {
+    const text = 'public class AnnaMuellerViewModel : ViewModelBase\n{\n    var vm = new AnnaMuellerViewModel();\n}';
+    const { text: anonymized, entityMap } = anonymize(text, [nerSpan(text, 'AnnaMueller')]);
+
+    expect(anonymized).toBe('public class PERSON_1 : ViewModelBase\n{\n    var vm = new PERSON_1();\n}');
+    expect(deAnonymize(anonymized, entityMap)).toBe(text);
+  });
+
+  test('generic code words the model read as a name are dropped', () => {
+    const text = 'public class UserDataViewModel\n{\n    public string CustomerName { get; set; }\n    var x = getAnnaMuellerInvoice();\n}';
+    const regions = findCodeLikeRegions(text);
+    const spans = [nerSpan(text, 'UserData'), nerSpan(text, 'CustomerName'), nerSpan(text, 'AnnaMueller')];
+
+    expect(dropGenericIdentifierSpans(text, regions, spans).map((span) => span.text)).toEqual(['AnnaMueller']);
+  });
+
+  test('a generic word in prose stays the model\'s call', () => {
+    const text = 'Please ask User about it.';
+    const spans = [nerSpan(text, 'User')];
+
+    expect(dropGenericIdentifierSpans(text, [], spans)).toEqual(spans);
   });
 
   test('a whole identifier in code becomes a bare placeholder', () => {
@@ -189,7 +213,7 @@ describe('code-safe replacement and restoration', () => {
   });
 
   test('restores placeholders the model reused in new identifiers', () => {
-    const text = 'def getAdaLovelaceInvoice():\n    return 1';
+    const text = 'AdaLovelace = load()\nprint(AdaLovelace)';
     const { entityMap } = anonymize(text, [nerSpan(text, 'AdaLovelace')]);
 
     expect(deAnonymize('def setPERSON_1Invoice(): pass\nPERSON_1_total = 0', entityMap)).toBe(

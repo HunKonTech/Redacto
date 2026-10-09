@@ -164,6 +164,77 @@ function inRegions(regions: readonly CodeRegion[], start: number, end: number): 
   return regions.some((region) => start >= region.start && end <= region.end);
 }
 
+/**
+ * Words identifiers are commonly built from. The model sometimes reads them
+ * as a name (`UserData` in `UserDataViewModel` as a person); a flagged part
+ * made only of these words is not personal data. Words that are also common
+ * first names (`max`, `will`, `mark`, `grant`) are left out on purpose.
+ */
+const GENERIC_IDENTIFIER_WORDS: ReadonlySet<string> = new Set([
+  'abstract', 'access', 'account', 'accounts', 'action', 'active', 'activity', 'adapter', 'add',
+  'address', 'admin', 'age', 'agent', 'alias', 'all', 'api', 'app', 'application', 'archive',
+  'area', 'async', 'attribute', 'audit', 'auth', 'author', 'avatar', 'base', 'basic', 'billing',
+  'binding', 'birth', 'birthday', 'body', 'booking', 'builder', 'button', 'cache', 'card', 'cart',
+  'case', 'category', 'child', 'city', 'class', 'client', 'clients', 'code', 'collection',
+  'command', 'comment', 'common', 'company', 'component', 'config', 'configuration', 'connection',
+  'contact', 'contacts', 'container', 'content', 'context', 'contract', 'control', 'controller',
+  'core', 'count', 'country', 'create', 'created', 'credential', 'credentials', 'current',
+  'customer', 'customers', 'dao', 'dashboard', 'data', 'database', 'date', 'default', 'delete',
+  'department', 'description', 'detail', 'details', 'device', 'dialog', 'display', 'document',
+  'domain', 'dto', 'edit', 'editor', 'email', 'emails', 'employee', 'employees', 'entity', 'entry',
+  'error', 'event', 'events', 'factory', 'family', 'field', 'file', 'filter', 'find', 'first',
+  'form', 'full', 'gender', 'get', 'given', 'group', 'groups', 'guest', 'handler', 'has', 'header',
+  'helper', 'history', 'home', 'id', 'identity', 'image', 'impl', 'info', 'information', 'init',
+  'input', 'invoice', 'is', 'item', 'items', 'job', 'key', 'last', 'layout', 'list', 'load',
+  'local', 'location', 'log', 'logger', 'login', 'mail', 'main', 'manager', 'map', 'mapper',
+  'member', 'members', 'message', 'meta', 'middle', 'mobile', 'mock', 'modal', 'model', 'models',
+  'module', 'my', 'name', 'names', 'new', 'nick', 'nickname', 'node', 'number', 'object', 'old',
+  'on', 'option', 'options', 'order', 'orders', 'organization', 'output', 'owner', 'panel',
+  'parent', 'partner', 'password', 'patient', 'payment', 'people', 'permission', 'person',
+  'personal', 'persons', 'phone', 'photo', 'picture', 'post', 'postal', 'preferences', 'primary',
+  'private', 'product', 'profile', 'profiles', 'property', 'provider', 'proxy', 'public', 'query',
+  'record', 'records', 'register', 'registration', 'remove', 'report', 'repo', 'repository',
+  'request', 'resolver', 'resource', 'response', 'result', 'role', 'roles', 'root', 'save',
+  'schema', 'screen', 'search', 'secondary', 'security', 'selected', 'service', 'session', 'set',
+  'settings', 'setup', 'shared', 'sign', 'signup', 'source', 'staff', 'state', 'status', 'store',
+  'street', 'student', 'subscriber', 'summary', 'surname', 'table', 'target', 'task', 'team',
+  'teams', 'teacher', 'temp', 'template', 'tenant', 'test', 'title', 'to', 'token', 'type',
+  'update', 'updated', 'user', 'username', 'users', 'util', 'utils', 'validator', 'value', 'view',
+  'viewer', 'views', 'vm', 'widget', 'wrapper', 'zip',
+]);
+
+/** Lower-case words of an identifier: `UserDataViewModel` → `user`, `data`, `view`, `model`. */
+function identifierWords(name: string): string[] {
+  return name
+    .split(/[\s_$\p{N}]+|(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/u)
+    .filter(Boolean)
+    .map((word) => word.toLowerCase());
+}
+
+/**
+ * Drops model spans in code that are made only of generic identifier words
+ * (`UserData` in `UserDataViewModel`, `customerName`). A span counts as code
+ * when it sits in a code region, is glued to a longer identifier, or is a
+ * compound identifier itself; a lone word in prose is the model's call.
+ */
+export function dropGenericIdentifierSpans(
+  text: string,
+  regions: readonly CodeRegion[],
+  spans: readonly PiiSpan[],
+): PiiSpan[] {
+  return spans.filter((span) => {
+    if (span.source !== 'ner') return true;
+    const start = byteOffsetToStringIndex(text, span.start);
+    const end = byteOffsetToStringIndex(text, span.end);
+    const original = text.slice(start, end);
+    if (!IDENTIFIER_TEXT_RE.test(original)) return true;
+    const words = identifierWords(original);
+    if (words.length === 0 || !words.every((word) => GENERIC_IDENTIFIER_WORDS.has(word))) return true;
+    const glued = IDENTIFIER_CHAR_RE.test(text[start - 1] ?? '') || IDENTIFIER_CHAR_RE.test(text[end] ?? '');
+    return !(glued || words.length > 1 || inRegions(regions, start, end));
+  });
+}
+
 /** Split an identifier into its words: `getHTTPResponse_v2` → `get`, `HTTP`, `Response`, `v2`. */
 function identifierWordBreaks(identifier: string): { replace: Set<number>; insertBefore: Set<number> } {
   const replace = new Set<number>();
@@ -386,26 +457,20 @@ export function createIdentifierPositionCheck(
   };
 }
 
-interface IdentifierPart {
-  start: number;
-  end: number;
-  span: PiiSpan;
-}
-
 /**
- * The model reads each occurrence of an identifier on its own, so the same
- * name can come back split differently: `GitHub` in `class GitHubService`
- * but `Git` + `Hub` in `ILogger<GitHubService>`, which anonymizes to
- * `ORGANIZATION_1Service` next to `ORGANIZATION_2ORGANIZATION_3Service`.
- *
- * For spans that sit inside a longer identifier, touching parts of one type
- * are joined, and the occurrence of the identifier with the best cover (most
- * characters, then fewest parts) is applied to every occurrence of it, so the
- * name anonymizes the same way everywhere. Other spans pass through.
+ * A name the model flagged inside a longer identifier stands for the whole
+ * identifier: replacing only the part (`UserDataViewModel` →
+ * `PERSON_1ViewModel`) leaves the rest of the name behind and reads as a
+ * half-renamed symbol. Each such span is widened to the identifier it sits
+ * in, at every occurrence of that identifier, so the name is replaced whole
+ * and the same way everywhere — also where the model split it differently
+ * (`GitHub` in one place, `Git` + `Hub` in another) or missed it. The type
+ * and score come from the longest part. Other spans pass through.
  */
 export function consistentIdentifierSpans(text: string, spans: readonly PiiSpan[]): PiiSpan[] {
   const inIdentifierPosition = createIdentifierPositionCheck(text);
-  const occurrences = new Map<number, { word: string; parts: IdentifierPart[] }>();
+  const flagged = new Map<string, PiiSpan>();
+  const cover = (span: PiiSpan) => span.end - span.start;
   for (const span of spans) {
     const start = byteOffsetToStringIndex(text, span.start);
     const end = byteOffsetToStringIndex(text, span.end);
@@ -415,67 +480,29 @@ export function consistentIdentifierSpans(text: string, spans: readonly PiiSpan[
     while (wordStart > 0 && IDENTIFIER_CHAR_RE.test(text[wordStart - 1])) wordStart--;
     while (wordEnd < text.length && IDENTIFIER_CHAR_RE.test(text[wordEnd])) wordEnd++;
     if (wordStart === start && wordEnd === end) continue;
-    const occurrence = occurrences.get(wordStart) ?? { word: text.slice(wordStart, wordEnd), parts: [] };
-    occurrence.parts.push({ start: start - wordStart, end: end - wordStart, span });
-    occurrences.set(wordStart, occurrence);
-  }
-  if (occurrences.size === 0) return [...spans];
-
-  const best = new Map<string, IdentifierPart[]>();
-  const cover = (parts: IdentifierPart[]) => parts.reduce((sum, part) => sum + part.end - part.start, 0);
-  for (const { word, parts } of occurrences.values()) {
-    const joined = joinTouchingParts(parts);
-    const current = best.get(word);
-    if (
-      !current ||
-      cover(joined) > cover(current) ||
-      (cover(joined) === cover(current) && joined.length < current.length)
-    ) {
-      best.set(word, joined);
+    const word = text.slice(wordStart, wordEnd);
+    if (!IDENTIFIER_TEXT_RE.test(word)) continue;
+    const best = flagged.get(word);
+    if (!best || cover(span) > cover(best) || (cover(span) === cover(best) && span.score > best.score)) {
+      flagged.set(word, span);
     }
   }
+  if (flagged.size === 0) return [...spans];
 
   const result: PiiSpan[] = [...spans];
-  for (const [word, parts] of best) {
+  for (const [word, flag] of flagged) {
     const occurrence = new RegExp(`(?<![\\p{L}\\p{N}_$])${escapeRegExp(word)}(?![\\p{L}\\p{N}_$])`, 'gu');
     for (const match of text.matchAll(occurrence)) {
-      const wordStart = match.index!;
-      const wordEnd = wordStart + word.length;
-      const byteStart = stringIndexToByteOffset(text, wordStart);
-      const byteEnd = stringIndexToByteOffset(text, wordEnd);
+      const byteStart = stringIndexToByteOffset(text, match.index!);
+      const byteEnd = stringIndexToByteOffset(text, match.index! + word.length);
       const overlapping = result.filter((span) => span.start < byteEnd && span.end > byteStart);
       // A span reaching past the name ("GitHub Inc" in prose) is left alone.
       if (overlapping.some((span) => span.start < byteStart || span.end > byteEnd)) continue;
       for (const span of overlapping) result.splice(result.indexOf(span), 1);
-      for (const part of parts) {
-        result.push({
-          ...part.span,
-          start: stringIndexToByteOffset(text, wordStart + part.start),
-          end: stringIndexToByteOffset(text, wordStart + part.end),
-          text: text.slice(wordStart + part.start, wordStart + part.end),
-        });
-      }
+      result.push({ ...flag, start: byteStart, end: byteEnd, text: word });
     }
   }
   return result.sort((a, b) => a.start - b.start);
-}
-
-/** `Git` + `Hub` of one type, with nothing between them, → `GitHub`. */
-function joinTouchingParts(parts: IdentifierPart[]): IdentifierPart[] {
-  const joined: IdentifierPart[] = [];
-  for (const part of [...parts].sort((a, b) => a.start - b.start)) {
-    const last = joined[joined.length - 1];
-    if (last && last.end === part.start && last.span.entity_type === part.span.entity_type) {
-      joined[joined.length - 1] = {
-        start: last.start,
-        end: part.end,
-        span: { ...last.span, score: Math.max(last.span.score, part.span.score) },
-      };
-    } else {
-      joined.push(part);
-    }
-  }
-  return joined;
 }
 
 function escapeRegExp(value: string): string {
