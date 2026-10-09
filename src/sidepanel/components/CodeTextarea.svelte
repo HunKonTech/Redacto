@@ -60,7 +60,8 @@
 	}
 	textarea.over { position: relative; background: transparent; color: transparent; caret-color: var(--color-ink); }
 	textarea.over::placeholder { color: var(--color-subtle); }
-	textarea.over::selection { color: transparent; background: var(--color-accent-soft); }
+	/* See-through, or it hides the coloured text behind it (IDE themes give an opaque accent-soft). */
+	textarea.over::selection { color: transparent; background: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 
 	.syn-keyword { color: var(--color-accent); }
 	.syn-string { color: var(--color-group-location-fg); }

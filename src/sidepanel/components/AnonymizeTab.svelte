@@ -182,6 +182,16 @@
 		void commit().catch((err) => (error = err instanceof Error ? err.message : String(err)));
 	}
 
+	/** Empty the text and drop its detection and result. */
+	function clear(): void {
+		input = '';
+		detection = null;
+		detectedFor = null;
+		committedId = null;
+		disabled = new Set();
+		error = '';
+	}
+
 	function onKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
 			event.preventDefault();
@@ -208,9 +218,12 @@
 				aria-label={t('anonymize.inputAria')}
 				placeholder={t('anonymize.placeholder')}
 			/>
-			<button type="button" class="primary" disabled={running || !input.trim() || !settings} onclick={run}>
-				{running ? t('common.detecting') : stale ? t('anonymize.again') : t('anonymize.run')}
-			</button>
+			<div class="actions">
+				<button type="button" class="primary" disabled={running || !input.trim() || !settings} onclick={run}>
+					{running ? t('common.detecting') : stale ? t('anonymize.again') : t('anonymize.run')}
+				</button>
+				<button type="button" class="secondary" disabled={running || !input} onclick={clear}>{t('anonymize.clear')}</button>
+			</div>
 			{#if error}
 				<p class="error" role="alert">{error}</p>
 			{/if}
@@ -305,7 +318,13 @@
 		width: 100%; padding: 9px; border: 0; border-radius: var(--radius-sm); background: var(--color-accent);
 		color: var(--color-on-accent); font-size: 12px; font-weight: 600; cursor: pointer;
 	}
-	.primary:disabled { cursor: not-allowed; opacity: 0.55; }
+	.primary:disabled, .secondary:disabled { cursor: not-allowed; opacity: 0.55; }
+	.actions { display: flex; gap: 6px; }
+	.secondary {
+		flex-shrink: 0; padding: 9px 12px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm);
+		background: var(--color-card); color: var(--color-ink); font-size: 12px; font-weight: 600; cursor: pointer;
+	}
+	.secondary:not(:disabled):hover { background: var(--color-input); }
 	.error { margin: 0; color: var(--color-danger); font-size: 11px; line-height: 1.45; }
 	.hint { margin: 0; color: var(--color-muted); font-size: 11px; line-height: 1.45; }
 

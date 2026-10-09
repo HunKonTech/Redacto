@@ -40,7 +40,6 @@
 	} = $props();
 
 	let expandedId = $state<string | null>(null);
-	let confirmingClear = $state(false);
 	let copyNote = $state('');
 	let copyNoteTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -103,16 +102,6 @@
 		const parts = [t('history.replaced', { count: entry.replacedCount })];
 		if (entry.renamedIdentifiers > 0) parts.push(t('history.renamed', { count: entry.renamedIdentifiers }));
 		return parts.join(' · ');
-	}
-
-	function clearAll(): void {
-		if (!confirmingClear) {
-			confirmingClear = true;
-			setTimeout(() => (confirmingClear = false), 3000);
-			return;
-		}
-		confirmingClear = false;
-		onclear();
 	}
 </script>
 
@@ -179,9 +168,7 @@
 				{/each}
 			</ul>
 			<div class="list-foot">
-				<button type="button" class="link danger" onclick={clearAll}>
-					{confirmingClear ? t('history.clearConfirm') : t('history.clear')}
-				</button>
+				<button type="button" class="link danger" onclick={onclear}>{t('history.clear')}</button>
 			</div>
 		{/if}
 	</article>

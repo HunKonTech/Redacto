@@ -192,6 +192,16 @@ html[data-ide-host] body {
   background: var(--ide-input-bg);
   outline: none;
 }
+/*
+ * The syntax-coloured field (CodeTextarea.svelte) draws its text in a copy
+ * behind a see-through textarea; the field colors above would cover that copy
+ * and leave selected text invisible, so they go on the wrapper instead.
+ */
+[data-ide-host] #app textarea.over,
+[data-ide-host] #app textarea.over:focus {
+  background: transparent;
+  color: transparent;
+}
 [data-ide-host] #app .input[aria-invalid="true"] { border-color: var(--ide-error); }
 [data-ide-host] #app .marked {
   border: 1px solid var(--ide-input-border);
