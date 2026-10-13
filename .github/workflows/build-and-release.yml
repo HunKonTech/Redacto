@@ -504,6 +504,13 @@ jobs:
 
             Install packages: `redacto-chrome-brave-vivaldi-*.zip` for Chrome, Brave, Vivaldi and other Chromium browsers; `redacto-edge-*.zip` for Microsoft Edge; `redacto-firefox-*.zip` for Firefox 140+; `redacto-vscode-*.vsix`, `redacto-jetbrains-*.zip` and `redacto-visualstudio-*.vsix` for the IDEs.
 
+            Install from the stores:
+            - [Firefox (addons.mozilla.org)](https://addons.mozilla.org/hu/firefox/addon/redacto/)
+            - [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/redacto/bnoolokflpknooilcgacnlolbjmjdjfg)
+            - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=BenKoncsik.redacto-vscode)
+            - [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=BenKoncsik.Redacto)
+            - [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34648-redacto)
+
             The Local AI model is not in the packages: every build downloads it (~170 MB) once, on first use, from [Hugging Face](https://huggingface.co/${{ vars.MODEL_HF_REPO || 'koncsik/redacto-eu-pii-ner-q4f16' }}), verifies it, and shows the progress (popup, side panel and toolbar icon in the browsers; the IDE's progress indicator and the Redacto panel in the IDEs). Until it is there, pattern-based detection is active.
 
             Chrome Web Store uploads remain manual, Microsoft Edge Add-ons is submitted by the `edge-publish` job on every push, and addons.mozilla.org by the `firefox-publish` job on every run (see `docs/developer/releasing.md`).
