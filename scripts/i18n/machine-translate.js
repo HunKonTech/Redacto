@@ -23,15 +23,23 @@
  *   node scripts/i18n/machine-translate.js [--python python3]
  *     [--translator KO_language_translator] [--batch 4] [--time-budget 60]
  *     [--only de,fr] [--force] [--workers 2] [--retries 5] [--cooldown 60]
+ *     [--env-file scripts/i18n/.env]
  *
  * Google rate-limits the free endpoint (HTTP 429). A batch that fails is retried
  * after `--cooldown` seconds (growing with each attempt), up to `--retries` times.
+ *
+ * The translator falls back to Microsoft (Azure AI Translator) and DeepL when
+ * Google refuses. Their keys come from the environment or from
+ * `scripts/i18n/.env` (git-ignored; see `.env.example` next to it), the
+ * environment winning: MICROSOFT_TRANSLATOR_KEY, MICROSOFT_TRANSLATOR_REGION
+ * and DEEPL_API_KEY. Without keys only Google is used.
  */
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const util = require('util');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -40,6 +48,7 @@ const GENERATED_DIR = path.join(ROOT, 'src/shared/i18n/generated');
 const LOCALES_DIR = path.join(GENERATED_DIR, 'locales');
 const SNAPSHOT_FILE = path.join(GENERATED_DIR, 'source.json');
 const INDEX_FILE = path.join(GENERATED_DIR, 'index.ts');
+const ENV_FILE = path.join(__dirname, '.env');
 
 /** Languages written by hand (or the source), never machine-translated. */
 const MANUAL_LOCALES = new Set(['en', 'hu']);
@@ -66,6 +75,7 @@ function parseArgs(argv) {
     timeBudget: Infinity,
     only: null,
     force: false,
+    envFile: ENV_FILE,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -83,9 +93,49 @@ function parseArgs(argv) {
     else if (arg === '--time-budget') args.timeBudget = Number(value()) || Infinity;
     else if (arg === '--only') args.only = new Set(value().split(',').map((code) => code.trim()).filter(Boolean));
     else if (arg === '--force') args.force = true;
+    else if (arg === '--env-file') args.envFile = path.resolve(value());
     else throw new Error(`Unknown argument ${arg}`);
   }
   return args;
+}
+
+/**
+ * The fallback translators' keys: from the environment, else from the .env
+ * file (KEY=value lines; a missing file means no keys). Empty when unset.
+ */
+function readServiceKeys(file = ENV_FILE, env = process.env) {
+  let fromFile = {};
+  try {
+    fromFile = util.parseEnv(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw new Error(`Reading ${file} failed: ${error.message}`);
+  }
+  const value = (name) => (env[name] || fromFile[name] || '').trim();
+  return {
+    microsoftKey: value('MICROSOFT_TRANSLATOR_KEY'),
+    microsoftRegion: value('MICROSOFT_TRANSLATOR_REGION'),
+    deeplKey: value('DEEPL_API_KEY'),
+  };
+}
+
+/** main.py arguments for the configured fallback translators. */
+function serviceArgs(keys) {
+  const args = [];
+  if (keys.microsoftKey) {
+    args.push('--microsoft-key', keys.microsoftKey);
+    if (keys.microsoftRegion) args.push('--microsoft-region', keys.microsoftRegion);
+  }
+  if (keys.deeplKey) args.push('--deepl-key', keys.deeplKey);
+  return args;
+}
+
+/** The services in fallback order, for the log (never the keys themselves). */
+function serviceNames(keys) {
+  return [
+    'Google',
+    keys.microsoftKey && `Microsoft${keys.microsoftRegion ? ` (${keys.microsoftRegion})` : ''}`,
+    keys.deeplKey && `DeepL${keys.deeplKey.endsWith(':fx') ? ' Free' : ''}`,
+  ].filter(Boolean);
 }
 
 /** The English dictionary, read from en.ts without a TypeScript compiler. */
@@ -259,6 +309,7 @@ function runTranslator(args, batch, en, timeoutMs) {
         [
           path.join(args.translator, 'main.py'), args.force ? '--force' : '--new-only',
           '--i18n-file', file, '--i18n-source-lang', 'en', '--workers', String(args.workers),
+          ...args.serviceArgs,
         ],
         { stdio: 'inherit', timeout: Number.isFinite(timeoutMs) ? Math.max(1, Math.round(timeoutMs)) : undefined },
       );
@@ -287,6 +338,9 @@ function runTranslator(args, batch, en, timeoutMs) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const keys = readServiceKeys(args.envFile);
+  args.serviceArgs = serviceArgs(keys);
+  console.log(`Translation services: ${serviceNames(keys).join(' -> ')}`);
   const startedAt = Date.now();
   const en = readSourceMessages();
   fs.mkdirSync(LOCALES_DIR, { recursive: true });
@@ -333,8 +387,8 @@ function main() {
     if (!result) break;
     const after = batch.reduce((sum, { googleCode }) => sum + Object.keys(result[googleCode] ?? {}).length, 0);
     if (!args.force && after <= before) {
-      // Every request failed: Google is rate-limiting or blocking this machine.
-      console.warn('::warning::Nothing was translated in this batch (Google rate limit?); stopping until the next run.');
+      // Every request failed: every service is rate-limiting, blocking or out of quota.
+      console.warn('::warning::Nothing was translated in this batch (rate limit or quota?); stopping until the next run.');
       break;
     }
     for (const { googleCode, locale } of batch) {
@@ -375,8 +429,11 @@ module.exports = {
   keepValidTranslations,
   nativeName,
   readDictsFile,
+  readServiceKeys,
   readSourceMessages,
   renderIndex,
+  serviceArgs,
+  serviceNames,
   toLocale,
   writeDictsFile,
 };

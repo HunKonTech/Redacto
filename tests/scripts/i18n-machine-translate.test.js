@@ -8,8 +8,11 @@ const {
   keepValidTranslations,
   nativeName,
   readDictsFile,
+  readServiceKeys,
   readSourceMessages,
   renderIndex,
+  serviceArgs,
+  serviceNames,
   toLocale,
   writeDictsFile,
 } = require('../../scripts/i18n/machine-translate');
@@ -99,5 +102,39 @@ describe('language codes and names', () => {
     ]);
     expect(source).toContain('export const GENERATED_LOCALES = [\n  "de",\n  "fr",\n] as const;');
     expect(source).toContain('"fr": "Français",');
+  });
+});
+
+describe('fallback translator keys', () => {
+  const envFile = (content) => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pg-i18n-')), '.env');
+    fs.writeFileSync(file, content);
+    return file;
+  };
+
+  test('are read from the .env file', () => {
+    const file = envFile('# comment\nMICROSOFT_TRANSLATOR_KEY=abc\nMICROSOFT_TRANSLATOR_REGION="westeurope"\nDEEPL_API_KEY=\n');
+    expect(readServiceKeys(file, {})).toEqual({ microsoftKey: 'abc', microsoftRegion: 'westeurope', deeplKey: '' });
+  });
+
+  test('come from the environment first', () => {
+    const file = envFile('DEEPL_API_KEY=from-file\n');
+    expect(readServiceKeys(file, { DEEPL_API_KEY: 'from-env' }).deeplKey).toBe('from-env');
+  });
+
+  test('are empty without a .env file', () => {
+    expect(readServiceKeys(path.join(os.tmpdir(), 'no-such-dir', '.env'), {})).toEqual({
+      microsoftKey: '',
+      microsoftRegion: '',
+      deeplKey: '',
+    });
+  });
+
+  test('become main.py arguments only when set', () => {
+    expect(serviceArgs({ microsoftKey: '', microsoftRegion: 'westeurope', deeplKey: '' })).toEqual([]);
+    expect(serviceArgs({ microsoftKey: 'm', microsoftRegion: 'westeurope', deeplKey: 'd:fx' })).toEqual([
+      '--microsoft-key', 'm', '--microsoft-region', 'westeurope', '--deepl-key', 'd:fx',
+    ]);
+    expect(serviceNames({ microsoftKey: 'm', microsoftRegion: '', deeplKey: 'd:fx' })).toEqual(['Google', 'Microsoft', 'DeepL Free']);
   });
 });
