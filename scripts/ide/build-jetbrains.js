@@ -10,10 +10,10 @@ const dir = path.join(ROOT, 'ide', 'jetbrains');
 const ver = version();
 const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
-// plugin.xml carries no description: Gradle patches this one in (README as HTML).
+// plugin.xml carries no description: Gradle patches this one in (the intro and the shared IDE text as HTML).
 const generated = path.join(dir, 'build-generated');
 fs.mkdirSync(generated, { recursive: true });
-fs.writeFileSync(path.join(generated, 'description.html'), readmeHtml());
+fs.writeFileSync(path.join(generated, 'description.html'), readmeHtml(path.join(dir, 'README.ide.md')));
 
 run(`${gradlew} --no-daemon buildPlugin -PpluginVersion=${ver}`, dir);
 

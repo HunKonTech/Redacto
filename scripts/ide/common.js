@@ -45,12 +45,12 @@ const REPO = 'HunKonTech/Redacto';
 const BRANCH = 'main';
 
 /**
- * The root README with every relative link and image turned into an absolute
- * GitHub URL: the marketplaces render the README away from the repository,
- * where relative paths would be broken. Images (`.png`, `.svg`, ...) point to
+ * Markdown with every relative link and image turned into an absolute GitHub
+ * URL: the marketplaces render the page away from the repository, where
+ * relative paths would be broken. Images (`.png`, `.svg`, ...) point to
  * raw.githubusercontent.com, everything else to github.com.
  */
-function readmeMarkdown() {
+function absoluteLinks(markdown) {
   const absolute = (url) => {
     if (/^([a-z][a-z0-9+.-]*:|#|\/\/)/i.test(url)) return url;
     const clean = url.replace(/^\.?\//, '');
@@ -60,27 +60,32 @@ function readmeMarkdown() {
     const kind = /\/$|(^|\/)[^./]+$/.test(clean) ? 'tree' : 'blob';
     return `https://github.com/${REPO}/${kind}/${BRANCH}/${clean.replace(/\/$/, '')}`;
   };
-  return fs
-    .readFileSync(path.join(ROOT, 'README.md'), 'utf8')
+  return markdown
     .replace(/\]\(([^)\s]+)\)/g, (_, url) => `](${absolute(url)})`)
-    .replace(/\b(src|href)="([^"]+)"/g, (_, attr, url) => `${attr}="${absolute(url)}"`)
-    // <picture> (dark-mode logo) is not supported by every marketplace: keep its <img>.
-    .replace(/<picture>[\s\S]*?(<img[^>]*>)[\s\S]*?<\/picture>/g, '$1');
-}
-
-/** The README as HTML (JetBrains plugin description). */
-function readmeHtml() {
-  const md = require('markdown-it')({ html: true, linkify: true });
-  return md.render(readmeMarkdown().replace(/^# Redacto\s*$/m, '')) ;
+    .replace(/\b(src|href)="([^"]+)"/g, (_, attr, url) => `${attr}="${absolute(url)}"`);
 }
 
 /**
- * Write the marketplace README: the IDE-specific intro (`introFile`) followed
- * by the root README, to `dest`.
+ * The marketplace page: the IDE's own intro (`introFile`) followed by the
+ * shared IDE text, `ide/about.ide.md`. The root README is about the Chrome
+ * extension (install from the Chrome Web Store, Chrome requirements), so the
+ * IDE pages do not carry it.
  */
-function writeReadme(introFile, dest) {
+function readmeMarkdown(introFile) {
   const intro = fs.readFileSync(introFile, 'utf8').trimEnd();
-  fs.writeFileSync(dest, `${intro}\n\n---\n\n${readmeMarkdown()}`);
+  const about = fs.readFileSync(path.join(ROOT, 'ide', 'about.ide.md'), 'utf8').trimEnd();
+  return absoluteLinks(`${intro}\n\n${about}\n`);
+}
+
+/** The page as HTML (JetBrains plugin description). */
+function readmeHtml(introFile) {
+  const md = require('markdown-it')({ html: true, linkify: true });
+  return md.render(readmeMarkdown(introFile).replace(/^# .*$/m, ''));
+}
+
+/** Write the marketplace page for `introFile` to `dest`. */
+function writeReadme(introFile, dest) {
+  fs.writeFileSync(dest, readmeMarkdown(introFile));
 }
 
 function run(command, cwd) {

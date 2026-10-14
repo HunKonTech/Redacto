@@ -85,12 +85,16 @@ extension development" workload.
 
 ## Marketplace README
 
-The root `README.md` is the plugins' marketplace page and is shipped in the
-packages (images and links rewritten to absolute GitHub URLs by
-`scripts/ide/common.js`). VS Code and Visual Studio get the IDE-specific intro
-(`README.ide.md`, `overview.ide.md`) followed by the root README (generated
-`README.md` / `overview.md`, git-ignored); JetBrains gets the README as HTML,
-patched into `plugin.xml`'s description by Gradle.
+The marketplace pages are IDE-specific: the root `README.md` describes the Chrome
+extension (Chrome Web Store install, Chrome requirements), so the plugins do not
+ship it. Each IDE has its own intro (`ide/vscode/README.ide.md`,
+`ide/visualstudio/.../overview.ide.md`, `ide/jetbrains/README.ide.md`: what it
+needs and where its menus are), followed by the text all three share,
+`ide/about.ide.md`. Relative links are rewritten to absolute GitHub URLs by
+`scripts/ide/common.js`. VS Code and Visual Studio get the result as the
+generated `README.md` / `overview.md` (git-ignored); JetBrains gets it as HTML,
+patched into the plugin's description by Gradle. When a feature changes, update
+these files so a page never describes something the IDE does not do.
 
 ## Publishing
 
